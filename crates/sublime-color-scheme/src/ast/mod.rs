@@ -488,7 +488,7 @@ fn parse_color_function(
 
             Ok(Color::HSLA(numbers[0], numbers[1], numbers[2], numbers[3]))
         }
-        _ => todo!(),
+        _ => Err(ParseError::InvalidColorFunction),
     }
 }
 
