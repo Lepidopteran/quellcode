@@ -5,7 +5,7 @@ use syntect::highlighting::{
     UnderlineOption,
 };
 
-pub mod ast;
+pub mod parser;
 pub mod error;
 
 use crate::error::ParseError;
