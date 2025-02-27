@@ -5,8 +5,8 @@ use syntect::highlighting::{
     UnderlineOption,
 };
 
-pub mod error;
 pub mod ast;
+pub mod error;
 
 use crate::error::ParseError;
 
@@ -22,14 +22,19 @@ pub struct ColorScheme {
 impl FromStr for ColorScheme {
     type Err = ParseError;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        serde_json::from_str(s).map_err(ParseError::Json)
-    }
-}
 
-impl TryFrom<serde_json::Value> for ColorScheme {
-    type Error = ParseError;
+        // NOTE: Need to remove comments and remove leading commas since JSON doesn't support them.
+        let value: serde_json::Value = jsonc_parser::parse_to_ast(
+            s,
+            &jsonc_parser::CollectOptions {
+                comments: jsonc_parser::CommentCollectionStrategy::Off,
+                tokens: false,
+            },
+            &jsonc_parser::ParseOptions::default(),
+        )?
+        .value
+        .into();
 
-    fn try_from(value: serde_json::Value) -> Result<Self, ParseError> {
         serde_json::from_value(value).map_err(ParseError::Json)
     }
 }
@@ -130,8 +135,6 @@ impl TryFrom<Rule> for ThemeItem {
 
 #[cfg(test)]
 mod tests {
-    use jsonc_parser::{parse_to_serde_value, ParseOptions};
-
     use super::*;
 
     #[test]
@@ -145,7 +148,6 @@ mod tests {
     #[test]
     fn convert_theme_with_variables() {
         let theme = include_str!("../assets/schemes/Catppuccin Latte.sublime-color-scheme");
-        let value = parse_to_serde_value(theme, &ParseOptions::default()).unwrap();
-        ColorScheme::try_from(value.unwrap()).expect("Failed to parse theme");
+        ColorScheme::from_str(theme).expect("Failed to parse theme");
     }
 }

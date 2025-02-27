@@ -29,4 +29,6 @@ pub enum ParseError {
     ParseTheme(#[from] ParseThemeError),
     #[error("Failed to parse number")]
     ParseNumber(#[from] std::num::ParseFloatError),
+    #[error("Failed to parse JSONC")]
+    ParseNumberString(#[from] jsonc_parser::errors::ParseError),
 }
