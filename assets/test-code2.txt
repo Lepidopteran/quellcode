@@ -1,0 +1,42 @@
+--- @param opts? noted.Config
+function M.setup(opts)
+	local util = require("noted.util")
+	local config = require("noted.config").setup(opts)
+
+	if config.auto_project then
+		M.__auto_select_or_create_project()
+	end
+
+	vim.api.nvim_create_user_command("NotedSelectProject", function()
+		M.project = require("noted.cmd").list_projects()
+	end, {})
+
+	vim.api.nvim_create_user_command("NotedAddProject", function()
+		M.project = require("noted").__add_project()
+	end, {})
+
+	vim.api.nvim_create_user_command("NotedRemoveProject", function()
+		local projects = require("noted.util").get_projects()
+		M.project = require("noted").__remove_project(projects)
+	end, {})
+
+	vim.api.nvim_create_user_command("NotedCreateNote", function()
+		if M.project == "" or M.project == nil then
+			M.project = require("noted.cmd").list_projects()
+		end
+
+		if M.project == "" or M.project == nil then
+			error(
+				"No project selected\n Run :NotedSelectProject to select a project\n or Run :NotedAddProject to add a project"
+			)
+		end
+
+		local path = vim.api.nvim_buf_get_name(0)
+		local code = util.get_visual_selection()
+		local note = require("noted.cmd").create_note(path, code)
+
+		print(vim.inspect(note))
+
+		require("noted.cmd").save_note(M.project, note)
+	end, { range = true })
+end

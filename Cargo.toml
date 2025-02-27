@@ -1,0 +1,20 @@
+[package]
+name = "gtk-code-viewer"
+version = "0.1.0"
+edition = "2021"
+
+[workspace]
+	members = ["crates/sublime-color-scheme"]
+	resolver = "2"
+
+[dependencies]
+async-channel = "2.3.1"
+gtk = { version = "0.9.5", package = "gtk4", features = ["v4_14"] }
+image = { version = "0.25.5", features = ["serde"] }
+resvg = "0.44.0"
+serde = { version = "1.0.217", features = ["derive"] }
+serde_json = "1.0.138"
+svg = "0.18.0"
+syntect = "5.2.0"
+thiserror = "2.0.11"
+usvg = "0.44.0"
