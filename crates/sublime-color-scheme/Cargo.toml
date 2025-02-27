@@ -2,6 +2,10 @@
 name = "sublime-color-scheme"
 version = "0.1.0"
 edition = "2021"
+description = "Parse Sublime Text color schemes to Syntect Themes"
+license = "Apache-2.0"
+repository = "https://github.com/Lepidopteran/quellcode/tree/main/crates/sublime-color-scheme"
+readme = "README.md"
 
 [dependencies]
 jsonc-parser = { version = "0.26.2", features = ["serde"] }
