@@ -6,8 +6,6 @@ use syntect::highlighting::{
 };
 
 pub mod error;
-pub mod util;
-pub mod named;
 pub mod ast;
 
 use crate::error::ParseError;
