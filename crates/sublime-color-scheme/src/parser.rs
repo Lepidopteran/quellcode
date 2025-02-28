@@ -14,11 +14,42 @@ pub enum Color {
     HSLA(f32, f32, f32, f32),
     HWB(f32, f32, f32),
     Named(Rgb<Srgb, u8>),
-    Variable(Variable),
+    Variable(String),
     Expression {
         color: Box<Color>,
         adjusters: Vec<Adjuster>,
     },
+}
+
+#[derive(Debug, PartialEq)]
+pub enum ColorFunction {
+    RGB,
+    RGBA,
+    HSL,
+    HSLA,
+    HWB,
+    Variable,
+    Expression,
+}
+
+impl FromStr for ColorFunction {
+    type Err = ParseError;
+
+    fn from_str(value: &str) -> Result<Self, Self::Err> {
+        info!("Parsing color function: {}", value);
+        let func = match value.to_lowercase().as_str() {
+            "rgb" => Self::RGB,
+            "rgba" => Self::RGBA,
+            "hsl" => Self::HSL,
+            "hsla" => Self::HSLA,
+            "hwb" => Self::HWB,
+            "var" => Self::Variable,
+            "color" => Self::Expression,
+            _ => return Err(ParseError::ParseFunction),
+        };
+
+        Ok(func)
+    }
 }
 
 #[derive(Debug, PartialEq)]
@@ -74,36 +105,6 @@ impl FromStr for ColorSpace {
     }
 }
 
-#[derive(Debug, PartialEq)]
-pub enum ColorFunction {
-    RGB,
-    RGBA,
-    HSL,
-    HSLA,
-    HWB,
-    Variable,
-    Expression,
-}
-
-impl FromStr for ColorFunction {
-    type Err = ParseError;
-
-    fn from_str(value: &str) -> Result<Self, Self::Err> {
-        info!("Parsing color function: {}", value);
-        let func = match value.to_lowercase().as_str() {
-            "rgb" => Self::RGB,
-            "rgba" => Self::RGBA,
-            "hsl" => Self::HSL,
-            "hsla" => Self::HSLA,
-            "hwb" => Self::HWB,
-            "var" => Self::Variable,
-            "color" => Self::Expression,
-            _ => return Err(ParseError::ParseFunction),
-        };
-
-        Ok(func)
-    }
-}
 
 #[derive(Debug, PartialEq)]
 pub enum Token {
@@ -412,7 +413,7 @@ fn parse_variable(stream: &mut impl Iterator<Item = Token>) -> Result<Color, Par
         }
     }
 
-    Ok(Color::Variable(Variable(name)))
+    Ok(Color::Variable(name))
 }
 
 fn parse_color_function(
@@ -524,15 +525,6 @@ fn parse_hex(stream: &mut impl Iterator<Item = Token>) -> Result<Color, ParseErr
     }
 }
 
-#[derive(Debug, PartialEq)]
-pub struct Variable(String);
-
-impl Variable {
-    pub fn name(&self) -> &str {
-        &self.0
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -575,15 +567,15 @@ mod tests {
         let variables = [
             (
                 "var(lightPurple)",
-                Color::Variable(Variable("lightPurple".to_string())),
+                Color::Variable("lightPurple".to_string()),
             ),
             (
                 "var(light_Purple)",
-                Color::Variable(Variable("light_Purple".to_string())),
+                Color::Variable("light_Purple".to_string()),
             ),
             (
                 "var(light_purple)",
-                Color::Variable(Variable("light_purple".to_string())),
+                Color::Variable("light_purple".to_string()),
             ),
         ];
 
