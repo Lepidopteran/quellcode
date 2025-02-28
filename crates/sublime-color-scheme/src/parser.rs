@@ -15,10 +15,7 @@ pub enum Color {
     HWB(f32, f32, f32),
     Named(Rgb<Srgb, u8>),
     Variable(String),
-    Expression {
-        color: Box<Color>,
-        adjusters: Vec<Adjuster>,
-    },
+    Expression(Box<Color>, Vec<Adjuster>),
 }
 
 #[derive(Debug, PartialEq)]
@@ -105,7 +102,6 @@ impl FromStr for ColorSpace {
     }
 }
 
-
 #[derive(Debug, PartialEq)]
 pub enum Token {
     Hash,
@@ -173,10 +169,7 @@ pub fn parse_color(s: &str) -> Result<Color, ParseError> {
                 .map(|argument| parse_adjuster(argument))
                 .collect::<Result<_, _>>()?;
 
-            Ok(Color::Expression {
-                color: Box::new(color),
-                adjusters,
-            })
+            Ok(Color::Expression(Box::new(color), adjusters))
         }
         ColorFunction::HSL
         | ColorFunction::HSLA
@@ -608,10 +601,10 @@ mod tests {
 
         assert_eq!(
             parse_color("color(rgb(100, 0, 200) alpha(50%))").unwrap(),
-            Color::Expression {
-                color: Box::new(Color::RGB(100.0, 0.0, 200.0)),
-                adjusters: vec![Adjuster::Alpha(0.5)]
-            }
+            Color::Expression(
+                Box::new(Color::RGB(100.0, 0.0, 200.0)),
+                vec![Adjuster::Alpha(0.5)]
+            )
         );
 
         assert_eq!(
@@ -619,20 +612,20 @@ mod tests {
                 "color(rgb(100, 0, 200) alpha(50%) blend(color(rgb(100, 0, 200) alpha(50%)) 50%))"
             )
             .unwrap(),
-            Color::Expression {
-                color: Box::new(Color::RGB(100.0, 0.0, 200.0)),
-                adjusters: vec![
+            Color::Expression(
+                Box::new(Color::RGB(100.0, 0.0, 200.0)),
+                vec![
                     Adjuster::Alpha(0.5),
                     Adjuster::Blend(
-                        Color::Expression {
-                            color: Box::new(Color::RGB(100.0, 0.0, 200.0)),
-                            adjusters: vec![Adjuster::Alpha(0.5)]
-                        },
+                        Color::Expression(
+                            Box::new(Color::RGB(100.0, 0.0, 200.0)),
+                            vec![Adjuster::Alpha(0.5)]
+                        ),
                         0.5,
                         None
                     )
                 ]
-            }
+            )
         );
     }
 
