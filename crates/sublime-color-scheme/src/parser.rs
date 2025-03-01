@@ -1,5 +1,5 @@
 use crate::error::ParseError;
-use log::{debug, info};
+use log::{debug, error, info};
 use palette::{encoding::Srgb, named, rgb::Rgb};
 use std::str::FromStr;
 
@@ -182,6 +182,8 @@ pub fn parse_color(s: &str) -> Result<Color, ParseError> {
 pub fn parse_adjuster(s: &str) -> Result<Adjuster, ParseError> {
     let mut chars = s.chars();
     let mut stream = get_tokens(&mut chars).peekable();
+
+    info!("Parsing adjuster: {}", s);
 
     while stream.peek() == Some(&Token::WhiteSpace) {
         stream.next();
@@ -395,14 +397,19 @@ fn parse_variable(stream: &mut impl Iterator<Item = Token>) -> Result<Color, Par
 
     for token in stream.by_ref() {
         if open_paren_count > 1 {
+            error!("Too many open parens: {}", name);
             return Err(ParseError::InvalidVariable);
         }
 
         match token {
             Token::OpenParen => open_paren_count += 1,
             Token::Literal(literal) => name.push_str(&literal),
+            Token::Number(number) => name.push_str(&number),
             Token::CloseParen => break,
-            _ => return Err(ParseError::InvalidVariable),
+            _ => {
+                error!("Invalid variable: {}", name);
+                return Err(ParseError::InvalidVariable)
+            },
         }
     }
 

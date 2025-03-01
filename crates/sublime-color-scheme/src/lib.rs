@@ -1,16 +1,28 @@
+use color::get_color;
+use log::debug;
 use serde::Deserialize;
 use std::{collections::HashMap, str::FromStr};
 use syntect::highlighting::{
-    Color, FontStyle, ScopeSelectors, StyleModifier, Theme, ThemeItem, ThemeSettings,
-    UnderlineOption,
+    Color as SyntectColor, FontStyle, ScopeSelectors, StyleModifier, Theme, ThemeItem,
+    ThemeSettings, UnderlineOption,
 };
 
-pub mod parser;
+pub mod color;
 pub mod error;
+pub mod parser;
 
 use crate::error::ParseError;
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
+pub struct Rule {
+    pub name: Option<String>,
+    pub scope: String,
+    pub font_style: Option<String>,
+    pub foreground: Option<String>,
+    pub background: Option<String>,
+}
+
+#[derive(Deserialize, Debug)]
 pub struct ColorScheme {
     pub name: Option<String>,
     pub author: Option<String>,
@@ -22,7 +34,6 @@ pub struct ColorScheme {
 impl FromStr for ColorScheme {
     type Err = ParseError;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-
         // NOTE: Need to remove comments and remove leading commas since JSON doesn't support them.
         let value: serde_json::Value = jsonc_parser::parse_to_ast(
             s,
@@ -44,52 +55,60 @@ impl TryFrom<ColorScheme> for Theme {
     fn try_from(value: ColorScheme) -> Result<Self, Self::Error> {
         let mut settings = ThemeSettings::default();
         let variables = value.variables.unwrap_or_default();
-        for (key, value) in &value.globals {
-            match &key[..] {
-                "foreground" => settings.foreground = Color::from_str(value).ok(),
-                "background" => settings.background = Color::from_str(value).ok(),
-                "caret" => settings.caret = Color::from_str(value).ok(),
-                "line_highlight" => settings.line_highlight = Color::from_str(value).ok(),
-                "misspelling" => settings.misspelling = Color::from_str(value).ok(),
-                "minimap_border" => settings.minimap_border = Color::from_str(value).ok(),
-                "accent" => settings.accent = Color::from_str(value).ok(),
 
+        for (key, value) in &value.globals {
+            debug!("Got global: {} = {}", key, value);
+            match &key[..] {
+                "foreground" => settings.foreground = get_color(value, &variables).ok(),
+                "background" => settings.background = get_color(value, &variables).ok(),
+                "caret" => settings.caret = get_color(value, &variables).ok(),
+                "line_highlight" => settings.line_highlight = get_color(value, &variables).ok(),
+                "misspelling" => settings.misspelling = get_color(value, &variables).ok(),
+                "minimap_border" => settings.minimap_border = get_color(value, &variables).ok(),
+                "accent" => settings.accent = get_color(value, &variables).ok(),
                 "popup_css" => settings.popup_css = Some(value.clone()),
                 "phantom_css" => settings.phantom_css = Some(value.clone()),
-
                 "bracket_contents_foreground" => {
-                    settings.bracket_contents_foreground = Color::from_str(value).ok()
+                    settings.bracket_contents_foreground = get_color(value, &variables).ok()
                 }
                 "bracket_contents_options" => {
                     settings.bracket_contents_options = UnderlineOption::from_str(value).ok()
                 }
-                "brackets_foreground" => settings.brackets_foreground = Color::from_str(value).ok(),
-                "brackets_background" => settings.brackets_background = Color::from_str(value).ok(),
+                "brackets_foreground" => {
+                    settings.brackets_foreground = get_color(value, &variables).ok()
+                }
+                "brackets_background" => {
+                    settings.brackets_background = get_color(value, &variables).ok()
+                }
                 "brackets_options" => {
                     settings.brackets_options = UnderlineOption::from_str(value).ok()
                 }
-                "tags_foreground" => settings.tags_foreground = Color::from_str(value).ok(),
+                "tags_foreground" => settings.tags_foreground = get_color(value, &variables).ok(),
                 "tags_options" => settings.tags_options = UnderlineOption::from_str(value).ok(),
-                "highlight" => settings.highlight = Color::from_str(value).ok(),
-                "find_highlight" => settings.find_highlight = Color::from_str(value).ok(),
+                "highlight" => settings.highlight = get_color(value, &variables).ok(),
+                "find_highlight" => settings.find_highlight = get_color(value, &variables).ok(),
                 "find_highlight_foreground" => {
-                    settings.find_highlight_foreground = Color::from_str(value).ok()
+                    settings.find_highlight_foreground = get_color(value, &variables).ok()
                 }
-                "gutter" => settings.gutter = Color::from_str(value).ok(),
-                "gutter_foreground" => settings.gutter_foreground = Color::from_str(value).ok(),
-                "selection" => settings.selection = Color::from_str(value).ok(),
+                "gutter" => settings.gutter = get_color(value, &variables).ok(),
+                "gutter_foreground" => {
+                    settings.gutter_foreground = get_color(value, &variables).ok()
+                }
+                "selection" => settings.selection = get_color(value, &variables).ok(),
                 "selection_foreground" => {
-                    settings.selection_foreground = Color::from_str(value).ok()
+                    settings.selection_foreground = get_color(value, &variables).ok()
                 }
-                "selection_border" => settings.selection_border = Color::from_str(value).ok(),
-                "inactive_selection" => settings.inactive_selection = Color::from_str(value).ok(),
+                "selection_border" => settings.selection_border = get_color(value, &variables).ok(),
+                "inactive_selection" => {
+                    settings.inactive_selection = get_color(value, &variables).ok()
+                }
                 "inactive_selection_foreground" => {
-                    settings.inactive_selection_foreground = Color::from_str(value).ok()
+                    settings.inactive_selection_foreground = get_color(value, &variables).ok()
                 }
-                "guide" => settings.guide = Color::from_str(value).ok(),
-                "active_guide" => settings.active_guide = Color::from_str(value).ok(),
-                "stack_guide" => settings.stack_guide = Color::from_str(value).ok(),
-                "shadow" => settings.shadow = Color::from_str(value).ok(),
+                "guide" => settings.guide = get_color(value, &variables).ok(),
+                "active_guide" => settings.active_guide = get_color(value, &variables).ok(),
+                "stack_guide" => settings.stack_guide = get_color(value, &variables).ok(),
+                "shadow" => settings.shadow = get_color(value, &variables).ok(),
                 _ => (), // E.g. "shadowWidth" and "invisibles" are ignored
             }
         }
@@ -101,53 +120,78 @@ impl TryFrom<ColorScheme> for Theme {
             scopes: value
                 .rules
                 .into_iter()
-                .map(ThemeItem::try_from)
-                .collect::<Result<Vec<_>, _>>()?,
-        })
-    }
-}
-
-#[derive(Deserialize)]
-pub struct Rule {
-    pub name: Option<String>,
-    pub scope: String,
-    pub font_style: Option<String>,
-    pub foreground: Option<String>,
-    pub background: Option<String>,
-}
-
-impl TryFrom<Rule> for ThemeItem {
-    type Error = ParseError;
-    fn try_from(value: Rule) -> Result<Self, Self::Error> {
-        Ok(Self {
-            scope: ScopeSelectors::from_str(&value.scope)?,
-            style: StyleModifier {
-                foreground: value.foreground.map(|s| Color::from_str(&s)).transpose()?,
-                background: value.background.map(|s| Color::from_str(&s)).transpose()?,
-                font_style: value
-                    .font_style
-                    .map(|s| FontStyle::from_str(&s))
-                    .transpose()?,
-            },
+                .map(|rule| {
+                    Ok(ThemeItem {
+                        scope: ScopeSelectors::from_str(&rule.scope)?,
+                        style: StyleModifier {
+                            foreground: rule
+                                .foreground
+                                .map(|s| get_color(&s, &variables))
+                                .transpose()?,
+                            background: rule
+                                .background
+                                .map(|s| get_color(&s, &variables))
+                                .transpose()?,
+                            font_style: rule
+                                .font_style
+                                .map(|s| FontStyle::from_str(&s))
+                                .transpose()?,
+                        },
+                    })
+                })
+                .collect::<Result<Vec<_>, ParseError>>()?,
         })
     }
 }
 
 #[cfg(test)]
 mod tests {
+    use log::debug;
+
     use super::*;
+
+    fn start_log() {
+        let _ = env_logger::builder().is_test(true).try_init();
+    }
 
     #[test]
     fn convert_theme_without_variables() {
-        ColorScheme::from_str(include_str!(
-            "../assets/schemes/ayu-dark.sublime-color-scheme"
-        ))
-        .unwrap();
+        start_log();
+        let schemes = vec![
+            include_str!("../assets/schemes/ayu-dark.sublime-color-scheme"),
+            include_str!("../assets/schemes/ayu-mirage.sublime-color-scheme"),
+            include_str!("../assets/schemes/ayu-light.sublime-color-scheme"),
+        ];
+
+        for scheme in schemes {
+            let scheme = ColorScheme::from_str(scheme).expect("Failed to parse theme");
+
+            Theme::try_from(scheme).expect("Failed to convert to theme");
+        }
     }
 
     #[test]
     fn convert_theme_with_variables() {
-        let theme = include_str!("../assets/schemes/Catppuccin Latte.sublime-color-scheme");
-        ColorScheme::from_str(theme).expect("Failed to parse theme");
+        start_log();
+
+        let mut success = 0;
+        let schemes = vec![
+            include_str!("../assets/schemes/Catppuccin Latte.sublime-color-scheme"),
+            include_str!("../assets/schemes/Catppuccin Mocha.sublime-color-scheme"),
+            include_str!("../assets/schemes/Catppuccin Frappe.sublime-color-scheme"),
+            include_str!("../assets/schemes/Catppuccin Macchiato.sublime-color-scheme"),
+            include_str!("../assets/schemes/Gruvbox Material Dark.sublime-color-scheme"),
+            include_str!("../assets/schemes/Kanagawa.sublime-color-scheme"),
+            include_str!("../assets/schemes/Nord.sublime-color-scheme"),
+        ];
+
+        for scheme in schemes {
+            let scheme = ColorScheme::from_str(scheme).expect("Failed to parse theme");
+
+            Theme::try_from(scheme).expect("Failed to convert to theme");
+            success += 1;
+
+            debug!("Successfully converted {} themes", success);
+        }
     }
 }

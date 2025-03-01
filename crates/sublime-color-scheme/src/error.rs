@@ -27,8 +27,12 @@ pub enum ParseError {
     ParseExpression,
     #[error("Failed to parse theme")]
     ParseTheme(#[from] ParseThemeError),
-    #[error("Failed to parse number")]
+    #[error("Failed to parse float number")]
     ParseNumber(#[from] std::num::ParseFloatError),
+    #[error("Failed to parse integer number")]
+    ParseInteger(#[from] std::num::ParseIntError),
     #[error("Failed to parse JSONC")]
     ParseNumberString(#[from] jsonc_parser::errors::ParseError),
+    #[error("Could not find variable")]
+    UnknownVariable,
 }
