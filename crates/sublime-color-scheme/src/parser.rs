@@ -12,7 +12,7 @@ pub enum Color {
     RGBA(f32, f32, f32, f32),
     HSL(f32, f32, f32),
     HSLA(f32, f32, f32, f32),
-    HWB(f32, f32, f32),
+    HWB(f32, f32, f32, Option<f32>),
     Named(Rgb<Srgb, u8>),
     Variable(String),
     Expression(Box<Color>, Vec<Adjuster>),
@@ -462,11 +462,11 @@ fn parse_color_function(
             Ok(Color::HSL(numbers[0], numbers[1], numbers[2]))
         }
         ColorFunction::HWB => {
-            if numbers.len() != 3 {
+            if numbers.len() != 3 || numbers.len() != 4 {
                 return Err(ParseError::InvalidColorFunction);
             }
 
-            Ok(Color::HWB(numbers[0], numbers[1], numbers[2]))
+            Ok(Color::HWB(numbers[0], numbers[1], numbers[2], Some(numbers[3])))
         }
         ColorFunction::RGBA => {
             if numbers.len() != 4 {
