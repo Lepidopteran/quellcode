@@ -8,11 +8,11 @@ use std::str::FromStr;
 pub enum Color {
     Hex(String),
     HexAlpha(String),
-    RGB(f32, f32, f32),
-    RGBA(f32, f32, f32, f32),
-    HSL(f32, f32, f32),
-    HSLA(f32, f32, f32, f32),
-    HWB(f32, f32, f32, Option<f32>),
+    RGB(u8, u8, u8),
+    RGBA(u8, u8, u8, f32),
+    HSL(u32, f32, f32),
+    HSLA(u32, f32, f32, f32),
+    HWB(u32, f32, f32, Option<f32>),
     Named(Rgb<Srgb, u8>),
     Variable(String),
     Expression(Box<Color>, Vec<Adjuster>),
@@ -60,11 +60,11 @@ pub enum Adjuster {
     /// Adjust the opacity of the color `(Percentage)`
     Alpha(f32),
 
-    /// Adjust the hue of the color `(Percentage)`
-    Saturation(f32),
+    /// Adjust the hue of the color `(Percentage, Relative)`.
+    Saturation(f32, bool),
 
-    /// Adjust the saturation of the color `(Percentage)`
-    Lightness(f32),
+    /// Adjust the saturation of the color `(Percentage, Relative)`.
+    Lightness(f32, bool),
 
     /// Modifies a color to ensure a minimum contrast ratio against a “background” color.
     /// [Source](https://www.sublimetext.com/docs/minihtml.html#min-contrast-adjuster)
@@ -100,6 +100,12 @@ impl FromStr for ColorSpace {
             _ => Err(ParseError::ParseColorSpace),
         }
     }
+}
+
+#[derive(Debug, PartialEq)]
+pub enum Number {
+    Integer(i32),
+    Float(f32),
 }
 
 #[derive(Debug, PartialEq)]
@@ -218,17 +224,85 @@ pub fn parse_adjuster(s: &str) -> Result<Adjuster, ParseError> {
         AdjusterKind::Alpha => {
             let number = parse_number(&mut stream)?;
 
-            Ok(Adjuster::Alpha(number))
+            if let Number::Float(float) = number {
+                if !(0.0..=1.0).contains(&float) {
+                    return Err(ParseError::ParseAdjuster);
+                }
+
+                Ok(Adjuster::Alpha(float))
+            } else {
+                Err(ParseError::ParseAdjuster)
+            }
         }
         AdjusterKind::Saturation => {
-            let number = parse_number(&mut stream)?;
+            let mut number_string = String::new();
+            let mut relative = false;
 
-            Ok(Adjuster::Saturation(number))
+            for token in stream.by_ref() {
+                match token {
+                    Token::Number(n) => number_string.push_str(&n),
+                    Token::SubtractOperator => {
+                        number_string.push('-');
+                        relative = true;
+                    }
+                    Token::AddOperator => {
+                        number_string.push('+');
+                        relative = true;
+                    }
+                    Token::Percent => number_string.push('%'),
+                    Token::Point => number_string.push('.'),
+                    Token::WhiteSpace => continue,
+                    Token::CloseParen => break,
+                    _ => return Err(ParseError::ParseAdjuster),
+                }
+            }
+
+            let number = parse_number_string(&number_string)?;
+
+            if let Number::Float(float) = number {
+                if !(-1.0..=1.0).contains(&float) {
+                    return Err(ParseError::ParseAdjuster);
+                }
+
+                Ok(Adjuster::Saturation(float, relative))
+            } else {
+                Err(ParseError::ParseAdjuster)
+            }
         }
         AdjusterKind::Lightness => {
-            let number = parse_number(&mut stream)?;
+            let mut number_string = String::new();
+            let mut relative = false;
 
-            Ok(Adjuster::Lightness(number))
+            for token in stream.by_ref() {
+                match token {
+                    Token::Number(n) => number_string.push_str(&n),
+                    Token::SubtractOperator => {
+                        number_string.push('-');
+                        relative = true;
+                    }
+                    Token::AddOperator => {
+                        number_string.push('+');
+                        relative = true;
+                    }
+                    Token::Percent => number_string.push('%'),
+                    Token::Point => number_string.push('.'),
+                    Token::WhiteSpace => continue,
+                    Token::CloseParen => break,
+                    _ => return Err(ParseError::ParseAdjuster),
+                }
+            }
+
+            let number = parse_number_string(&number_string)?;
+
+            if let Number::Float(float) = number {
+                if !(-1.0..=1.0).contains(&float) {
+                    return Err(ParseError::ParseAdjuster);
+                }
+
+                Ok(Adjuster::Lightness(float, relative))
+            } else {
+                Err(ParseError::ParseAdjuster)
+            }
         }
         AdjusterKind::MinContrast => {
             let arguments = split_expression(&mut stream)?;
@@ -240,9 +314,13 @@ pub fn parse_adjuster(s: &str) -> Result<Adjuster, ParseError> {
             let color = parse_color(&arguments[0])?;
             let percentage = parse_number_string(&arguments[1])?;
 
-            Ok(Adjuster::MinContrast(color, percentage))
+            if let Number::Float(float) = percentage {
+                Ok(Adjuster::MinContrast(color, float))
+            } else {
+                Err(ParseError::ParseAdjuster)
+            }
         }
-        AdjusterKind::Blend | AdjusterKind::BlendAlpha => {
+        AdjusterKind::Blend => {
             let arguments = split_expression(&mut stream)?;
 
             if arguments.len() < 2 || arguments.len() > 3 {
@@ -256,10 +334,30 @@ pub fn parse_adjuster(s: &str) -> Result<Adjuster, ParseError> {
                 .map(|arg| ColorSpace::from_str(arg))
                 .transpose()?;
 
-            if kind == AdjusterKind::Blend {
-                Ok(Adjuster::Blend(color, percentage, color_space))
+            if let Number::Float(float) = percentage {
+                Ok(Adjuster::Blend(color, float, color_space))
             } else {
-                Ok(Adjuster::BlendAlpha(color, percentage, color_space))
+                Err(ParseError::ParseAdjuster)
+            }
+        }
+        AdjusterKind::BlendAlpha => {
+            let arguments = split_expression(&mut stream)?;
+
+            if arguments.len() < 2 || arguments.len() > 3 {
+                return Err(ParseError::ParseAdjuster);
+            }
+
+            let color = parse_color(&arguments[0])?;
+            let percentage = parse_number_string(&arguments[1])?;
+            let color_space = arguments
+                .get(2)
+                .map(|arg| ColorSpace::from_str(arg))
+                .transpose()?;
+
+            if let Number::Float(float) = percentage {
+                Ok(Adjuster::BlendAlpha(color, float, color_space))
+            } else {
+                Err(ParseError::ParseAdjuster)
             }
         }
     }
@@ -366,7 +464,7 @@ fn split_expression(stream: &mut impl Iterator<Item = Token>) -> Result<Vec<Stri
     Ok(arguments)
 }
 
-fn parse_number(stream: &mut impl Iterator<Item = Token>) -> Result<f32, ParseError> {
+fn parse_number(stream: &mut impl Iterator<Item = Token>) -> Result<Number, ParseError> {
     let mut chars = String::new();
     for token in stream.by_ref() {
         match token {
@@ -383,11 +481,25 @@ fn parse_number(stream: &mut impl Iterator<Item = Token>) -> Result<f32, ParseEr
     parse_number_string(&chars)
 }
 
-fn parse_number_string(input: &str) -> Result<f32, ParseError> {
+fn parse_number_string(input: &str) -> Result<Number, ParseError> {
+    if input.is_empty() {
+        return Err(ParseError::InvalidNumber("Empty string".to_string()));
+    }
+
+    if input.chars().filter(|c| *c == '.').count() > 1 {
+        return Err(ParseError::InvalidNumber(
+            "Too many decimal points".to_string(),
+        ));
+    }
+
+    let float = input.contains('.');
+
     Ok(if let Some(stripped) = input.strip_suffix('%') {
-        stripped.parse::<f32>().map(|n| n / 100.0)?
+        Number::Float(stripped.parse::<f32>().map(|n| n / 100.0)?)
+    } else if float {
+        Number::Float(input.parse::<f32>()?)
     } else {
-        input.parse::<f32>()?
+        Number::Integer(input.parse::<i32>()?)
     })
 }
 
@@ -408,8 +520,8 @@ fn parse_variable(stream: &mut impl Iterator<Item = Token>) -> Result<Color, Par
             Token::CloseParen => break,
             _ => {
                 error!("Invalid variable: {}", name);
-                return Err(ParseError::InvalidVariable)
-            },
+                return Err(ParseError::InvalidVariable);
+            }
         }
     }
 
@@ -425,7 +537,7 @@ fn parse_color_function(
     }
 
     let mut stream = stream.peekable();
-    let mut numbers: Vec<f32> = Vec::new();
+    let mut numbers: Vec<Number> = Vec::new();
     let mut current_number = String::new();
 
     for token in stream.by_ref() {
@@ -459,35 +571,154 @@ fn parse_color_function(
                 return Err(ParseError::InvalidColorFunction);
             }
 
-            Ok(Color::RGB(numbers[0], numbers[1], numbers[2]))
+            let rgb: Vec<u8> = numbers
+                .iter()
+                .take(3)
+                .map(|num| {
+                    if let Number::Integer(value) = num {
+                        Ok(*value as u8)
+                    } else {
+                        Err(ParseError::InvalidColorFunction)
+                    }
+                })
+                .collect::<Result<Vec<u8>, _>>()?;
+
+            Ok(Color::RGB(rgb[0], rgb[1], rgb[2]))
         }
         ColorFunction::HSL => {
             if numbers.len() != 3 {
                 return Err(ParseError::InvalidColorFunction);
             }
 
-            Ok(Color::HSL(numbers[0], numbers[1], numbers[2]))
+            let (first, rest) = numbers
+                .split_first()
+                .ok_or(ParseError::InvalidColorFunction)?;
+
+            let hue = if let Number::Integer(value) = first {
+                if *value < 0 || *value > 360 {
+                    return Err(ParseError::InvalidColorFunction);
+                }
+
+                *value as u32
+            } else {
+                return Err(ParseError::InvalidColorFunction);
+            };
+
+            let numbers: Vec<f32> = rest
+                .iter()
+                .map(|num| {
+                    if let Number::Float(value) = num {
+                        Ok(*value)
+                    } else {
+                        Err(ParseError::InvalidColorFunction)
+                    }
+                })
+                .collect::<Result<Vec<f32>, _>>()?;
+
+            Ok(Color::HSL(hue, numbers[0], numbers[1]))
         }
+
         ColorFunction::HWB => {
             if numbers.len() != 3 || numbers.len() != 4 {
                 return Err(ParseError::InvalidColorFunction);
             }
 
-            Ok(Color::HWB(numbers[0], numbers[1], numbers[2], Some(numbers[3])))
+            let (hue, arguments) = numbers
+                .split_first()
+                .ok_or(ParseError::InvalidColorFunction)?;
+
+            let hue = if let Number::Integer(value) = hue {
+                if *value < 0 || *value > 360 {
+                    return Err(ParseError::InvalidColorFunction);
+                }
+
+                *value as u32
+            } else {
+                return Err(ParseError::InvalidColorFunction);
+            };
+
+            let arguments: Vec<f32> = arguments
+                .iter()
+                .map(|num| {
+                    if let Number::Float(value) = num {
+                        Ok(*value)
+                    } else {
+                        Err(ParseError::InvalidColorFunction)
+                    }
+                })
+                .collect::<Result<Vec<f32>, _>>()?;
+
+            Ok(Color::HWB(
+                hue,
+                arguments[0],
+                arguments[1],
+                Some(arguments[2]),
+            ))
         }
+
         ColorFunction::RGBA => {
             if numbers.len() != 4 {
                 return Err(ParseError::InvalidColorFunction);
             }
 
-            Ok(Color::RGBA(numbers[0], numbers[1], numbers[2], numbers[3]))
+            let (alpha, rest) = numbers
+                .split_last()
+                .ok_or(ParseError::InvalidColorFunction)?;
+
+            let rgb: Vec<u8> = rest
+                .iter()
+                .map(|num| {
+                    if let Number::Integer(value) = num {
+                        Ok(*value as u8)
+                    } else {
+                        Err(ParseError::InvalidColorFunction)
+                    }
+                })
+                .collect::<Result<Vec<u8>, _>>()?;
+
+            let alpha = if let Number::Float(value) = alpha {
+                if *value < 0.0 || *value > 1.0 {
+                    return Err(ParseError::InvalidColorFunction);
+                }
+                *value
+            } else {
+                return Err(ParseError::InvalidColorFunction);
+            };
+
+            Ok(Color::RGBA(rgb[0], rgb[1], rgb[2], alpha))
         }
+
         ColorFunction::HSLA => {
             if numbers.len() != 4 {
                 return Err(ParseError::InvalidColorFunction);
             }
 
-            Ok(Color::HSLA(numbers[0], numbers[1], numbers[2], numbers[3]))
+            let (hue, arguments) = numbers
+                .split_first()
+                .ok_or(ParseError::InvalidColorFunction)?;
+
+            let hue = if let Number::Integer(value) = hue {
+                if *value < 0 || *value > 360 {
+                    return Err(ParseError::InvalidColorFunction);
+                }
+
+                *value as u32
+            } else {
+                return Err(ParseError::InvalidColorFunction);
+            };
+
+            let arguments: Vec<f32> = arguments
+                .iter()
+                .map(|num| {
+                    if let Number::Float(value) = num {
+                        Ok(*value)
+                    } else {
+                        Err(ParseError::InvalidColorFunction)
+                    }
+                })
+                .collect::<Result<Vec<f32>, _>>()?;
+
+            Ok(Color::HSLA(hue, arguments[0], arguments[1], arguments[2]))
         }
         _ => Err(ParseError::InvalidColorFunction),
     }
@@ -539,19 +770,19 @@ mod tests {
 
         let adjusters = [
             ("alpha(50%)", Adjuster::Alpha(0.5)),
-            ("saturation(50%)", Adjuster::Saturation(0.5)),
-            ("lightness(50%)", Adjuster::Lightness(0.5)),
+            ("saturation(50%)", Adjuster::Saturation(0.5, false)),
+            ("lightness(50%)", Adjuster::Lightness(0.5, false)),
             (
                 "blend(rgb(100, 0, 200) 50%)",
-                Adjuster::Blend(Color::RGB(100.0, 0.0, 200.0), 0.5, None),
+                Adjuster::Blend(Color::RGB(100, 0, 200), 0.5, None),
             ),
             (
                 "blend(rgb(100, 0, 200) 50% hsl)",
-                Adjuster::Blend(Color::RGB(100.0, 0.0, 200.0), 0.5, Some(ColorSpace::HSL)),
+                Adjuster::Blend(Color::RGB(100, 0, 200), 0.5, Some(ColorSpace::HSL)),
             ),
             (
                 "min-contrast(rgb(100, 0, 200) 50%)",
-                Adjuster::MinContrast(Color::RGB(100.0, 0.0, 200.0), 0.5),
+                Adjuster::MinContrast(Color::RGB(100, 0, 200), 0.5),
             ),
         ];
 
@@ -589,12 +820,9 @@ mod tests {
         start_log();
 
         let functions = [
-            ("rgb(100, 0, 200)", Color::RGB(100.0, 0.0, 200.0)),
-            (
-                "rgba(100, 0, 200, 0.5)",
-                Color::RGBA(100.0, 0.0, 200.0, 0.5),
-            ),
-            ("hsl(100, 50%, 100%)", Color::HSL(100.0, 0.5, 1.0)),
+            ("rgb(100, 0, 200)", Color::RGB(100, 0, 200)),
+            ("rgba(100, 0, 200, 0.5)", Color::RGBA(100, 0, 200, 0.5)),
+            ("hsl(100, 50%, 100%)", Color::HSL(100, 0.5, 1.0)),
         ];
 
         for (string, expected) in functions {
@@ -609,7 +837,7 @@ mod tests {
         assert_eq!(
             parse_color("color(rgb(100, 0, 200) alpha(50%))").unwrap(),
             Color::Expression(
-                Box::new(Color::RGB(100.0, 0.0, 200.0)),
+                Box::new(Color::RGB(100, 0, 200)),
                 vec![Adjuster::Alpha(0.5)]
             )
         );
@@ -620,12 +848,12 @@ mod tests {
             )
             .unwrap(),
             Color::Expression(
-                Box::new(Color::RGB(100.0, 0.0, 200.0)),
+                Box::new(Color::RGB(100, 0, 200)),
                 vec![
                     Adjuster::Alpha(0.5),
                     Adjuster::Blend(
                         Color::Expression(
-                            Box::new(Color::RGB(100.0, 0.0, 200.0)),
+                            Box::new(Color::RGB(100, 0, 200)),
                             vec![Adjuster::Alpha(0.5)]
                         ),
                         0.5,
@@ -662,17 +890,17 @@ mod tests {
     #[test]
     fn parse_numbers() {
         let numbers = [
-            ("1", 1.0),
-            ("-1", -1.0),
-            ("1.0", 1.0),
-            ("-1.0", -1.0),
-            ("1%", 0.01),
-            ("-1%", -0.01),
-            ("+1", 1.0),
-            ("1.0%", 0.01),
-            ("100%", 1.0),
-            ("100.0%", 1.0),
-            ("100.0", 100.0),
+            ("1", Number::Integer(1)),
+            ("-1", Number::Integer(-1)),
+            ("1.0", Number::Float(1.0)),
+            ("-1.0", Number::Float(-1.0)),
+            ("1%", Number::Float(0.01)),
+            ("-1%", Number::Float(-0.01)),
+            ("+1", Number::Integer(1)),
+            ("1.0%", Number::Float(0.01)),
+            ("100%", Number::Float(1.0)),
+            ("100.0%", Number::Float(1.0)),
+            ("100.0", Number::Float(100.0)),
         ];
 
         for (string, expected) in numbers {

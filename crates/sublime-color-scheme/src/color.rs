@@ -8,7 +8,7 @@ use crate::{
 use log::debug;
 use palette::{
     color_difference::Wcag21RelativeContrast, Darken, Hsl, Hsla, Hwb, Hwba, IntoColor, Lighten,
-    LinSrgba, Mix, Saturate, Srgb, Srgba, WithAlpha,
+    LinSrgba, Mix, Saturate, Srgba, WithAlpha,
 };
 use syntect::highlighting::Color as SyntectColor;
 
@@ -46,8 +46,13 @@ fn get_palette_color(
     input_color: Color,
     variables: &HashMap<String, String>,
 ) -> Result<Srgba, ParseError> {
-    let color = match input_color {
-        Color::RGB(red, green, blue) => Srgba::new(red, green, blue, 1.0),
+    let color: Srgba<f32> = match input_color {
+        Color::RGB(red, green, blue) => Srgba::new(
+            red as f32 / 255.0,
+            green as f32 / 255.0,
+            blue as f32 / 255.0,
+            1.0,
+        ),
         Color::Hex(hex) => match hex.len() {
             3 => Srgba::new(
                 u8::from_str_radix(&hex[0..1], 16)?,
@@ -82,18 +87,24 @@ fn get_palette_color(
             .into(),
             _ => return Err(ParseError::InvalidHexColor),
         },
-        Color::RGBA(red, green, blue, alpha) => Srgba::new(red, green, blue, alpha),
-        Color::HSL(hue, saturation, lightness) => Hsl::new(hue, saturation, lightness).into_color(),
-
+        Color::RGBA(red, green, blue, alpha) => Srgba::new(
+            red as f32 / 255.0,
+            green as f32 / 255.0,
+            blue as f32 / 255.0,
+            alpha,
+        ),
+        Color::HSL(hue, saturation, lightness) => {
+            Hsl::new(hue as f32, saturation, lightness).into_color()
+        }
         Color::HSLA(hue, saturation, lightness, alpha) => {
-            Hsla::new(hue, saturation, lightness, alpha).into_color()
+            Hsla::new(hue as f32, saturation, lightness, alpha).into_color()
         }
 
         Color::HWB(hue, whiteness, blackness, alpha) => {
             if let Some(alpha) = alpha {
-                Hwba::new(hue, whiteness, blackness, alpha).into_color()
+                Hwba::new(hue as f32, whiteness, blackness, alpha).into_color()
             } else {
-                Hwb::new(hue, whiteness, blackness).into_color()
+                Hwb::new(hue as f32, whiteness, blackness).into_color()
             }
         }
         Color::Variable(name) => {
@@ -134,10 +145,10 @@ fn get_palette_color(
                             false,
                         );
                     }
-                    Adjuster::Lightness(lightness) => {
+                    Adjuster::Lightness(lightness, _) => {
                         current_color = current_color.lighten_fixed(lightness);
                     }
-                    Adjuster::Saturation(saturation) => {
+                    Adjuster::Saturation(saturation, _) => {
                         let hsl: Hsla = current_color.into_color();
 
                         current_color = hsl.saturate_fixed(saturation).into_color();

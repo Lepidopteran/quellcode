@@ -3,8 +3,7 @@ use log::debug;
 use serde::Deserialize;
 use std::{collections::HashMap, str::FromStr};
 use syntect::highlighting::{
-    Color as SyntectColor, FontStyle, ScopeSelectors, StyleModifier, Theme, ThemeItem,
-    ThemeSettings, UnderlineOption,
+    FontStyle, ScopeSelectors, StyleModifier, Theme, ThemeItem, ThemeSettings, UnderlineOption,
 };
 
 pub mod color;
