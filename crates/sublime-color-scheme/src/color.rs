@@ -7,8 +7,8 @@ use crate::{
 
 use log::debug;
 use palette::{
-    color_difference::Wcag21RelativeContrast, Darken, Hsl, Hsla, Hwb, Hwba, IntoColor, Lighten,
-    LinSrgba, Mix, Saturate, Srgba, WithAlpha,
+    color_difference::Wcag21RelativeContrast, Darken, Desaturate, Hsl, Hsla, Hwb, Hwba, IntoColor,
+    Lighten, LinSrgba, Mix, Saturate, Srgba, WithAlpha,
 };
 use syntect::highlighting::Color as SyntectColor;
 
@@ -145,13 +145,37 @@ fn get_palette_color(
                             false,
                         );
                     }
-                    Adjuster::Lightness(lightness, _) => {
-                        current_color = current_color.lighten_fixed(lightness);
-                    }
-                    Adjuster::Saturation(saturation, _) => {
-                        let hsl: Hsla = current_color.into_color();
+                    Adjuster::Lightness(lightness, relative) => {
+                        let mut hsl: Hsla = current_color.into_color();
+                        let negative = lightness < 0.0;
+                        if !relative {
+                            hsl.lightness = lightness;
+                            current_color = hsl.into_color();
 
-                        current_color = hsl.saturate_fixed(saturation).into_color();
+                            continue;
+                        }
+
+                        if negative {
+                            current_color = current_color.darken(-lightness);
+                        } else {
+                            current_color = current_color.lighten(lightness);
+                        }
+                    }
+                    Adjuster::Saturation(saturation, relative) => {
+                        let mut hsl: Hsla = current_color.into_color();
+
+                        if !relative {
+                            hsl.saturation = saturation;
+                            current_color = hsl.into_color();
+
+                            continue;
+                        }
+
+                        if saturation > 0.0 {
+                            current_color = hsl.saturate(saturation).into_color();
+                        } else {
+                            current_color = hsl.desaturate(-saturation).into_color();
+                        }
                     }
                     Adjuster::MinContrast(background_color, ratio) => {
                         let mut foreground: LinSrgba<f32> = current_color.into_linear();
