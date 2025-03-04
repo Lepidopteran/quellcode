@@ -197,6 +197,7 @@ mod tests {
             include_str!("../assets/schemes/Gruvbox Material Dark.sublime-color-scheme"),
             include_str!("../assets/schemes/Kanagawa.sublime-color-scheme"),
             include_str!("../assets/schemes/Nord.sublime-color-scheme"),
+            include_str!("../assets/schemes/Monokai.sublime-color-scheme"),
         ];
 
         for scheme in schemes {
