@@ -1,5 +1,7 @@
 # Sublime Color Scheme
 
+![Crates.io Version](https://img.shields.io/crates/v/sublime-color-scheme?style=plastic)
+
 This is a _simple_ library to parse a sublime color scheme to a [`syntect::highlighting::Theme`](https://docs.rs/syntect/latest/syntect/highlighting/struct.Theme.html).
 
 I wrote this to use within my project [quellcode](https://github.com/Lepidopteran/quellcode), but other projects may find it useful.
