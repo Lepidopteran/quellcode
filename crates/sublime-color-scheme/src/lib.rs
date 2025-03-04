@@ -1,7 +1,7 @@
 use color::get_color;
 use log::debug;
 use serde::Deserialize;
-use std::{collections::HashMap, str::FromStr};
+use std::{collections::HashMap, path::Path, str::FromStr};
 use syntect::highlighting::{
     FontStyle, ScopeSelectors, StyleModifier, Theme, ThemeItem, ThemeSettings, UnderlineOption,
 };
@@ -141,6 +141,21 @@ impl TryFrom<ColorScheme> for Theme {
                 .collect::<Result<Vec<_>, ParseError>>()?,
         })
     }
+}
+
+/// Parse a color scheme from a string.
+///
+/// Equivalent to calling [ColorScheme::from_str]
+pub fn parse_color_scheme(scheme: &str) -> Result<ColorScheme, ParseError> {
+    ColorScheme::from_str(scheme)
+}
+
+/// Parse a color scheme from a file.
+///
+/// Equivalent to calling [parse_color_scheme]
+pub fn parse_color_scheme_file(path: &Path) -> Result<ColorScheme, ParseError> {
+    let scheme = std::fs::read_to_string(path)?;
+    parse_color_scheme(&scheme)
 }
 
 #[cfg(test)]
