@@ -1,6 +1,6 @@
 # Sublime Color Scheme
 
-![Crates.io Version](https://img.shields.io/crates/v/sublime-color-scheme?style=plastic)
+[![Crates.io Version](https://img.shields.io/crates/v/sublime-color-scheme?style=plastic)](https://crates.io/crates/sublime-color-scheme)
 
 This is a _simple_ library to parse a sublime color scheme to a [`syntect::highlighting::Theme`](https://docs.rs/syntect/latest/syntect/highlighting/struct.Theme.html).
 
