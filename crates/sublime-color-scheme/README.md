@@ -4,6 +4,37 @@ This is a _simple_ library to parse a sublime color scheme to a [`syntect::highl
 
 I wrote this to use within my project [quellcode](https://github.com/Lepidopteran/quellcode), but other projects may find it useful.
 
+## Supported features
+
+### Colors
+
+- [x] Hex
+- [x] Hex with alpha
+- [x] Named
+- [x] RGB
+- [x] RGBA
+- [x] HSL
+- [x] HSLA
+- [x] HWB
+- [x] HWB with alpha
+- [x] Variables
+- [X] Color Modifiers
+
+### Adjusters
+
+- [x] Lightness
+- [x] Saturation
+- [x] Alpha
+- [x] Blend
+- [x] Blend Alpha
+- [x] Min Contrast
+
+> Min Contrast is supported but I'm im not sure if I implemented correctly. Please open an issue if it doesn't work.
+
+## TODO
+
+- [ ] Foreground Adjust
+
 ## Installation
 
 Add this to your `Cargo.toml`:
