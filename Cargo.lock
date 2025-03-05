@@ -809,8 +809,10 @@ dependencies = [
  "resvg",
  "serde",
  "serde_json",
+ "sublime-color-scheme",
  "svg",
  "syntect",
+ "syntect-vscode",
  "thiserror 2.0.11",
  "usvg",
 ]
@@ -1796,13 +1798,12 @@ dependencies = [
 
 [[package]]
 name = "sublime-color-scheme"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "env_logger",
  "jsonc-parser",
  "log",
  "palette",
- "regex",
  "serde",
  "serde_json",
  "syntect",
@@ -1856,6 +1857,19 @@ dependencies = [
  "thiserror 1.0.69",
  "walkdir",
  "yaml-rust",
+]
+
+[[package]]
+name = "syntect-vscode"
+version = "0.1.0"
+dependencies = [
+ "env_logger",
+ "jsonc-parser",
+ "log",
+ "serde",
+ "serde_json",
+ "syntect",
+ "thiserror 2.0.11",
 ]
 
 [[package]]

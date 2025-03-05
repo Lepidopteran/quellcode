@@ -1,0 +1,21 @@
+[package]
+name = "syntect-vscode"
+version = "0.1.0"
+edition = "2021"
+description = "Parse VSCode themes to Syntect Themes"
+license = "Apache-2.0"
+repository = "https://github.com/Lepidopteran/quellcode/tree/main/crates/sublime-color-scheme"
+categories = ["parser-implementations", "parsing"]
+keywords = ["syntect", "vscode", "code", "parsing", "theme"]
+readme = "README.md"
+
+[dependencies]
+jsonc-parser = { version = "0.26.2", features = ["serde"] }
+log = { version = "0.4.25", features = ["std"] }
+serde = { version = "1.0.217", features = ["derive"] }
+serde_json = "1.0.138"
+syntect = "5.2.0"
+thiserror = "2.0.11"
+
+[dev-dependencies]
+env_logger = "0.11.6"
