@@ -1,4 +1,5 @@
 use std::io::Write;
+use std::str::FromStr;
 
 use gtk::gdk::{Paintable, Texture};
 use gtk::glib::value::FromValue;
@@ -61,6 +62,34 @@ fn render_test_code() -> RenderedCode {
     theme_set
         .add_from_folder("./assets/themes")
         .expect("Could not load themes");
+
+    let kanagawa = sublime_color_scheme::ColorScheme::from_str(include_str!(
+        "../assets/themes/Kanagawa.sublime-color-scheme"
+    ))
+    .unwrap();
+
+    let synthwave = syntect_vscode::VscodeTheme::from_str(include_str!(
+        "../assets/themes/synthwave-color-theme.json"
+    ))
+    .unwrap();
+
+    let tokyo_night = syntect_vscode::VscodeTheme::from_str(include_str!(
+        "../assets/themes/tokyo-night-color-theme.json"
+    ));
+
+    theme_set
+        .themes
+        .insert("Kanagawa".to_string(), kanagawa.try_into().unwrap());
+
+    theme_set
+        .themes
+        .insert("Synthwave".to_string(), synthwave.try_into().unwrap());
+
+    theme_set.themes.insert(
+        "Tokyo Night".to_string(),
+        tokyo_night.unwrap().try_into().unwrap(),
+    );
+
     println!(
         "{:?}",
         theme_set
@@ -69,7 +98,7 @@ fn render_test_code() -> RenderedCode {
             .map(|theme| theme.0)
             .collect::<Vec<_>>()
     );
-    let theme = &theme_set.themes["Dracula"];
+    let theme = &theme_set.themes["Tokyo Night"];
     let mut highlight = HighlightLines::new(syntax, theme);
     let mut document = Document::new();
 
