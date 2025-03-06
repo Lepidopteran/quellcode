@@ -1,128 +1,97 @@
+use svg::node::element::{Rectangle, TSpan, Text};
+use svg::Document;
+use syntect::easy::HighlightLines;
+use syntect::highlighting::{FontStyle, Theme};
+use syntect::parsing::{SyntaxReference, SyntaxSet};
+use usvg::roxmltree;
+
 pub mod escape;
 
-use std::{collections::HashMap, str::FromStr};
+pub fn generate_highlighted_code_svg(
+    text: &str,
+    syntax_set: &SyntaxSet,
+    syntax: &SyntaxReference,
+    theme: &Theme,
+) -> usvg::Tree {
+    let text_size = 12;
+    let offset = 1;
 
-use serde::Deserialize;
-use syntect::{
-    highlighting::{
-        Color, FontStyle, ParseThemeError, ScopeSelectors, StyleModifier, Theme, ThemeItem,
-        ThemeSettings, UnderlineOption,
-    },
-    parsing::ParseScopeError,
-};
-use thiserror::Error;
+    let mut highlight = HighlightLines::new(syntax, theme);
+    let mut document = Document::new();
 
-#[derive(Debug, Error)]
-pub enum ParseError {
-    #[error("Failed to parse JSON")]
-    Json(#[from] serde_json::Error),
-    #[error("Failed to parse scope")]
-    ParseScope(#[from] ParseScopeError),
-    #[error("Failed to parse theme")]
-    ParseTheme(#[from] ParseThemeError),
-}
+    let background = theme
+        .settings
+        .background
+        .unwrap_or(syntect::highlighting::Color::WHITE);
+    let background_element = Rectangle::new()
+        .set("width", "100%")
+        .set("height", "100%")
+        .set(
+            "fill",
+            format!(
+                "#{:02x}{:02x}{:02x}",
+                background.r, background.g, background.b
+            ),
+        );
 
-#[derive(Deserialize)]
-pub struct ColorScheme {
-    pub name: Option<String>,
-    pub author: Option<String>,
-    pub globals: HashMap<String, String>,
-    pub rules: Vec<Rule>,
-}
-impl FromStr for ColorScheme {
-    type Err = ParseError;
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        serde_json::from_str(s).map_err(ParseError::Json)
-    }
-}
-impl TryFrom<ColorScheme> for Theme {
-    type Error = ParseError;
-    fn try_from(value: ColorScheme) -> Result<Self, Self::Error> {
-        let mut settings = ThemeSettings::default();
-        for (key, value) in &value.globals {
-            match &key[..] {
-                "foreground" => settings.foreground = Color::from_str(value).ok(),
-                "background" => settings.background = Color::from_str(value).ok(),
-                "caret" => settings.caret = Color::from_str(value).ok(),
-                "line_highlight" => settings.line_highlight = Color::from_str(value).ok(),
-                "misspelling" => settings.misspelling = Color::from_str(value).ok(),
-                "minimap_border" => settings.minimap_border = Color::from_str(value).ok(),
-                "accent" => settings.accent = Color::from_str(value).ok(),
+    document = document.add(background_element);
 
-                "popup_css" => settings.popup_css = Some(value.clone()),
-                "phantom_css" => settings.phantom_css = Some(value.clone()),
+    for (index, line) in text.lines().enumerate() {
+        let ranges = highlight.highlight_line(line, syntax_set).unwrap();
 
-                "bracket_contents_foreground" => {
-                    settings.bracket_contents_foreground = Color::from_str(value).ok()
-                }
-                "bracket_contents_options" => {
-                    settings.bracket_contents_options = UnderlineOption::from_str(value).ok()
-                }
-                "brackets_foreground" => settings.brackets_foreground = Color::from_str(value).ok(),
-                "brackets_background" => settings.brackets_background = Color::from_str(value).ok(),
-                "brackets_options" => {
-                    settings.brackets_options = UnderlineOption::from_str(value).ok()
-                }
-                "tags_foreground" => settings.tags_foreground = Color::from_str(value).ok(),
-                "tags_options" => settings.tags_options = UnderlineOption::from_str(value).ok(),
-                "highlight" => settings.highlight = Color::from_str(value).ok(),
-                "find_highlight" => settings.find_highlight = Color::from_str(value).ok(),
-                "find_highlight_foreground" => {
-                    settings.find_highlight_foreground = Color::from_str(value).ok()
-                }
-                "gutter" => settings.gutter = Color::from_str(value).ok(),
-                "gutter_foreground" => settings.gutter_foreground = Color::from_str(value).ok(),
-                "selection" => settings.selection = Color::from_str(value).ok(),
-                "selection_foreground" => {
-                    settings.selection_foreground = Color::from_str(value).ok()
-                }
-                "selection_border" => settings.selection_border = Color::from_str(value).ok(),
-                "inactive_selection" => settings.inactive_selection = Color::from_str(value).ok(),
-                "inactive_selection_foreground" => {
-                    settings.inactive_selection_foreground = Color::from_str(value).ok()
-                }
-                "guide" => settings.guide = Color::from_str(value).ok(),
-                "active_guide" => settings.active_guide = Color::from_str(value).ok(),
-                "stack_guide" => settings.stack_guide = Color::from_str(value).ok(),
-                "shadow" => settings.shadow = Color::from_str(value).ok(),
-                _ => (), // E.g. "shadowWidth" and "invisibles" are ignored
+        let mut text_element = Text::new("")
+            .set("font-family", "JetBrains Mono")
+            .set("font-size", format!("{text_size}"))
+            .set("font-weight", "normal")
+            .set("y", ((index + offset) * text_size).to_string());
+
+        for &(ref style, text) in ranges.iter() {
+            let mut tspan = TSpan::new(text.replace('\t', "")).set("xml:space", "preserve");
+
+            tspan = tspan.set(
+                "fill",
+                format!(
+                    "#{:02x}{:02x}{:02x}",
+                    style.foreground.r, style.foreground.g, style.foreground.b
+                ),
+            );
+
+            if style.font_style.contains(FontStyle::BOLD) {
+                tspan = tspan.set("font-weight", "bold");
             }
+
+            text_element = text_element.add(tspan);
         }
 
-        Ok(Self {
-            name: value.name,
-            author: value.author,
-            settings,
-            scopes: value
-                .rules
-                .into_iter()
-                .map(ThemeItem::try_from)
-                .collect::<Result<Vec<_>, _>>()?,
-        })
-    }
-}
+        let tabs = line.match_indices('\t').count();
+        if tabs > 0 {
+            text_element = text_element.set("x", (tabs * text_size).to_string());
+        }
 
-#[derive(Deserialize)]
-pub struct Rule {
-    pub name: Option<String>,
-    pub scope: String,
-    pub font_style: Option<String>,
-    pub foreground: Option<String>,
-    pub background: Option<String>,
-}
-impl TryFrom<Rule> for ThemeItem {
-    type Error = ParseError;
-    fn try_from(value: Rule) -> Result<Self, Self::Error> {
-        Ok(Self {
-            scope: ScopeSelectors::from_str(&value.scope)?,
-            style: StyleModifier {
-                foreground: value.foreground.map(|s| Color::from_str(&s)).transpose()?,
-                background: value.background.map(|s| Color::from_str(&s)).transpose()?,
-                font_style: value
-                    .font_style
-                    .map(|s| FontStyle::from_str(&s))
-                    .transpose()?,
-            },
-        })
+        document = document.add(text_element);
     }
+
+    let height = text.lines().count() * text_size;
+    let width = text.lines().map(|line| line.len()).max().unwrap_or(0) * text_size;
+
+    document = document.set("viewBox", format!("0 0 {} {}", width, height));
+    let mut options = usvg::Options {
+        font_size: text_size as f32,
+        dpi: 96.0,
+        ..usvg::Options::default()
+    };
+
+    options.fontdb_mut().load_system_fonts();
+
+    let document = document.to_string().replace("\n", "");
+    let tree = roxmltree::Document::parse_with_options(
+        &document,
+        roxmltree::ParsingOptions {
+            allow_dtd: true,
+            ..Default::default()
+        },
+    )
+    .unwrap();
+
+    usvg::Tree::from_xmltree(&tree, &options).unwrap()
 }
