@@ -43,7 +43,7 @@ Add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-sublime_color_scheme = "0.1.0"
+sublime-color-scheme = "0.1.2"
 ```
 
 ## Usage

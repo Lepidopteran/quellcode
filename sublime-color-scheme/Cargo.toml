@@ -1,10 +1,10 @@
 [package]
 name = "sublime-color-scheme"
-version = "0.1.1"
+version = "0.1.2"
 edition = "2021"
 description = "Parse Sublime Text color schemes to Syntect Themes"
 license = "Apache-2.0"
-repository = "https://github.com/Lepidopteran/quellcode/tree/main/crates/sublime-color-scheme"
+repository = "https://github.com/Lepidopteran/quellcode/tree/main/sublime-color-scheme"
 categories = ["parser-implementations", "parsing"]
 keywords = ["syntect", "sublime", "color-scheme", "parsing", "theme"]
 readme = "README.md"
