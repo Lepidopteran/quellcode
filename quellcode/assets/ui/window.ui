@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<interface>
+  <template class="QuellCodeWindow" parent="GtkApplicationWindow">
+    <property name="title">QuellCode</property>
+    <property name="default_width">800</property>
+    <property name="default_height">600</property>
+    <child>
+      <object class="GtkPaned" id="layout">
+        <property name="orientation">horizontal</property>
+				<property name="position">100</property>
+        <child>
+          <object class="GtkBox" id="content">
+            <property name="orientation">vertical</property>
+						<child>
+							<object class="GtkTextView" id="editor">
+								<property name="editable">true</property>
+								<property name="cursor-visible">true</property>
+								<property name="wrap-mode">3</property>
+								<property name="monospace">true</property>
+								<style>
+									<class name="code"></class>
+								</style>
+							</object>
+						</child>
+          </object>
+        </child>
+				<child>
+					<object class="GtkBox" id="inspector">
+						<property name="orientation">vertical</property>
+						<style>
+							<class name="sidebar"></class>
+						</style>
+					</object>
+				</child>
+      </object>
+    </child>
+  </template>
+</interface>
