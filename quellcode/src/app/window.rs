@@ -5,6 +5,8 @@ use gtk::subclass::prelude::*;
 use gtk::{gio, glib, Application, CompositeTemplate, TemplateChild};
 
 pub mod imp {
+    use crate::app::ui::code_view::CodeView;
+
     use super::*;
     #[derive(CompositeTemplate, Default)]
     #[template(resource = "/org/quellcode/quellcode/window.ui")]
@@ -17,6 +19,9 @@ pub mod imp {
 
         #[template_child]
         pub layout: TemplateChild<gtk::Paned>,
+
+        #[template_child]
+        pub editor: TemplateChild<CodeView>,
     }
 
     // The central trait for subclassing a GObject

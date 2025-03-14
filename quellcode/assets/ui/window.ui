@@ -12,14 +12,7 @@
           <object class="GtkBox" id="content">
             <property name="orientation">vertical</property>
 						<child>
-							<object class="GtkTextView" id="editor">
-								<property name="editable">true</property>
-								<property name="cursor-visible">true</property>
-								<property name="wrap-mode">3</property>
-								<property name="monospace">true</property>
-								<style>
-									<class name="code"></class>
-								</style>
+							<object class="QuellcodeCodeView" id="editor">
 							</object>
 						</child>
           </object>
