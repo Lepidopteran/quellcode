@@ -36,9 +36,9 @@ pub mod imp {
 
     #[derive(Default)]
     pub struct CodeView {
-        pub syntax_set: RefCell<SyntaxSet>,
-        pub syntax: RefCell<Option<SyntaxReference>>,
-        pub theme: RefCell<Option<Theme>>,
+        pub syntax_set: Rc<RefCell<SyntaxSet>>,
+        pub syntax: Rc<RefCell<Option<SyntaxReference>>>,
+        pub theme: Rc<RefCell<Option<Theme>>>,
     }
 
     #[glib::object_subclass]
@@ -77,6 +77,7 @@ pub mod imp {
                 let theme = theme.borrow();
                 let syntax = syntax.borrow();
 
+                debug!("Highlighting code {} {}", theme.is_none(), syntax.is_none());
                 if let (Some(theme), Some(syntax)) = (theme.as_ref(), syntax.as_ref()) {
                     highlight_code(buffer, &start_iter, &end_iter, theme, &syntax_set, syntax);
                 }
