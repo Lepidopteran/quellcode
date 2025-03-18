@@ -21,7 +21,7 @@ pub mod imp {
         pub inspector: TemplateChild<gtk::Box>,
 
         #[template_child]
-        pub layout: TemplateChild<gtk::Paned>,
+        pub layout: TemplateChild<gtk::Box>,
 
         #[template_child]
         pub editor: TemplateChild<CodeView>,

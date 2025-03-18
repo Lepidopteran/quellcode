@@ -157,6 +157,14 @@ pub mod imp {
                 provider,
                 gtk::STYLE_PROVIDER_PRIORITY_APPLICATION,
             );
+
+            let style = gtk::CssProvider::new();
+            style.load_from_string(include_str!("../../assets/style.css"));
+            gtk::style_context_add_provider_for_display(
+                &Display::default().expect("Failed to get display"),
+                &style,
+                gtk::STYLE_PROVIDER_PRIORITY_APPLICATION,
+            );
         }
 
         fn startup(&self) {
