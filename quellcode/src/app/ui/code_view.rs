@@ -1,30 +1,22 @@
-use std::{
-    cell::{Ref, RefCell},
-    rc::Rc,
-};
+use std::cell::Ref;
 
 use gtk::{
     gdk::RGBA,
     glib::{self, Object},
-    pango,
     prelude::*,
     subclass::prelude::{ObjectSubclassExt, ObjectSubclassIsExt},
     TextTag,
 };
-use log::debug;
+
 use syntect::{
-    highlighting::{
-        FontStyle, HighlightState, Highlighter, RangedHighlightIterator, ScopeSelectors, Theme,
-        ThemeSet,
-    },
-    parsing::{ParseState, ScopeStack, SyntaxReference, SyntaxSet, SCOPE_REPO},
+    highlighting::{HighlightState, Highlighter, RangedHighlightIterator, Theme},
+    parsing::{ParseState, ScopeStack, SyntaxReference, SyntaxSet},
 };
 
 pub mod imp {
     use std::{cell::RefCell, rc::Rc};
 
     use super::*;
-    use glib::Properties;
     use gtk::{
         glib::subclass::prelude::*,
         prelude::{TextViewExt, WidgetExt},
@@ -77,7 +69,6 @@ pub mod imp {
                 let theme = theme.borrow();
                 let syntax = syntax.borrow();
 
-                debug!("Highlighting code {} {}", theme.is_none(), syntax.is_none());
                 if let (Some(theme), Some(syntax)) = (theme.as_ref(), syntax.as_ref()) {
                     highlight_code(buffer, &start_iter, &end_iter, theme, &syntax_set, syntax);
                 }
@@ -221,82 +212,4 @@ fn highlight_code(
             buffer.apply_tag(&tag, &start, &end);
         }
     }
-}
-
-fn create_tags_from_scopes(buffer: &gtk::TextBuffer, theme: &Theme) {
-    for rule in &theme.scopes {
-        let style = rule.style;
-        let font_style = style.font_style;
-
-        let underline_style = if font_style.unwrap_or_default() == FontStyle::UNDERLINE {
-            pango::Underline::Single
-        } else {
-            pango::Underline::None
-        };
-
-        let italic = if font_style.unwrap_or_default() == FontStyle::ITALIC {
-            pango::Style::Italic
-        } else {
-            pango::Style::Normal
-        };
-
-        let weight = if font_style.unwrap_or_default() == FontStyle::BOLD {
-            700
-        } else {
-            400
-        };
-
-        buffer.create_tag(
-            Some(&scope_to_tag_name(&rule.scope)),
-            &[
-                (
-                    "background",
-                    &style
-                        .background
-                        .map(|color| rgba_to_hex(color.r, color.g, color.b, color.a)),
-                ),
-                (
-                    "foreground",
-                    &style
-                        .foreground
-                        .map(|color| rgba_to_hex(color.r, color.g, color.b, color.a)),
-                ),
-                ("underline", &underline_style),
-                ("style", &italic),
-                ("weight", &weight.to_value()),
-            ],
-        );
-    }
-}
-
-fn scope_to_tag_name(scope: &ScopeSelectors) -> String {
-    let mut name = String::new();
-    for selector in &scope.selectors {
-        let scopes = selector.extract_scopes();
-
-        for scope in &scopes {
-            let repo = SCOPE_REPO.lock().expect("Failed to get scope repo");
-            for i in 0..(scope.len()) {
-                let atom = scope.atom_at(i as usize);
-                let atom_s = repo.atom_str(atom);
-                name.push('.');
-                name.push_str(atom_s);
-            }
-
-            name.push(' ')
-        }
-
-        name.pop();
-        name.push_str(", ");
-    }
-
-    let len = name.len();
-    name.truncate(len - 2);
-
-    println!("{}", name);
-    name
-}
-
-fn rgba_to_hex(r: u8, g: u8, b: u8, a: u8) -> String {
-    format!("#{:02x}{:02x}{:02x}{:02x}", r, g, b, a)
 }
