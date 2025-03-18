@@ -4,6 +4,9 @@ use gtk::prelude::*;
 use gtk::subclass::prelude::*;
 use gtk::{gio, glib, Application, CompositeTemplate, TemplateChild};
 
+use super::application::QuellcodeApplication;
+use super::ui::code_view::CodeView;
+
 pub mod imp {
     use crate::app::ui::code_view::CodeView;
 
@@ -41,7 +44,13 @@ pub mod imp {
         }
     }
 
-    impl ObjectImpl for Window {}
+    impl ObjectImpl for Window {
+        fn constructed(&self) {
+            self.parent_constructed();
+
+            self.editor.set_size_request(800, -1);
+        }
+    }
     impl WidgetImpl for Window {}
     impl WindowImpl for Window {}
     impl ApplicationWindowImpl for Window {}
@@ -55,7 +64,18 @@ glib::wrapper! {
 }
 
 impl Window {
-    pub fn new(app: &Application) -> Self {
-        Object::builder().property("application", app).build()
+    pub fn new(app: &QuellcodeApplication) -> Self {
+        let window: Self = Object::builder().build();
+        window.set_application(Some(app));
+
+        window
+    }
+
+    pub fn inspector(&self) -> &gtk::Box {
+        &self.imp().inspector
+    }
+
+    pub fn editor(&self) -> &CodeView {
+        &self.imp().editor
     }
 }

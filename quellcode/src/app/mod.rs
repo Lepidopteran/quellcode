@@ -1,19 +1,103 @@
-use gtk::{prelude::*, Application, ApplicationWindow, Box, Paned};
+use application::QuellcodeApplication;
+use gtk::{
+    glib::{self, closure_local},
+    prelude::*,
+    DropDown, StringList,
+};
 
+mod application;
 mod ui;
 mod window;
 
 const APP_ID: &str = "org.quellcode.Quellcode";
 
-pub fn new() -> Application {
-    let app = Application::builder().application_id(APP_ID).build();
-    app.connect_activate(build_ui);
+pub fn new() -> QuellcodeApplication {
+    let app = QuellcodeApplication::new(APP_ID);
+
+    app.connect_activate(|app| {
+        build_ui(app);
+    });
 
     app
 }
 
-pub fn build_ui(app: &Application) {
+pub fn build_ui(app: &QuellcodeApplication) {
     let window = window::Window::new(app);
+    let theme_set = app.theme_set();
+    let themes = StringList::new(
+        &theme_set
+            .themes
+            .iter()
+            .map(|t| t.0.as_str())
+            .collect::<Vec<_>>(),
+    );
+
+    let inspector = window.inspector();
+    let theme_dropdown = DropDown::builder().model(&themes).build();
+    theme_dropdown.connect_selected_notify(glib::clone!(
+        #[weak]
+        app,
+        move |dropdown| {
+            app.set_code_theme(
+                themes
+                    .string(dropdown.selected())
+                    .expect("Failed to get string"),
+            )
+        }
+    ));
+
+    inspector.append(&theme_dropdown);
+
+    let syntax_set = app.syntax_set();
+    let syntaxes = StringList::new(
+        &syntax_set
+            .syntaxes()
+            .iter()
+            .map(|s| s.name.as_str())
+            .collect::<Vec<_>>(),
+    );
+
+    let syntax_dropdown = DropDown::builder().model(&syntaxes).build();
+    syntax_dropdown.connect_selected_notify(glib::clone!(
+        #[weak]
+        app,
+        move |dropdown| {
+            app.set_code_syntax(
+                syntaxes
+                    .string(dropdown.selected())
+                    .expect("Failed to get string"),
+            )
+        }
+    ));
+
+    inspector.append(&syntax_dropdown);
+
+    let editor = window.editor().clone();
+    let syntax_set = app.syntax_set();
+    editor.set_syntax(syntax_set.find_syntax_by_name("Rust").cloned());
+    app.connect_closure(
+        "theme-changed",
+        false,
+        closure_local!(
+            move |app: &QuellcodeApplication, old_theme: &str, new_theme: &str| {
+                if old_theme == new_theme {
+                    return;
+                }
+
+                let theme_set = app.theme_set();
+                if let Some(theme) = theme_set.themes.get(new_theme) {
+                    editor.set_theme(Some(theme.clone()));
+                }
+            }
+        ),
+    );
+
+    let editor = window.editor().clone();
+    app.connect_code_syntax_notify(move |app| {
+        if let Some(syntax) = app.syntax_set().find_syntax_by_name(&app.code_syntax()) {
+            editor.set_syntax(Some(syntax.clone()));
+        }
+    });
 
     window.present();
 }
