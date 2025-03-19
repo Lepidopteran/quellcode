@@ -127,7 +127,7 @@ pub fn build_ui(app: &QuellcodeApplication) {
             viewer.set_opacity(0.75);
             let syntax_set: SyntaxSet = editor.syntax_set().clone();
             gio::spawn_blocking(move || {
-                let generated_svg = gtk_code_viewer::generate_highlighted_code_svg(
+                let generated_svg = quellcode::generate_highlighted_code_svg(
                     &text,
                     &syntax_set,
                     &editor_syntax,

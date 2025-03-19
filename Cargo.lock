@@ -903,30 +903,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "gtk-code-viewer"
-version = "0.1.0"
-dependencies = [
- "async-channel",
- "color-eyre",
- "directories",
- "env_logger",
- "glib-build-tools",
- "gtk4",
- "image",
- "log",
- "once_cell",
- "resvg",
- "serde",
- "serde_json",
- "sublime-color-scheme",
- "svg",
- "syntect",
- "syntect-vscode",
- "thiserror 2.0.11",
- "usvg",
-]
-
-[[package]]
 name = "gtk4"
 version = "0.9.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1639,6 +1615,30 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7f6d64c71eb498fe9eae14ce4ec935c555749aef511cca85b5568910d6e48001"
 dependencies = [
  "bytemuck",
+]
+
+[[package]]
+name = "quellcode"
+version = "0.1.0"
+dependencies = [
+ "async-channel",
+ "color-eyre",
+ "directories",
+ "env_logger",
+ "glib-build-tools",
+ "gtk4",
+ "image",
+ "log",
+ "once_cell",
+ "resvg",
+ "serde",
+ "serde_json",
+ "sublime-color-scheme",
+ "svg",
+ "syntect",
+ "syntect-vscode",
+ "thiserror 2.0.11",
+ "usvg",
 ]
 
 [[package]]
