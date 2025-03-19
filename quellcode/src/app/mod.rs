@@ -1,9 +1,14 @@
+use std::{cell::RefCell, rc::Rc};
+
 use application::QuellcodeApplication;
 use gtk::{
-    glib::{self, closure_local},
+    glib::{self, closure_local, property::PropertySet},
     prelude::*,
+    subclass::prelude::ObjectSubclassIsExt,
     DropDown, StringList,
 };
+use syntect::parsing::SyntaxSet;
+use usvg::WriteOptions;
 
 mod application;
 mod ui;
@@ -73,6 +78,7 @@ pub fn build_ui(app: &QuellcodeApplication) {
     inspector.append(&syntax_dropdown);
 
     let editor = window.editor().clone();
+    let viewer = window.imp().viewer.clone();
     let syntax_set = app.syntax_set();
     editor.set_syntax(syntax_set.find_syntax_by_name("Rust").cloned());
     app.connect_closure(
@@ -87,6 +93,7 @@ pub fn build_ui(app: &QuellcodeApplication) {
                 let theme_set = app.theme_set();
                 if let Some(theme) = theme_set.themes.get(new_theme) {
                     editor.set_theme(Some(theme.clone()));
+                    viewer.set_theme(Some(theme.clone()));
                 }
             }
         ),
@@ -96,6 +103,31 @@ pub fn build_ui(app: &QuellcodeApplication) {
     app.connect_code_syntax_notify(move |app| {
         if let Some(syntax) = app.syntax_set().find_syntax_by_name(&app.code_syntax()) {
             editor.set_syntax(Some(syntax.clone()));
+        }
+    });
+
+    let viewer = window.imp().viewer.clone();
+    viewer.set_syntax(syntax_set.find_syntax_by_name("XML").cloned());
+    let editor = window.editor().clone();
+
+    editor.buffer().connect_changed(move |buffer| {
+        let syntax_set: &SyntaxSet = &editor.syntax_set();
+        let syntax = editor.syntax();
+        let theme = editor.theme();
+
+        if let (Some(theme), Some(syntax)) = (theme.as_ref(), syntax.as_ref()) {
+            let text = buffer
+                .text(&buffer.start_iter(), &buffer.end_iter(), true)
+                .to_string();
+            viewer
+                .buffer()
+                .set_text(&gtk_code_viewer::generate_highlighted_code_svg(
+                    &text,
+                    syntax_set,
+                    syntax,
+                    theme,
+                    &WriteOptions::default(),
+                ));
         }
     });
 

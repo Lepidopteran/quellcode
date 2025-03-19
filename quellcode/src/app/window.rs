@@ -25,6 +25,9 @@ pub mod imp {
 
         #[template_child]
         pub editor: TemplateChild<CodeView>,
+
+        #[template_child]
+        pub viewer: TemplateChild<CodeView>,
     }
 
     // The central trait for subclassing a GObject

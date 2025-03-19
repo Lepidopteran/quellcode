@@ -3,7 +3,7 @@ use svg::Document;
 use syntect::easy::HighlightLines;
 use syntect::highlighting::{FontStyle, Theme};
 use syntect::parsing::{SyntaxReference, SyntaxSet};
-use usvg::roxmltree;
+use usvg::{roxmltree, WriteOptions};
 
 pub mod escape;
 
@@ -12,7 +12,8 @@ pub fn generate_highlighted_code_svg(
     syntax_set: &SyntaxSet,
     syntax: &SyntaxReference,
     theme: &Theme,
-) -> usvg::Tree {
+    write_options: &WriteOptions,
+) -> String {
     let text_size = 12;
     let offset = 1;
 
@@ -75,13 +76,6 @@ pub fn generate_highlighted_code_svg(
     let width = text.lines().map(|line| line.len()).max().unwrap_or(0) * text_size;
 
     document = document.set("viewBox", format!("0 0 {} {}", width, height));
-    let mut options = usvg::Options {
-        font_size: text_size as f32,
-        dpi: 96.0,
-        ..usvg::Options::default()
-    };
-
-    options.fontdb_mut().load_system_fonts();
 
     let document = document.to_string().replace("\n", "");
     let tree = roxmltree::Document::parse_with_options(
@@ -93,5 +87,15 @@ pub fn generate_highlighted_code_svg(
     )
     .unwrap();
 
-    usvg::Tree::from_xmltree(&tree, &options).unwrap()
+    let mut options = usvg::Options {
+        font_size: text_size as f32,
+        dpi: 96.0,
+        ..usvg::Options::default()
+    };
+
+    options.fontdb_mut().load_system_fonts();
+
+    usvg::Tree::from_xmltree(&tree, &options)
+        .unwrap()
+        .to_string(write_options)
 }

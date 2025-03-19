@@ -27,6 +27,18 @@
                 </child>
               </object>
             </child>
+            <child>
+              <object class="GtkScrolledWindow">
+                <property name="hexpand">true</property>
+                <property name="vexpand">true</property>
+                <child>
+                  <object class="QuellcodeCodeView" id="viewer">
+                    <property name="hexpand">true</property>
+                    <property name="vexpand">true</property>
+                  </object>
+                </child>
+              </object>
+            </child>
           </object>
         </child>
         <child>
