@@ -12,6 +12,7 @@ use syntect::parsing::SyntaxSet;
 use usvg::WriteOptions;
 
 mod application;
+mod dir;
 mod ui;
 mod window;
 
