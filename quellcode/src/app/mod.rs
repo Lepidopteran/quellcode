@@ -2,6 +2,7 @@ use std::{cell::RefCell, rc::Rc};
 
 use application::QuellcodeApplication;
 use gtk::{
+    gio,
     glib::{self, closure_local, property::PropertySet},
     prelude::*,
     subclass::prelude::ObjectSubclassIsExt,
@@ -110,24 +111,41 @@ pub fn build_ui(app: &QuellcodeApplication) {
     viewer.set_syntax(syntax_set.find_syntax_by_name("XML").cloned());
     let editor = window.editor().clone();
 
+    let (sender, receiver) = async_channel::bounded(1);
     editor.buffer().connect_changed(move |buffer| {
-        let syntax_set: &SyntaxSet = &editor.syntax_set();
-        let syntax = editor.syntax();
-        let theme = editor.theme();
+        let syntax = editor.syntax().clone();
+        let theme = editor.theme().clone();
+        let buffer = buffer.clone();
+        let sender = sender.clone();
 
-        if let (Some(theme), Some(syntax)) = (theme.as_ref(), syntax.as_ref()) {
+        if let (Some(theme_syntax), Some(editor_syntax)) = (theme, syntax) {
             let text = buffer
                 .text(&buffer.start_iter(), &buffer.end_iter(), true)
                 .to_string();
-            viewer
-                .buffer()
-                .set_text(&gtk_code_viewer::generate_highlighted_code_svg(
+
+            viewer.set_opacity(0.75);
+            let syntax_set: SyntaxSet = editor.syntax_set().clone();
+            gio::spawn_blocking(move || {
+                let generated_svg = gtk_code_viewer::generate_highlighted_code_svg(
                     &text,
-                    syntax_set,
-                    syntax,
-                    theme,
+                    &syntax_set,
+                    &editor_syntax,
+                    &theme_syntax,
                     &WriteOptions::default(),
-                ));
+                );
+
+                sender
+                    .send_blocking(generated_svg)
+                    .expect("Failed to send svg");
+            });
+        }
+    });
+
+    let viewer = window.imp().viewer.clone();
+    glib::spawn_future_local(async move {
+        while let Ok(svg) = receiver.recv().await {
+            viewer.set_opacity(1.0);
+            viewer.buffer().set_text(&svg);
         }
     });
 
