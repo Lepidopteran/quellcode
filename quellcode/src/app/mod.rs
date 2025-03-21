@@ -1,4 +1,4 @@
-use std::{cell::RefCell, rc::Rc};
+use std::{cell::RefCell, path::PathBuf, rc::Rc};
 
 use application::QuellcodeApplication;
 use gtk::{
@@ -8,6 +8,7 @@ use gtk::{
     subclass::prelude::ObjectSubclassIsExt,
     DropDown, StringList,
 };
+use quellcode::generating::{Generator, RenderOutput};
 use syntect::parsing::SyntaxSet;
 use usvg::WriteOptions;
 
@@ -127,13 +128,9 @@ pub fn build_ui(app: &QuellcodeApplication) {
             viewer.set_opacity(0.75);
             let syntax_set: SyntaxSet = editor.syntax_set().clone();
             gio::spawn_blocking(move || {
-                let generated_svg = quellcode::generate_highlighted_code_svg(
-                    &text,
-                    &syntax_set,
-                    &editor_syntax,
-                    &theme_syntax,
-                    &WriteOptions::default(),
-                );
+                let generator = quellcode::generating::svg::SvgGenerator::default();
+                let generated_svg =
+                    generator.generate(&text, &theme_syntax, &editor_syntax, &syntax_set);
 
                 sender
                     .send_blocking(generated_svg)
@@ -145,8 +142,10 @@ pub fn build_ui(app: &QuellcodeApplication) {
     let viewer = window.imp().viewer.clone();
     glib::spawn_future_local(async move {
         while let Ok(svg) = receiver.recv().await {
-            viewer.set_opacity(1.0);
-            viewer.buffer().set_text(&svg);
+            if let Ok(RenderOutput::Both(svg, _)) = svg {
+                viewer.set_opacity(1.0);
+                viewer.buffer().set_text(&svg);
+            }
         }
     });
 
