@@ -13,15 +13,12 @@ mod application;
 mod dir;
 mod ui;
 mod window;
-use quellcode::generating::svg::{generate_svg, SvgOptions};
+use quellcode::{
+    generating::svg::{generate_svg, SvgOptions},
+    ThemeFormat,
+};
 
 pub const APP_ID: &str = "org.quellcode.Quellcode";
-
-pub enum ThemeFormat {
-    Sublime,
-    TmTheme,
-    VsCode,
-}
 
 pub fn new() -> QuellcodeApplication {
     let app = QuellcodeApplication::new(APP_ID);
@@ -43,12 +40,7 @@ pub fn code_theme_files() -> Vec<(ThemeFormat, PathBuf)> {
             entry.ok().and_then(|entry| {
                 let path = entry.path();
                 if path.is_file() {
-                    match path.extension().and_then(|ext| ext.to_str()) {
-                        Some("sublime-color-scheme") => Some((ThemeFormat::Sublime, path)),
-                        Some("tmTheme") => Some((ThemeFormat::TmTheme, path)),
-                        Some("json") => Some((ThemeFormat::VsCode, path)),
-                        _ => None,
-                    }
+                    ThemeFormat::from_path(&path).map(|format| (format, path))
                 } else {
                     None
                 }
@@ -107,7 +99,6 @@ pub fn build_ui(app: &QuellcodeApplication) {
     ));
 
     inspector.append(&syntax_dropdown);
-
 
     let editor = window.editor().clone();
     let viewer = window.imp().viewer.clone();
