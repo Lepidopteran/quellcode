@@ -9,6 +9,7 @@ use usvg::{roxmltree, WriteOptions};
 
 use super::{Generator, Properties, PropertyType, RenderType};
 
+#[derive(Debug, Clone)]
 pub struct SvgGenerator {
     write_options: WriteOptions,
     properties: Properties,
@@ -21,19 +22,19 @@ pub struct SvgGenerator {
 impl Default for SvgGenerator {
     fn default() -> Self {
         Self {
-            properties: HashMap::from([
+            write_options: WriteOptions::default(),
+            font_size: 12.0,
+            padding: 0.0,
+            font_family: "monospace".to_string(),
+            include_background: true,
+            properties: vec![
                 ("include_background", PropertyType::Bool),
                 ("padding", PropertyType::Float),
                 ("font_family", PropertyType::String),
                 ("font_size", PropertyType::Float),
                 ("line_height", PropertyType::Float),
                 ("bake_fonts", PropertyType::Bool),
-            ]),
-            write_options: WriteOptions::default(),
-            font_size: 12.0,
-            padding: 0.0,
-            font_family: "monospace".to_string(),
-            include_background: true,
+            ],
         }
     }
 }
@@ -161,7 +162,7 @@ impl Generator for SvgGenerator {
         }
 
         for (index, line) in text.lines().enumerate() {
-            let ranges = highlight.highlight_line(line, syntax_set).unwrap();
+            let ranges = highlight.highlight_line(line, syntax_set)?;
 
             let mut text_element = Text::new("")
                 .set("font-family", font_family)
@@ -208,7 +209,7 @@ impl Generator for SvgGenerator {
                 ..Default::default()
             },
         )
-        .unwrap();
+        .expect("Failed to parse SVG");
 
         let mut options = usvg::Options {
             font_size: text_size as f32,

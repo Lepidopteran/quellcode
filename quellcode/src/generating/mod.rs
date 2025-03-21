@@ -4,12 +4,14 @@ use thiserror::Error;
 
 pub mod svg;
 
-type Properties = HashMap<&'static str, PropertyType>;
+type Properties = Vec<(&'static str, PropertyType)>;
 
 #[derive(Debug, Error)]
 pub enum GeneratorError {
     #[error("Property error: {0}")]
     PropertyError(#[from] PropertyError),
+    #[error("Highlight error: {0}")]
+    HighlightError(#[from] syntect::Error),
     #[error("Other error: {0}")]
     Other(String),
 }
@@ -38,7 +40,7 @@ pub enum RenderOutput {
     Both(String, Option<Vec<u8>>),
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub enum PropertyType {
     String,
     Int,
