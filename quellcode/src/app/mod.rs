@@ -8,14 +8,12 @@ use gtk::{
     subclass::prelude::ObjectSubclassIsExt,
     DropDown, StringList,
 };
-use quellcode::generating::{svg::SvgGenerator, Generator, RenderOutput};
 use syntect::parsing::SyntaxSet;
-use usvg::WriteOptions;
-
 mod application;
 mod dir;
 mod ui;
 mod window;
+use quellcode::generating::svg::{generate_svg, SvgOptions};
 
 pub const APP_ID: &str = "org.quellcode.Quellcode";
 
@@ -110,6 +108,7 @@ pub fn build_ui(app: &QuellcodeApplication) {
 
     inspector.append(&syntax_dropdown);
 
+
     let editor = window.editor().clone();
     let viewer = window.imp().viewer.clone();
     let syntax_set = app.syntax_set();
@@ -141,14 +140,11 @@ pub fn build_ui(app: &QuellcodeApplication) {
 
     let viewer = window.imp().viewer.clone();
     viewer.set_syntax(syntax_set.find_syntax_by_name("XML").cloned());
-    let gen = SvgGenerator::default();
-
-    for (key, type_) in gen.properties().iter() {
-        println!("Property: {} {:?}", key, type_);
-    }
+    let gen = SvgOptions::default();
 
     let editor = window.editor().clone();
     let (sender, receiver) = async_channel::bounded(1);
+
     editor.buffer().connect_changed(move |buffer| {
         let syntax = editor.syntax().clone();
         let theme = editor.theme().clone();
@@ -164,9 +160,13 @@ pub fn build_ui(app: &QuellcodeApplication) {
             let syntax_set: SyntaxSet = editor.syntax_set().clone();
             let gen_clone = gen.clone();
             gio::spawn_blocking(move || {
-                let generated_svg: RenderOutput = gen_clone
-                    .generate(&text, &theme_syntax, &editor_syntax, &syntax_set)
-                    .unwrap();
+                let generated_svg = generate_svg(
+                    &text,
+                    &theme_syntax,
+                    &editor_syntax,
+                    &syntax_set,
+                    &gen_clone,
+                );
 
                 sender
                     .send_blocking(generated_svg)
@@ -178,7 +178,7 @@ pub fn build_ui(app: &QuellcodeApplication) {
     let viewer = window.imp().viewer.clone();
     glib::spawn_future_local(async move {
         while let Ok(svg) = receiver.recv().await {
-            if let RenderOutput::Both(svg, _) = svg {
+            if let Ok(svg) = svg {
                 viewer.set_opacity(1.0);
                 viewer.buffer().set_text(&svg);
             }
