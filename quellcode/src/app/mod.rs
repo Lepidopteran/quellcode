@@ -8,7 +8,7 @@ use gtk::{
     subclass::prelude::ObjectSubclassIsExt,
     DropDown, StringList,
 };
-use quellcode::generating::{Generator, RenderOutput};
+use quellcode::generating::{svg::SvgGenerator, Generator, RenderOutput};
 use syntect::parsing::SyntaxSet;
 use usvg::WriteOptions;
 
@@ -17,7 +17,13 @@ mod dir;
 mod ui;
 mod window;
 
-const APP_ID: &str = "org.quellcode.Quellcode";
+pub const APP_ID: &str = "org.quellcode.Quellcode";
+
+pub enum ThemeFormat {
+    Sublime,
+    TmTheme,
+    VsCode,
+}
 
 pub fn new() -> QuellcodeApplication {
     let app = QuellcodeApplication::new(APP_ID);
@@ -27,6 +33,30 @@ pub fn new() -> QuellcodeApplication {
     });
 
     app
+}
+
+pub fn code_theme_files() -> Vec<(ThemeFormat, PathBuf)> {
+    let themes_dir = dir::code_theme_dir();
+
+    themes_dir
+        .read_dir()
+        .expect("Failed to read themes dir")
+        .filter_map(|entry| {
+            entry.ok().and_then(|entry| {
+                let path = entry.path();
+                if path.is_file() {
+                    match path.extension().and_then(|ext| ext.to_str()) {
+                        Some("sublime-color-scheme") => Some((ThemeFormat::Sublime, path)),
+                        Some("tmTheme") => Some((ThemeFormat::TmTheme, path)),
+                        Some("json") => Some((ThemeFormat::VsCode, path)),
+                        _ => None,
+                    }
+                } else {
+                    None
+                }
+            })
+        })
+        .collect()
 }
 
 pub fn build_ui(app: &QuellcodeApplication) {
@@ -111,8 +141,13 @@ pub fn build_ui(app: &QuellcodeApplication) {
 
     let viewer = window.imp().viewer.clone();
     viewer.set_syntax(syntax_set.find_syntax_by_name("XML").cloned());
-    let editor = window.editor().clone();
+    let gen = SvgGenerator::default();
 
+    for (key, type_) in gen.properties().iter() {
+        println!("Property: {} {:?}", key, type_);
+    }
+
+    let editor = window.editor().clone();
     let (sender, receiver) = async_channel::bounded(1);
     editor.buffer().connect_changed(move |buffer| {
         let syntax = editor.syntax().clone();
@@ -127,10 +162,11 @@ pub fn build_ui(app: &QuellcodeApplication) {
 
             viewer.set_opacity(0.75);
             let syntax_set: SyntaxSet = editor.syntax_set().clone();
+            let gen_clone = gen.clone();
             gio::spawn_blocking(move || {
-                let generator = quellcode::generating::svg::SvgGenerator::default();
-                let generated_svg =
-                    generator.generate(&text, &theme_syntax, &editor_syntax, &syntax_set);
+                let generated_svg: RenderOutput = gen_clone
+                    .generate(&text, &theme_syntax, &editor_syntax, &syntax_set)
+                    .unwrap();
 
                 sender
                     .send_blocking(generated_svg)
@@ -142,7 +178,7 @@ pub fn build_ui(app: &QuellcodeApplication) {
     let viewer = window.imp().viewer.clone();
     glib::spawn_future_local(async move {
         while let Ok(svg) = receiver.recv().await {
-            if let Ok(RenderOutput::Both(svg, _)) = svg {
+            if let RenderOutput::Both(svg, _) = svg {
                 viewer.set_opacity(1.0);
                 viewer.buffer().set_text(&svg);
             }

@@ -1,4 +1,5 @@
 use std::cell::Ref;
+use std::path::PathBuf;
 
 use crate::app::window::Window;
 use gio::ApplicationFlags;
@@ -13,6 +14,8 @@ use syntect::{
     highlighting::{Theme, ThemeSet},
     parsing::{SyntaxReference, SyntaxSet},
 };
+
+use super::{code_theme_files, dir, ThemeFormat};
 
 /// Generate gtk css theme for a [Theme]
 ///
@@ -106,9 +109,9 @@ pub mod imp {
             match pspec.name() {
                 "code-theme" => {
                     let theme_name = value.get::<String>().expect("Failed to get theme name");
-                    let themes = &self.theme_set.borrow().themes;
+                    let themes_set = &self.theme_set.borrow();
 
-                    if let Some(theme) = themes.get(&theme_name) {
+                    if let Some(theme) = themes_set.themes.get(&theme_name) {
                         self.code_theme_provider
                             .borrow()
                             .load_from_string(&theme_to_gtk_css(theme));
@@ -169,10 +172,62 @@ pub mod imp {
 
         fn startup(&self) {
             self.parent_startup();
+            ensure_app_directories_exist();
 
-            let themes = &self.theme_set.borrow().themes;
-            let theme = themes.first_key_value().expect("Failed to get theme");
-            self.obj().set_code_theme(theme.0.clone());
+            let theme_set = &mut self.theme_set.borrow_mut();
+
+            for (format, path) in code_theme_files() {
+                match format {
+                    ThemeFormat::VsCode => {
+                        let vscode_theme = syntect_vscode::parse_vscode_theme_file(&path);
+
+                        if let Ok(vscode_theme) = vscode_theme {
+                            let theme_name = vscode_theme
+                                .name
+                                .clone()
+                                .unwrap_or(path.file_stem().unwrap().to_string_lossy().to_string());
+
+                            let theme =
+                                Theme::try_from(vscode_theme).expect("Failed to parse theme");
+
+                            theme_set.themes.insert(theme_name, theme);
+                        }
+                    }
+                    ThemeFormat::Sublime => {
+                        let color_scheme = sublime_color_scheme::parse_color_scheme_file(&path);
+
+                        if let Ok(color_scheme) = color_scheme {
+                            let theme_name = color_scheme
+                                .name
+                                .clone()
+                                .unwrap_or(path.file_stem().unwrap().to_string_lossy().to_string());
+
+                            let theme =
+                                Theme::try_from(color_scheme).expect("Failed to parse theme");
+
+                            theme_set.themes.insert(theme_name, theme);
+                        }
+                    }
+                    ThemeFormat::TmTheme => {
+                        let theme = ThemeSet::get_theme(&path);
+                        if let Ok(theme) = theme {
+                            let theme_name = theme
+                                .clone()
+                                .name
+                                .unwrap_or(path.file_stem().unwrap().to_string_lossy().to_string());
+
+                            theme_set.themes.insert(theme_name, theme);
+                        }
+                    }
+                }
+            }
+
+            let theme = theme_set
+                .themes
+                .first_key_value()
+                .expect("Failed to get theme");
+
+            self.code_theme.replace(theme.0.clone());
         }
     }
 }
@@ -197,5 +252,19 @@ impl QuellcodeApplication {
 
     pub fn syntax_set(&self) -> Ref<SyntaxSet> {
         self.imp().syntax_set.borrow()
+    }
+}
+
+fn ensure_app_directories_exist() {
+    for dir in [
+        dir::data_dir(),
+        dir::code_theme_dir(),
+        dir::code_syntax_dir(),
+    ] {
+        if dir.exists() {
+            continue;
+        }
+
+        std::fs::create_dir_all(dir).unwrap();
     }
 }
