@@ -1,16 +1,14 @@
 use std::{cell::RefCell, path::PathBuf, rc::Rc};
 
 use application::QuellcodeApplication;
+use generator::{svg::SvgGenerator, Generator, PropertyType, PropertyValue, RenderOutput};
 use gtk::{
-    gio,
-    glib::{self, closure_local, property::PropertySet},
-    prelude::*,
-    subclass::prelude::ObjectSubclassIsExt,
-    DropDown, StringList,
+    gio, glib::{self, closure_local, property::PropertySet}, prelude::*, subclass::prelude::ObjectSubclassIsExt, CheckButton, DropDown, Entry, Label, SpinButton, StringList
 };
 use syntect::parsing::SyntaxSet;
 mod application;
 mod dir;
+mod generator;
 mod ui;
 mod window;
 use quellcode::{
@@ -24,7 +22,8 @@ pub fn new() -> QuellcodeApplication {
     let app = QuellcodeApplication::new(APP_ID);
 
     app.connect_activate(|app| {
-        build_ui(app);
+        let generator = Rc::new(RefCell::new(SvgGenerator::new()));
+        build_ui(app, generator);
     });
 
     app
@@ -49,7 +48,7 @@ pub fn code_theme_files() -> Vec<(ThemeFormat, PathBuf)> {
         .collect()
 }
 
-pub fn build_ui(app: &QuellcodeApplication) {
+pub fn build_ui(app: &QuellcodeApplication, generator: Rc<RefCell<SvgGenerator>>) {
     let window = window::Window::new(app);
     let theme_set = app.theme_set();
     let themes = StringList::new(
@@ -131,16 +130,77 @@ pub fn build_ui(app: &QuellcodeApplication) {
 
     let viewer = window.imp().viewer.clone();
     viewer.set_syntax(syntax_set.find_syntax_by_name("XML").cloned());
+    let bake_text_check = CheckButton::builder().label("Bake text").build();
+    inspector.append(&bake_text_check);
+    let properties = generator.borrow().properties().clone();
+
+    for proptery in properties {
+        let generator_clone = generator.clone();
+        match proptery.kind {
+            PropertyType::Bool => {
+                let check_button = CheckButton::builder().tooltip_text(proptery.description).label(proptery.name).build();
+
+                if let Some(PropertyValue::Bool(value)) = proptery.default {
+                    check_button.set_active(value);
+                }
+
+                check_button.connect_toggled(move |check_button| {
+                    generator_clone
+                        .borrow_mut()
+                        .set_property(&proptery.name, check_button.is_active());
+                    println!("{:?}", generator_clone.borrow().get_property(&proptery.name));
+                });
+                inspector.append(&check_button);
+            },
+            PropertyType::Float => {
+                let label = Label::builder().label(proptery.name).build();
+                let spin_button = SpinButton::builder().tooltip_text(proptery.description).climb_rate(0.1).build();
+
+                if let Some(PropertyValue::Float(value)) = proptery.default {
+                    spin_button.set_value(value.into());
+                }
+
+                spin_button.connect_value_changed(move |spin_button| {
+                    generator_clone
+                        .borrow_mut()
+                        .set_property(&proptery.name, spin_button.value() as f32);
+                    println!("{:?}", generator_clone.borrow().get_property(&proptery.name));
+                });
+
+                inspector.append(&label);
+                inspector.append(&spin_button);
+            },
+            PropertyType::Int => {
+                let label = Label::builder().label(proptery.name).build();
+                let spin_button = SpinButton::builder().tooltip_text(proptery.description).climb_rate(1.0).build();
+
+                if let Some(PropertyValue::Int(value)) = proptery.default {
+                    spin_button.set_value(value.into());
+                }
+
+                spin_button.connect_value_changed(move |spin_button| {
+                    generator_clone
+                        .borrow_mut()
+                        .set_property(&proptery.name, spin_button.value() as i32);
+                    println!("{:?}", generator_clone.borrow().get_property(&proptery.name));
+                });
+
+                inspector.append(&label);
+                inspector.append(&spin_button);
+            },
+            _ => (),
+        }
+    }
+
     let gen = SvgOptions::default();
 
     let editor = window.editor().clone();
-    let (sender, receiver) = async_channel::bounded(1);
-
+    let (sender, text_receiver) = async_channel::bounded(1);
     editor.buffer().connect_changed(move |buffer| {
         let syntax = editor.syntax().clone();
         let theme = editor.theme().clone();
         let buffer = buffer.clone();
-        let sender = sender.clone();
+        let text_sender = sender.clone();
 
         if let (Some(theme_syntax), Some(editor_syntax)) = (theme, syntax) {
             let text = buffer
@@ -150,16 +210,16 @@ pub fn build_ui(app: &QuellcodeApplication) {
             viewer.set_opacity(0.75);
             let syntax_set: SyntaxSet = editor.syntax_set().clone();
             let gen_clone = gen.clone();
+            let generator = generator.borrow().clone();
             gio::spawn_blocking(move || {
-                let generated_svg = generate_svg(
+                let generated_svg = generator.generate(
                     &text,
                     &theme_syntax,
                     &editor_syntax,
                     &syntax_set,
-                    &gen_clone,
                 );
 
-                sender
+                text_sender
                     .send_blocking(generated_svg)
                     .expect("Failed to send svg");
             });
@@ -168,10 +228,12 @@ pub fn build_ui(app: &QuellcodeApplication) {
 
     let viewer = window.imp().viewer.clone();
     glib::spawn_future_local(async move {
-        while let Ok(svg) = receiver.recv().await {
+        while let Ok(svg) = text_receiver.recv().await {
             if let Ok(svg) = svg {
-                viewer.set_opacity(1.0);
-                viewer.buffer().set_text(&svg);
+                if let RenderOutput::Text(svg) = svg {
+                    viewer.set_opacity(1.0);
+                    viewer.buffer().set_text(&svg);
+                }
             }
         }
     });
