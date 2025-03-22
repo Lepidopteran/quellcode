@@ -1,34 +1,16 @@
 :root {
-  --shadow-color: rgb(from black r g b / calc(alpha * 0.5));
-  --lesser-shadow-color: color-mix(
-    in srgb,
-    var(--shadow-color),
-    transparent 50%
-  );
   --highlight-color: rgb(from white r g b / calc(alpha * 0.5));
-  --lesser-highlight-color: color-mix(
-    in srgb,
-    var(--highlight-color),
-    transparent 50%
-  );
 }
 
-.code {
-  box-shadow:
-    inset 0 0.05rem 0.1rem var(--highlight-color),
-    0.1rem 0.1rem 0.525em var(--shadow-color),
-    -0.1rem -0.1rem 0.25rem var(--lesser-highlight-color);
-  border-radius: 0.75em;
-  padding: 0.5rem 0.5rem;
-  margin: 1em;
+codeview {
+	padding: 0.5rem;
 }
 
-separator {
-  border: none;
+codeview text {
+	background: none;
 }
 
 .inspector {
-  box-shadow: 0 0 1rem var(--shadow-color);
   border-left: 1px solid rgb( from var(--highlight-color) r g b / calc(alpha * 0.25));
   padding: 1rem;
 }
