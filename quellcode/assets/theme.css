@@ -26,6 +26,10 @@ separator {
   border: none;
 }
 
+check:checked, radio:checked {
+	background-color: var(--accent-color);
+}
+
 .inspector {
   box-shadow: 0 0 1rem var(--shadow-color);
 }

@@ -167,16 +167,16 @@ impl TryInto<bool> for PropertyValue {
     }
 }
 
-pub trait Generator {
+pub trait Generator: Send + Sync {
     fn name(&self) -> &str;
     fn description(&self) -> &str;
     fn saveable(&self) -> &bool;
     fn properties(&self) -> &Properties;
     fn get_property(&self, name: &str) -> Result<PropertyValue, GeneratorError>;
-    fn set_property<T: Into<PropertyValue>>(
+    fn set_property(
         &mut self,
         name: &str,
-        value: T,
+        value: PropertyValue,
     ) -> Result<(), GeneratorError>;
     fn kind(&self) -> &RenderType;
 

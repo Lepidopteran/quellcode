@@ -35,6 +35,7 @@
                   <object class="QuellcodeCodeView" id="viewer">
                     <property name="hexpand">true</property>
                     <property name="vexpand">true</property>
+										<property name="editable">false</property>
                   </object>
                 </child>
               </object>
@@ -42,12 +43,62 @@
           </object>
         </child>
         <child>
-          <object class="GtkBox" id="inspector">
-            <property name="orientation">vertical</property>
-            <property name="spacing">4</property>
-            <style>
-              <class name="inspector"></class>
-            </style>
+          <object class="GtkScrolledWindow" id="inspector_scroll">
+            <property name="hscrollbar-policy">never</property>
+            <child>
+              <object class="GtkBox" id="inspector">
+                <property name="orientation">vertical</property>
+                <child>
+                  <object class="GtkBox">
+                    <property name="orientation">vertical</property>
+										<property name="spacing">8</property>
+                    <child>
+                      <object class="GtkBox" id="theme_box">
+                        <property name="orientation">vertical</property>
+                        <child>
+                          <object class="GtkLabel" id="theme_label">
+                            <property name="label">Theme</property>
+                            <property name="xalign">0</property>
+                            <attributes>
+                              <attribute name="weight" value="PANGO_WEIGHT_BOLD"></attribute>
+                              <attribute name="foreground-alpha" value="620000"></attribute>
+                            </attributes>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="GtkDropDown" id="theme_dropdown">
+                            <property name="halign">fill</property>
+                          </object>
+                        </child>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkBox" id="syntax_box">
+                        <property name="orientation">vertical</property>
+                        <child>
+                          <object class="GtkLabel" id="syntax_label">
+                            <property name="label">Syntax</property>
+                            <property name="xalign">0</property>
+                            <attributes>
+                              <attribute name="weight" value="PANGO_WEIGHT_BOLD"></attribute>
+                              <attribute name="foreground-alpha" value="620000"></attribute>
+                            </attributes>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="GtkDropDown" id="syntax_dropdown">
+                            <property name="halign">fill</property>
+                          </object>
+                        </child>
+                      </object>
+                    </child>
+                  </object>
+                </child>
+                <style>
+                  <class name="inspector"></class>
+                </style>
+              </object>
+            </child>
           </object>
         </child>
       </object>

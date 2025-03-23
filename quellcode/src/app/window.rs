@@ -28,6 +28,18 @@ pub mod imp {
 
         #[template_child]
         pub viewer: TemplateChild<CodeView>,
+
+        #[template_child]
+        theme_label: TemplateChild<gtk::Label>,
+
+        #[template_child]
+        pub theme_dropdown: TemplateChild<gtk::DropDown>,
+
+        #[template_child]
+        syntax_label: TemplateChild<gtk::Label>,
+
+        #[template_child]
+        pub syntax_dropdown: TemplateChild<gtk::DropDown>,
     }
 
     // The central trait for subclassing a GObject
@@ -50,8 +62,13 @@ pub mod imp {
     impl ObjectImpl for Window {
         fn constructed(&self) {
             self.parent_constructed();
+            self.theme_label
+                .set_mnemonic_widget(Some(&self.theme_dropdown.clone()));
 
-            self.editor.set_size_request(800, -1);
+            self.syntax_label
+                .set_mnemonic_widget(Some(&self.syntax_dropdown.clone()));
+
+            self.inspector.set_size_request(200, -1);
         }
     }
     impl WidgetImpl for Window {}
@@ -80,5 +97,17 @@ impl Window {
 
     pub fn editor(&self) -> &CodeView {
         &self.imp().editor
+    }
+
+    pub fn viewer(&self) -> &CodeView {
+        &self.imp().viewer
+    }
+
+    pub fn theme_dropdown(&self) -> &gtk::DropDown {
+        &self.imp().theme_dropdown
+    }
+
+    pub fn syntax_dropdown(&self) -> &gtk::DropDown {
+        &self.imp().syntax_dropdown
     }
 }

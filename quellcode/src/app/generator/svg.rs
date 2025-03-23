@@ -75,20 +75,20 @@ impl Generator for SvgGenerator {
         }
     }
 
-    fn set_property<T: Into<PropertyValue>>(
+    fn set_property(
         &mut self,
         name: &str,
-        value: T,
+        value: PropertyValue,
     ) -> Result<(), super::GeneratorError> {
         match name {
             "include_background" => {
-                self.options.include_background = value.into().try_into()?;
+                self.options.include_background = value.try_into()?;
             }
             "font_size" => {
-                self.options.font_size = value.into().try_into()?;
+                self.options.font_size = value.try_into()?;
             }
             "bake_font" => {
-                self.options.write_options.preserve_text = !value.into().try_into()?;
+                self.options.write_options.preserve_text = !value.try_into()?;
             }
             _ => {
                 return Err(super::GeneratorError::PropertyError(

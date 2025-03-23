@@ -102,6 +102,7 @@ impl CodeView {
     }
 
     pub fn set_theme(&self, theme: Option<Theme>) {
+        log::info!("Setting theme");
         self.imp().theme.replace(theme);
         if let (Some(theme), Some(syntax)) = (self.theme().as_ref(), self.syntax().as_ref()) {
             let buffer = self.buffer();
@@ -125,6 +126,7 @@ impl CodeView {
     }
 
     pub fn set_syntax(&self, syntax: Option<SyntaxReference>) {
+        log::info!("Setting syntax");
         self.imp().syntax.replace(syntax);
         if let (Some(theme), Some(syntax)) = (self.theme().as_ref(), self.syntax().as_ref()) {
             let buffer = self.buffer();
