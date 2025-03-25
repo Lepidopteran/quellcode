@@ -302,7 +302,6 @@ pub mod imp {
             glib::spawn_future_local(async move {
                 while let Ok(svg) = generator_receiver.recv().await {
                     if let Ok(RenderOutput::Text(svg)) = svg {
-                        viewer.set_opacity(1.0);
                         viewer.buffer().set_text(&svg);
                     }
                 }
@@ -425,6 +424,8 @@ impl QuellcodeApplication {
 fn ensure_app_directories_exist() {
     for dir in [
         dir::data_dir(),
+        dir::config_dir(),
+        dir::cache_dir(),
         dir::code_theme_dir(),
         dir::code_syntax_dir(),
     ] {
