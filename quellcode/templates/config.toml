@@ -14,3 +14,4 @@ syntax = "{{- syntax -}}"
 # Font settings for the editor and generators
 font_family = "{{- font_family -}}"
 font_size = {{font_size}}
+
