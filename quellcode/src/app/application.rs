@@ -425,7 +425,7 @@ pub mod imp {
                         .expect("Failed to get syntax")
                 });
 
-            debug!("Loaded config:\n{:#?}", config);
+            debug!("Loaded config");
             self.config.replace(config);
 
             self.code_theme.set(theme.0.clone());
