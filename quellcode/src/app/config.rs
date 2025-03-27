@@ -1,4 +1,4 @@
-use std::{fs, io::{Read, Write}};
+use std::{fs, io::Write};
 
 use askama::Template;
 use color_eyre::eyre::Result;

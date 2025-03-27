@@ -2,7 +2,7 @@ use glib::subclass::InitializingObject;
 use glib::Object;
 use gtk::prelude::*;
 use gtk::subclass::prelude::*;
-use gtk::{gio, glib, Application, CompositeTemplate, TemplateChild};
+use gtk::{gio, glib, CompositeTemplate, TemplateChild};
 
 use super::application::QuellcodeApplication;
 use super::ui::code_view::CodeView;

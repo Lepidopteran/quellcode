@@ -1,17 +1,13 @@
 use std::cell::{Ref, RefCell};
-use std::path::PathBuf;
 
-use gio::ApplicationFlags;
-use glib::clone;
 use gtk::glib::Object;
 use gtk::prelude::*;
 use gtk::subclass::prelude::*;
 use gtk::{gdk, gio, glib};
-use log::{debug, error, info};
-use syntect::html::css_for_theme_with_class_style;
+use log::{debug, error};
 use syntect::{
     highlighting::{Theme, ThemeSet},
-    parsing::{SyntaxReference, SyntaxSet},
+    parsing::SyntaxSet,
 };
 
 use super::{
@@ -67,17 +63,15 @@ pub fn theme_to_gtk_css(theme: &Theme) -> String {
 }
 
 pub mod imp {
-    use std::{cell::Cell, io, rc::Rc, sync::Arc};
+    use std::{io, rc::Rc, sync::Arc};
 
     use gdk::Display;
     use glib::{
         closure_local,
         property::PropertySet,
-        subclass::{InitializingObject, Signal},
-        GString, Properties,
+        subclass::Signal, Properties,
     };
     use log::warn;
-    use serde::Serialize;
 
     use crate::app::generator::{svg::SvgGenerator, Generator, RenderOutput};
 
