@@ -76,6 +76,7 @@ pub mod imp {
         subclass::{InitializingObject, Signal},
         GString, Properties,
     };
+    use log::warn;
     use serde::Serialize;
 
     use crate::app::generator::{svg::SvgGenerator, Generator, RenderOutput};
@@ -206,23 +207,29 @@ pub mod imp {
 
             theme_dropdown.set_model(Some(&themes));
 
-            theme_dropdown.set_selected(
-                theme_set
-                    .themes
-                    .iter()
-                    .position(|t| *t.0 == *self.code_theme.borrow())
-                    .unwrap() as u32,
-            );
+            if let Some(position) = theme_set
+                .themes
+                .iter()
+                .position(|t| *t.0 == *self.code_theme.borrow())
+            {
+                theme_dropdown.set_selected(position as u32);
+            } else {
+                warn!("Could not find theme {}", self.code_theme.borrow());
+                theme_dropdown.set_selected(0);
+            }
 
             syntax_dropdown.set_model(Some(&syntaxes));
 
-            syntax_dropdown.set_selected(
-                syntax_set
-                    .syntaxes()
-                    .iter()
-                    .position(|s| s.name == *self.code_syntax.borrow())
-                    .unwrap() as u32,
-            );
+            if let Some(position) = syntax_set
+                .syntaxes()
+                .iter()
+                .position(|s| s.name == *self.code_syntax.borrow())
+            {
+                syntax_dropdown.set_selected(position as u32);
+            } else {
+                warn!("Could not find syntax {}", self.code_syntax.borrow());
+                syntax_dropdown.set_selected(0);
+            }
 
             let config = self.config.clone();
             let self_ = self.obj().clone();
