@@ -4,6 +4,8 @@ mod generator;
 mod ui;
 mod window;
 
+pub mod config;
+
 use std::path::PathBuf;
 use application::QuellcodeApplication;
 

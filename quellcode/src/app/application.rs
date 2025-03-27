@@ -1,7 +1,6 @@
 use std::cell::{Ref, RefCell};
 use std::path::PathBuf;
 
-use crate::app::Window;
 use gio::ApplicationFlags;
 use glib::clone;
 use gtk::glib::Object;
@@ -15,7 +14,11 @@ use syntect::{
     parsing::{SyntaxReference, SyntaxSet},
 };
 
-use super::{code_theme_files, dir, ThemeFormat};
+use super::{
+    code_theme_files,
+    config::{load_config, save_config, write_default_config_file, Config, Core},
+    dir, ThemeFormat, Window,
+};
 
 /// Generate gtk css theme for a [Theme]
 ///
@@ -64,15 +67,16 @@ pub fn theme_to_gtk_css(theme: &Theme) -> String {
 }
 
 pub mod imp {
-    use std::{rc::Rc, sync::Arc};
+    use std::{cell::Cell, io, rc::Rc, sync::Arc};
 
     use gdk::Display;
     use glib::{
         closure_local,
         property::PropertySet,
         subclass::{InitializingObject, Signal},
-        Properties,
+        GString, Properties,
     };
+    use serde::Serialize;
 
     use crate::app::generator::{svg::SvgGenerator, Generator, RenderOutput};
 
@@ -86,6 +90,7 @@ pub mod imp {
         pub code_theme_provider: RefCell<gtk::CssProvider>,
         pub theme_set: RefCell<ThemeSet>,
         pub syntax_set: RefCell<SyntaxSet>,
+        pub config: Rc<RefCell<Config>>,
         #[property(get, set)]
         pub code_theme: RefCell<String>,
         #[property(get, set)]
@@ -107,6 +112,7 @@ pub mod imp {
                 code_theme: RefCell::new(String::new()),
                 code_syntax: RefCell::new(String::new()),
                 generator: RefCell::new(Some(Arc::new(SvgGenerator::default()))),
+                config: Rc::new(RefCell::new(Config::new())),
                 main_window: RefCell::new(None),
             }
         }
@@ -190,26 +196,48 @@ pub mod imp {
             // TODO: Organize the following code.
             let window = Window::new(&self.obj());
 
-            let themes = create_theme_model(&self.theme_set.borrow());
+            let theme_set = self.theme_set.borrow();
+            let themes = create_theme_model(&theme_set);
             let theme_dropdown = window.theme_dropdown();
-            let syntaxes = create_syntax_model(&self.syntax_set.borrow());
+
+            let syntax_set = self.syntax_set.borrow();
+            let syntaxes = create_syntax_model(&syntax_set);
             let syntax_dropdown = window.syntax_dropdown();
 
             theme_dropdown.set_model(Some(&themes));
+
+            theme_dropdown.set_selected(
+                theme_set
+                    .themes
+                    .iter()
+                    .position(|t| *t.0 == *self.code_theme.borrow())
+                    .unwrap() as u32,
+            );
+
             syntax_dropdown.set_model(Some(&syntaxes));
 
+            syntax_dropdown.set_selected(
+                syntax_set
+                    .syntaxes()
+                    .iter()
+                    .position(|s| s.name == *self.code_syntax.borrow())
+                    .unwrap() as u32,
+            );
+
+            let config = self.config.clone();
             let self_ = self.obj().clone();
             theme_dropdown.connect_selected_notify(move |dropdown| {
                 let theme_name = themes.string(dropdown.selected()).unwrap();
                 self_.set_property("code-theme", &theme_name);
+                config.borrow_mut().core.theme = theme_name.to_string();
             });
 
-            syntax_dropdown.set_model(Some(&create_syntax_model(&self.syntax_set.borrow())));
             let self_ = self.obj().clone();
-
+            let config = self.config.clone();
             syntax_dropdown.connect_selected_notify(move |dropdown| {
                 let syntax_name = syntaxes.string(dropdown.selected()).unwrap();
                 self_.set_property("code-syntax", &syntax_name);
+                config.borrow_mut().core.syntax = syntax_name.to_string();
             });
 
             let viewer = window.viewer().clone();
@@ -307,6 +335,17 @@ pub mod imp {
                 }
             });
 
+            let config = self.config.clone();
+            window.connect_close_request(move |_| {
+                debug!("Saving config before closing:\n{:#?}", config.borrow());
+                if let Err(err) = save_config(&config.borrow()) {
+                    error!("Failed to save config, Error:\n{}", err);
+                }
+
+                debug!("Closing window");
+                glib::Propagation::Proceed
+            });
+
             window.present();
             self.main_window.replace(Some(window.clone()));
         }
@@ -317,63 +356,128 @@ pub mod imp {
 
             let theme_set = &mut self.theme_set.borrow_mut();
 
-            for (format, path) in code_theme_files() {
-                match format {
-                    ThemeFormat::VsCode => {
-                        let vscode_theme = syntect_vscode::parse_vscode_theme_file(&path);
+            load_custom_themes(theme_set);
 
-                        if let Ok(vscode_theme) = vscode_theme {
-                            let theme_name = vscode_theme
-                                .name
-                                .clone()
-                                .unwrap_or(path.file_stem().unwrap().to_string_lossy().to_string());
-
-                            let theme =
-                                Theme::try_from(vscode_theme).expect("Failed to parse theme");
-
-                            theme_set.themes.insert(theme_name, theme);
+            let config = match load_config() {
+                Ok(config) => config,
+                Err(err) => {
+                    let theme = theme_set
+                        .themes
+                        .first_key_value()
+                        .expect("Failed to get theme");
+                    let config = Config {
+                        core: Core {
+                            theme: theme.0.clone(),
+                            syntax: self.syntax_set.borrow().syntaxes()[0].name.clone(),
+                            ..Default::default()
+                        },
+                    };
+                    if let Some(io_err) = err.downcast_ref::<io::Error>() {
+                        if io_err.kind() == io::ErrorKind::NotFound {
+                            let result = write_default_config_file(&config);
+                            if let Err(err) = result {
+                                error!("Failed to write default config file, Error:\n{}", err);
+                            }
+                            return;
                         }
+
+                        error!(
+                            "Failed to read config, using default config instead, Error:\n{}",
+                            io_err
+                        );
+                    } else {
+                        error!(
+                            "Failed to load config, using default config instead, Error:\n{}",
+                            err
+                        );
                     }
-                    ThemeFormat::Sublime => {
-                        let color_scheme = sublime_color_scheme::parse_color_scheme_file(&path);
-
-                        if let Ok(color_scheme) = color_scheme {
-                            let theme_name = color_scheme
-                                .name
-                                .clone()
-                                .unwrap_or(path.file_stem().unwrap().to_string_lossy().to_string());
-
-                            let theme =
-                                Theme::try_from(color_scheme).expect("Failed to parse theme");
-
-                            theme_set.themes.insert(theme_name, theme);
-                        }
-                    }
-                    ThemeFormat::TmTheme => {
-                        let theme = ThemeSet::get_theme(&path);
-                        if let Ok(theme) = theme {
-                            let theme_name = theme
-                                .clone()
-                                .name
-                                .unwrap_or(path.file_stem().unwrap().to_string_lossy().to_string());
-
-                            theme_set.themes.insert(theme_name, theme);
-                        }
-                    }
+                    config
                 }
-            }
+            };
 
-            let theme = theme_set
+            let theme: (&String, &Theme) = theme_set
                 .themes
-                .first_key_value()
-                .expect("Failed to get theme");
+                .get_key_value(&config.core.theme)
+                .unwrap_or_else(|| {
+                    log::warn!(
+                        "Theme \"{}\" not found, using default theme",
+                        config.core.theme
+                    );
+                    theme_set
+                        .themes
+                        .first_key_value()
+                        .expect("Failed to get theme")
+                });
+
+            let syntax_sets = &mut self.syntax_set.borrow_mut();
+
+            let syntax = syntax_sets
+                .find_syntax_by_name(&config.core.syntax)
+                .unwrap_or_else(|| {
+                    log::warn!(
+                        "Syntax \"{}\" not found, using default syntax",
+                        config.core.syntax
+                    );
+                    syntax_sets
+                        .syntaxes()
+                        .first()
+                        .expect("Failed to get syntax")
+                });
+
+            debug!("Loaded config:\n{:#?}", config);
+            self.config.replace(config);
 
             self.code_theme.set(theme.0.clone());
+            self.code_syntax.set(syntax.name.clone());
             self.code_theme_provider
                 .borrow()
                 .load_from_string(&theme_to_gtk_css(theme.1));
-            self.code_syntax
-                .set(self.syntax_set.borrow().syntaxes()[0].name.clone());
+        }
+    }
+}
+
+fn load_custom_themes(theme_set: &mut ThemeSet) {
+    for (format, path) in code_theme_files() {
+        match format {
+            ThemeFormat::VsCode => {
+                let vscode_theme = syntect_vscode::parse_vscode_theme_file(&path);
+
+                if let Ok(vscode_theme) = vscode_theme {
+                    let theme_name = vscode_theme
+                        .name
+                        .clone()
+                        .unwrap_or(path.file_stem().unwrap().to_string_lossy().to_string());
+
+                    let theme = Theme::try_from(vscode_theme).expect("Failed to parse theme");
+
+                    theme_set.themes.insert(theme_name, theme);
+                }
+            }
+            ThemeFormat::Sublime => {
+                let color_scheme = sublime_color_scheme::parse_color_scheme_file(&path);
+
+                if let Ok(color_scheme) = color_scheme {
+                    let theme_name = color_scheme
+                        .name
+                        .clone()
+                        .unwrap_or(path.file_stem().unwrap().to_string_lossy().to_string());
+
+                    let theme = Theme::try_from(color_scheme).expect("Failed to parse theme");
+
+                    theme_set.themes.insert(theme_name, theme);
+                }
+            }
+            ThemeFormat::TmTheme => {
+                let theme = ThemeSet::get_theme(&path);
+                if let Ok(theme) = theme {
+                    let theme_name = theme
+                        .clone()
+                        .name
+                        .unwrap_or(path.file_stem().unwrap().to_string_lossy().to_string());
+
+                    theme_set.themes.insert(theme_name, theme);
+                }
+            }
         }
     }
 }
@@ -418,6 +522,10 @@ impl QuellcodeApplication {
 
     pub fn syntax_set(&self) -> Ref<SyntaxSet> {
         self.imp().syntax_set.borrow()
+    }
+
+    pub fn config(&self) -> Ref<Config> {
+        self.imp().config.borrow()
     }
 }
 

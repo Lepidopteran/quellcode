@@ -1,0 +1,16 @@
+# Core Application Settings 
+[core]
+
+# Theme used for syntax highlighting, editor, and generators.
+# The name is case sensitive and must match the name of the theme.
+# If the name is not found, the first theme listed in the theme list will be used at startup.
+theme = "{{- theme -}}"
+
+# Language syntax used for syntax highlighting.
+# The name is case sensitive and must match the name of the syntax, for example rust must be "Rust".
+# If the name is not found, the first syntax listed in the syntax list will be used at startup.
+syntax = "{{- syntax -}}"
+
+# Font settings for the editor and generators
+font_family = "{{- font_family -}}"
+font_size = {{font_size}}
