@@ -72,8 +72,6 @@ pub mod imp {
                 if let (Some(theme), Some(syntax)) = (theme.as_ref(), syntax.as_ref()) {
                     highlight_code(buffer, &start_iter, &end_iter, theme, &syntax_set, syntax);
                 }
-
-                buffer.apply_tag_by_name("global", &start_iter, &end_iter);
             });
         }
     }
@@ -213,5 +211,7 @@ fn highlight_code(
 
             buffer.apply_tag(&tag, &start, &end);
         }
+
+        buffer.apply_tag_by_name("global", start, end);
     }
 }
