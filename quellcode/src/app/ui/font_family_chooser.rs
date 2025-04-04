@@ -4,8 +4,6 @@ use gtk::{
     subclass::prelude::ObjectSubclassIsExt,
 };
 
-const DEFAULT_FONT_FAMILY: &str = "Monospace";
-
 pub mod imp {
     use std::{cell::RefCell, rc::Rc};
 
@@ -47,12 +45,9 @@ pub mod imp {
         filter_model: TemplateChild<gtk::FilterListModel>,
         #[template_child]
         monospace_filter: TemplateChild<gtk::CustomFilter>,
-        #[property(get, set = |s: &Self, v: String| {
-            s.label.set_text(&v);
-            s.selected_family.set(v);
-        })]
-        pub selected_family: RefCell<String>,
-        #[property(get, set, name = "only-monospace")]
+        #[property(get)]
+        pub selected_family: RefCell<Option<FontFamily>>,
+        #[property(get, name = "monospace-filter")]
         pub monospace: Rc<RefCell<bool>>,
     }
 
@@ -91,17 +86,15 @@ pub mod imp {
 
         #[template_callback]
         fn row_activated(&self) {
-            let name = self
-                .selection
-                .selected_item()
+            let selected_item = self.selection.selected_item();
+            let family = selected_item
                 .and_downcast_ref::<FontFamily>()
-                .map(|f| f.name());
+                .expect("Expected FontFamily");
 
-            if let Some(name) = name {
-                self.obj().set_selected_family(name);
-                self.popover.popdown();
-                self.name_filter.set_search(None);
-            }
+            self.label.set_text(&family.name());
+            self.selected_family.set(Some(family.clone()));
+            self.popover.popdown();
+            self.name_filter.set_search(None);
         }
 
         #[template_callback]
@@ -124,7 +117,6 @@ pub mod imp {
 
             let self_obj = self.obj();
             self_obj.set_accessible_role(gtk::AccessibleRole::ComboBox);
-            self_obj.set_selected_family(DEFAULT_FONT_FAMILY);
 
             let pango_context = self.obj().create_pango_context();
             let factory = SignalListItemFactory::default();
