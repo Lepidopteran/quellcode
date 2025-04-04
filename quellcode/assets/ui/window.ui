@@ -35,7 +35,7 @@
                   <object class="QuellcodeCodeView" id="viewer">
                     <property name="hexpand">true</property>
                     <property name="vexpand">true</property>
-										<property name="editable">false</property>
+                    <property name="editable">false</property>
                   </object>
                 </child>
               </object>
@@ -51,7 +51,7 @@
                 <child>
                   <object class="GtkBox">
                     <property name="orientation">vertical</property>
-										<property name="spacing">8</property>
+                    <property name="spacing">8</property>
                     <child>
                       <object class="GtkBox" id="theme_box">
                         <property name="orientation">vertical</property>
@@ -68,6 +68,7 @@
                         <child>
                           <object class="GtkDropDown" id="theme_dropdown">
                             <property name="halign">fill</property>
+														<property name="enable-search">true</property>
                           </object>
                         </child>
                       </object>
@@ -88,10 +89,31 @@
                         <child>
                           <object class="GtkDropDown" id="syntax_dropdown">
                             <property name="halign">fill</property>
+														<property name="enable-search">true</property>
                           </object>
                         </child>
                       </object>
                     </child>
+										<child>
+											<object class="GtkBox" id="font_box">
+												<property name="orientation">vertical</property>
+												<child>
+													<object class="GtkLabel" id="font_label">
+														<property name="label">Font</property>
+														<property name="xalign">0</property>
+														<attributes>
+															<attribute name="weight" value="PANGO_WEIGHT_BOLD"></attribute>
+															<attribute name="foreground-alpha" value="620000"></attribute>
+														</attributes>
+													</object>
+												</child>
+												<child>
+													<object class="QuellcodeFontFamilyChooser" id="font_family_chooser">
+														<property name="halign">fill</property>
+													</object>
+												</child>
+											</object>
+										</child>
                   </object>
                 </child>
                 <style>

@@ -6,6 +6,7 @@ use gtk::{gio, glib, CompositeTemplate, TemplateChild};
 
 use super::application::QuellcodeApplication;
 use super::ui::code_view::CodeView;
+use super::ui::FontFamilyChooser;
 
 pub mod imp {
     use crate::app::ui::code_view::CodeView;
@@ -40,6 +41,9 @@ pub mod imp {
 
         #[template_child]
         pub syntax_dropdown: TemplateChild<gtk::DropDown>,
+
+        #[template_child]
+        pub font_family_chooser: TemplateChild<FontFamilyChooser>,
     }
 
     // The central trait for subclassing a GObject
@@ -68,7 +72,7 @@ pub mod imp {
             self.syntax_label
                 .set_mnemonic_widget(Some(&self.syntax_dropdown.clone()));
 
-            self.inspector.set_size_request(200, -1);
+            self.inspector.set_size_request(300, -1);
         }
     }
     impl WidgetImpl for Window {}
@@ -109,5 +113,9 @@ impl Window {
 
     pub fn syntax_dropdown(&self) -> &gtk::DropDown {
         &self.imp().syntax_dropdown
+    }
+
+    pub fn font_family_chooser(&self) -> &FontFamilyChooser {
+        &self.imp().font_family_chooser
     }
 }
