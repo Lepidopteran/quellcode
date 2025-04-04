@@ -34,7 +34,7 @@ impl Default for Core {
         Self {
             theme: String::new(),
             syntax: String::new(),
-            font_family: String::from("monospace"),
+            font_family: String::from("Monospace"),
             font_size: 12.0,
         }
     }
