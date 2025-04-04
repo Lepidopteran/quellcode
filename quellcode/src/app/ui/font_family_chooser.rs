@@ -40,6 +40,10 @@ pub mod imp {
         #[template_child]
         selection: TemplateChild<gtk::SingleSelection>,
         #[template_child]
+        search: TemplateChild<gtk::SearchEntry>,
+        #[template_child]
+        name_filter: TemplateChild<gtk::StringFilter>,
+        #[template_child]
         filter_model: TemplateChild<gtk::FilterListModel>,
         #[template_child]
         monospace_filter: TemplateChild<gtk::CustomFilter>,
@@ -96,6 +100,7 @@ pub mod imp {
             if let Some(name) = name {
                 self.obj().set_selected_family(name);
                 self.popover.popdown();
+                self.name_filter.set_search(None);
             }
         }
 
@@ -117,7 +122,10 @@ pub mod imp {
             self.parent_constructed();
             self.monospace.set(true);
 
-            self.obj().set_selected_family(DEFAULT_FONT_FAMILY);
+            let self_obj = self.obj();
+            self_obj.set_accessible_role(gtk::AccessibleRole::ComboBox);
+            self_obj.set_selected_family(DEFAULT_FONT_FAMILY);
+
             let pango_context = self.obj().create_pango_context();
             let factory = SignalListItemFactory::default();
             let model = ListStore::new::<FontFamily>();

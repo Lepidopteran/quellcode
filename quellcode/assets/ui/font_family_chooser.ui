@@ -8,7 +8,7 @@
         <property name="filter">
           <object class="GtkEveryFilter" id="multi_filter">
             <child>
-              <object class="GtkStringFilter">
+              <object class="GtkStringFilter" id ="name_filter">
                 <binding name="search">
                   <lookup name="text">search</lookup>
                 </binding>
@@ -27,6 +27,7 @@
   </object>
   <template class="QuellcodeFontFamilyChooser" parent="GtkWidget">
     <accessibility>
+			<property name="labelled-by">label</property>
       <property name="has-popup">true</property>
       <state name="expanded">false</state>
     </accessibility>
@@ -39,7 +40,7 @@
             <property name="can-focus">false</property>
             <child>
               <object class="GtkLabel" id="label">
-                <property name="xalign">0.0</property>
+                <property name="xalign">0</property>
                 <property name="hexpand">true</property>
               </object>
             </child>
@@ -55,6 +56,7 @@
     </child>
     <child>
       <object class="GtkPopover" id="popover">
+        <property name="accessible-role">list-box</property>
         <signal handler="popover_closed" name="closed" swapped="true"></signal>
         <property name="has-arrow">false</property>
         <property name="halign">start</property>
