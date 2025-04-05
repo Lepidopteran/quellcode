@@ -63,7 +63,11 @@ pub fn theme_to_gtk_css(theme: &Theme) -> String {
 }
 
 pub mod imp {
-    use std::{io, rc::Rc, sync::Arc};
+    use std::{
+        io,
+        rc::Rc,
+        sync::{Arc, Mutex},
+    };
 
     use gdk::Display;
     use glib::{closure_local, property::PropertySet, subclass::Signal, Properties};
@@ -82,7 +86,7 @@ pub mod imp {
     #[properties(wrapper_type = super::QuellcodeApplication)]
     pub struct QuellcodeApplication {
         pub main_window: RefCell<Option<Window>>,
-        pub generator: RefCell<Option<Arc<dyn Generator>>>,
+        pub generator: Arc<Mutex<dyn Generator>>,
         pub code_theme_provider: RefCell<gtk::CssProvider>,
         pub theme_set: RefCell<ThemeSet>,
         pub syntax_set: RefCell<SyntaxSet>,
@@ -107,7 +111,7 @@ pub mod imp {
                 syntax_set: RefCell::new(SyntaxSet::load_defaults_nonewlines()),
                 code_theme: RefCell::new(String::new()),
                 code_syntax: RefCell::new(String::new()),
-                generator: RefCell::new(Some(Arc::new(SvgGenerator::default()))),
+                generator: Arc::new(Mutex::new(SvgGenerator::default())),
                 config: Rc::new(RefCell::new(Config::new())),
                 main_window: RefCell::new(None),
             }
@@ -306,7 +310,7 @@ pub mod imp {
 
             let editor = window.editor().clone();
             let (generator_sender, generator_receiver) = async_channel::bounded(1);
-            let generator = self.generator.borrow().as_ref().unwrap().clone();
+            let generator = self.generator.clone();
 
             editor_buffer.connect_changed(move |buffer| {
                 let editor_syntax = editor.syntax().clone();
@@ -317,7 +321,7 @@ pub mod imp {
                 let generator_sender = generator_sender.clone();
                 let generator = generator.clone();
                 gio::spawn_blocking(move || {
-                    let generated_svg = generator.generate(
+                    let generated_svg = generator.lock().unwrap().generate(
                         &text,
                         &editor_theme.unwrap(),
                         &editor_syntax.unwrap(),
@@ -329,6 +333,7 @@ pub mod imp {
                         .expect("Failed to send svg");
                 });
             });
+
             let viewer = window.imp().viewer.clone();
             glib::spawn_future_local(async move {
                 while let Ok(svg) = generator_receiver.recv().await {
@@ -351,12 +356,14 @@ pub mod imp {
 
             let editor = window.editor().clone();
             let font_chooser = window.font_family_chooser();
+            let generator = self.generator.clone();
 
             font_chooser.connect_closure(
                 "font-activated",
                 false,
                 closure_local!(|_: &FontFamilyChooser, family: &gtk::pango::FontFamily| {
                     editor.global_tag().set_family(Some(&family.name()));
+                    generator.lock().unwrap().set_font_family(&family.name());
                 },),
             );
 

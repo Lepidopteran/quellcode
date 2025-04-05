@@ -172,6 +172,8 @@ pub trait Generator: Send + Sync {
     fn description(&self) -> &str;
     fn saveable(&self) -> &bool;
     fn properties(&self) -> &Properties;
+    fn font_family(&self) -> &str;
+    fn set_font_family(&mut self, family: &str);
     fn get_property(&self, name: &str) -> Result<PropertyValue, GeneratorError>;
     fn set_property(
         &mut self,

@@ -22,13 +22,6 @@ impl SvgGenerator {
                     ..Default::default()
                 },
                 Property {
-                    name: "font_size",
-                    description: "Font size",
-                    kind: PropertyType::Int,
-                    default: Some(PropertyValue::Int(options.font_size as i32)),
-                    ..Default::default()
-                },
-                Property {
                     name: "bake_font",
                     description: "Whether to convert a font to points",
                     kind: PropertyType::Bool,
@@ -50,6 +43,14 @@ impl Generator for SvgGenerator {
         "Generate SVG"
     }
 
+    fn font_family(&self) -> &str {
+        &self.options.font_family
+    }
+
+    fn set_font_family(&mut self, family: &str) {
+        self.options.font_family = family.to_string();
+    }
+
     fn kind(&self) -> &RenderType {
         &RenderType::Text
     }
@@ -65,7 +66,6 @@ impl Generator for SvgGenerator {
     fn get_property(&self, name: &str) -> Result<PropertyValue, super::GeneratorError> {
         match name {
             "include_background" => Ok(self.options.include_background.into()),
-            "font_size" => Ok(self.options.font_size.into()),
             "bake_font" => Ok(PropertyValue::from(
                 !self.options.write_options.preserve_text,
             )),
@@ -84,9 +84,6 @@ impl Generator for SvgGenerator {
             "include_background" => {
                 self.options.include_background = value.try_into()?;
             }
-            "font_size" => {
-                self.options.font_size = value.try_into()?;
-            }
             "bake_font" => {
                 self.options.write_options.preserve_text = !value.try_into()?;
             }
@@ -101,16 +98,18 @@ impl Generator for SvgGenerator {
     }
 
     fn generate(
-            &self,
-            text: &str,
-            theme: &syntect::highlighting::Theme,
-            syntax: &syntect::parsing::SyntaxReference,
-            syntax_set: &syntect::parsing::SyntaxSet,
-        ) -> Result<super::RenderOutput, super::GeneratorError> {
+        &self,
+        text: &str,
+        theme: &syntect::highlighting::Theme,
+        syntax: &syntect::parsing::SyntaxReference,
+        syntax_set: &syntect::parsing::SyntaxSet,
+    ) -> Result<super::RenderOutput, super::GeneratorError> {
         if let Ok(svg) = generate_svg(text, theme, syntax, syntax_set, &self.options) {
             return Ok(super::RenderOutput::Text(svg));
         }
 
-        Err(super::GeneratorError::Other("Failed to generate svg".to_string()))
+        Err(super::GeneratorError::Other(
+            "Failed to generate svg".to_string(),
+        ))
     }
 }
