@@ -66,14 +66,15 @@ pub mod imp {
     use std::{io, rc::Rc, sync::Arc};
 
     use gdk::Display;
-    use glib::{
-        closure_local,
-        property::PropertySet,
-        subclass::Signal, Properties,
-    };
+    use glib::{closure_local, property::PropertySet, subclass::Signal, Properties};
+
+    use gtk::EventControllerMotion;
     use log::warn;
 
-    use crate::app::generator::{svg::SvgGenerator, Generator, RenderOutput};
+    use crate::app::{
+        generator::{svg::SvgGenerator, Generator, RenderOutput},
+        ui::FontFamilyChooser,
+    };
 
     use super::*;
 
@@ -267,16 +268,16 @@ pub mod imp {
                     .cloned(),
             );
 
-            viewer.set_syntax(Some(
-                viewer
-                    .syntax_set()
-                    .find_syntax_by_name("XML")
-                    .unwrap()
-                    .clone(),
-            ));
+            // viewer.set_syntax(Some(
+            //     viewer
+            //         .syntax_set()
+            //         .find_syntax_by_name("XML")
+            //         .unwrap()
+            //         .clone(),
+            // ));
 
-            let self_ = self.obj().clone();
-            self_.connect_closure(
+            let self_obj = self.obj().clone();
+            self_obj.connect_closure(
                 "theme-changed",
                 false,
                 closure_local!(move |app: &super::QuellcodeApplication,
@@ -297,7 +298,7 @@ pub mod imp {
             let editor = window.editor().clone();
             let editor_buffer = editor.buffer().clone();
 
-            self_.connect_code_syntax_notify(move |app| {
+            self_obj.connect_code_syntax_notify(move |app| {
                 if let Some(syntax) = app.syntax_set().find_syntax_by_name(&app.code_syntax()) {
                     editor.set_syntax(Some(syntax.clone()));
                 }
@@ -306,6 +307,7 @@ pub mod imp {
             let editor = window.editor().clone();
             let (generator_sender, generator_receiver) = async_channel::bounded(1);
             let generator = self.generator.borrow().as_ref().unwrap().clone();
+
             editor_buffer.connect_changed(move |buffer| {
                 let editor_syntax = editor.syntax().clone();
                 let editor_syntax_set = editor.syntax_set().clone();
@@ -347,7 +349,19 @@ pub mod imp {
                 glib::Propagation::Proceed
             });
 
+            let editor = window.editor().clone();
+            let font_chooser = window.font_family_chooser();
+
+            font_chooser.connect_closure(
+                "font-activated",
+                false,
+                closure_local!(|_: &FontFamilyChooser, family: &gtk::pango::FontFamily| {
+                    editor.global_tag().set_family(Some(&family.name()));
+                },),
+            );
+
             window.present();
+
             self.main_window.replace(Some(window.clone()));
         }
 
@@ -435,72 +449,88 @@ pub mod imp {
                 .load_from_string(&theme_to_gtk_css(theme.1));
         }
     }
-}
 
-fn load_custom_themes(theme_set: &mut ThemeSet) {
-    for (format, path) in code_theme_files() {
-        match format {
-            ThemeFormat::VsCode => {
-                let vscode_theme = syntect_vscode::parse_vscode_theme_file(&path);
-
-                if let Ok(vscode_theme) = vscode_theme {
-                    let theme_name = vscode_theme
-                        .name
-                        .clone()
-                        .unwrap_or(path.file_stem().unwrap().to_string_lossy().to_string());
-
-                    let theme = Theme::try_from(vscode_theme).expect("Failed to parse theme");
-
-                    theme_set.themes.insert(theme_name, theme);
-                }
+    fn ensure_app_directories_exist() {
+        for dir in [
+            dir::data_dir(),
+            dir::config_dir(),
+            dir::cache_dir(),
+            dir::code_theme_dir(),
+            dir::code_syntax_dir(),
+        ] {
+            if dir.exists() {
+                continue;
             }
-            ThemeFormat::Sublime => {
-                let color_scheme = sublime_color_scheme::parse_color_scheme_file(&path);
 
-                if let Ok(color_scheme) = color_scheme {
-                    let theme_name = color_scheme
-                        .name
-                        .clone()
-                        .unwrap_or(path.file_stem().unwrap().to_string_lossy().to_string());
+            std::fs::create_dir_all(dir).unwrap();
+        }
+    }
 
-                    let theme = Theme::try_from(color_scheme).expect("Failed to parse theme");
+    fn load_custom_themes(theme_set: &mut ThemeSet) {
+        for (format, path) in code_theme_files() {
+            match format {
+                ThemeFormat::VsCode => {
+                    let vscode_theme = syntect_vscode::parse_vscode_theme_file(&path);
 
-                    theme_set.themes.insert(theme_name, theme);
+                    if let Ok(vscode_theme) = vscode_theme {
+                        let theme_name = vscode_theme
+                            .name
+                            .clone()
+                            .unwrap_or(path.file_stem().unwrap().to_string_lossy().to_string());
+
+                        let theme = Theme::try_from(vscode_theme).expect("Failed to parse theme");
+
+                        theme_set.themes.insert(theme_name, theme);
+                    }
                 }
-            }
-            ThemeFormat::TmTheme => {
-                let theme = ThemeSet::get_theme(&path);
-                if let Ok(theme) = theme {
-                    let theme_name = theme
-                        .clone()
-                        .name
-                        .unwrap_or(path.file_stem().unwrap().to_string_lossy().to_string());
+                ThemeFormat::Sublime => {
+                    let color_scheme = sublime_color_scheme::parse_color_scheme_file(&path);
 
-                    theme_set.themes.insert(theme_name, theme);
+                    if let Ok(color_scheme) = color_scheme {
+                        let theme_name = color_scheme
+                            .name
+                            .clone()
+                            .unwrap_or(path.file_stem().unwrap().to_string_lossy().to_string());
+
+                        let theme = Theme::try_from(color_scheme).expect("Failed to parse theme");
+
+                        theme_set.themes.insert(theme_name, theme);
+                    }
+                }
+                ThemeFormat::TmTheme => {
+                    let theme = ThemeSet::get_theme(&path);
+                    if let Ok(theme) = theme {
+                        let theme_name = theme
+                            .clone()
+                            .name
+                            .unwrap_or(path.file_stem().unwrap().to_string_lossy().to_string());
+
+                        theme_set.themes.insert(theme_name, theme);
+                    }
                 }
             }
         }
     }
-}
 
-fn create_theme_model(themes_set: &ThemeSet) -> gtk::StringList {
-    gtk::StringList::new(
-        &themes_set
-            .themes
-            .iter()
-            .map(|t| t.0.as_str())
-            .collect::<Vec<_>>(),
-    )
-}
+    fn create_theme_model(themes_set: &ThemeSet) -> gtk::StringList {
+        gtk::StringList::new(
+            &themes_set
+                .themes
+                .iter()
+                .map(|t| t.0.as_str())
+                .collect::<Vec<_>>(),
+        )
+    }
 
-fn create_syntax_model(syntax_set: &SyntaxSet) -> gtk::StringList {
-    gtk::StringList::new(
-        &syntax_set
-            .syntaxes()
-            .iter()
-            .map(|t| t.name.as_str())
-            .collect::<Vec<_>>(),
-    )
+    fn create_syntax_model(syntax_set: &SyntaxSet) -> gtk::StringList {
+        gtk::StringList::new(
+            &syntax_set
+                .syntaxes()
+                .iter()
+                .map(|t| t.name.as_str())
+                .collect::<Vec<_>>(),
+        )
+    }
 }
 
 glib::wrapper! {
@@ -527,21 +557,5 @@ impl QuellcodeApplication {
 
     pub fn config(&self) -> Ref<Config> {
         self.imp().config.borrow()
-    }
-}
-
-fn ensure_app_directories_exist() {
-    for dir in [
-        dir::data_dir(),
-        dir::config_dir(),
-        dir::cache_dir(),
-        dir::code_theme_dir(),
-        dir::code_syntax_dir(),
-    ] {
-        if dir.exists() {
-            continue;
-        }
-
-        std::fs::create_dir_all(dir).unwrap();
     }
 }
