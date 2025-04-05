@@ -104,11 +104,13 @@ pub mod imp {
 
         #[template_callback]
         fn selection_changed(&self) {
-            let selected_item = self.selection.selected_item();
-            let family = selected_item
-                .and_downcast_ref::<FontFamily>()
-                .expect("Expected FontFamily");
-            self.obj().emit_by_name::<()>("font-selected", &[family]);
+            if let Some(selected_item) = self.selection.selected_item() {
+                let family = selected_item
+                    .downcast_ref::<FontFamily>()
+                    .expect("Expected FontFamily");
+
+                self.obj().emit_by_name::<()>("font-selected", &[family]);
+            };
         }
 
         #[template_callback]
@@ -162,8 +164,12 @@ pub mod imp {
             static SIGNALS: once_cell::sync::Lazy<Vec<glib::subclass::Signal>> =
                 once_cell::sync::Lazy::new(|| {
                     vec![
-                        Signal::builder("font-activated").param_types([FontFamily::static_type()]).build(),
-                        Signal::builder("font-selected").param_types([FontFamily::static_type()]).build(),
+                        Signal::builder("font-activated")
+                            .param_types([FontFamily::static_type()])
+                            .build(),
+                        Signal::builder("font-selected")
+                            .param_types([FontFamily::static_type()])
+                            .build(),
                     ]
                 });
 
