@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <interface>
   <object class="GtkSingleSelection" id="selection">
+		<signal handler="selection_changed" name="notify::selected-item" object="QuellcodeFontFamilyChooser" swapped="true"></signal>
     <property name="autoselect">false</property>
     <property name="model">
       <object class="GtkFilterListModel" id="filter_model">

@@ -8,7 +8,11 @@ pub mod imp {
     use std::{cell::RefCell, rc::Rc};
 
     use super::*;
-    use glib::{property::PropertySet, subclass::InitializingObject, GString, Properties};
+    use glib::{
+        property::PropertySet,
+        subclass::{InitializingObject, Signal},
+        GString, Properties,
+    };
     use gtk::{
         gio::ListStore,
         glib::subclass::prelude::*,
@@ -36,7 +40,7 @@ pub mod imp {
         #[template_child]
         pub list: TemplateChild<gtk::ListView>,
         #[template_child]
-        selection: TemplateChild<gtk::SingleSelection>,
+        pub selection: TemplateChild<gtk::SingleSelection>,
         #[template_child]
         search: TemplateChild<gtk::SearchEntry>,
         #[template_child]
@@ -95,6 +99,16 @@ pub mod imp {
             self.selected_family.set(Some(family.clone()));
             self.popover.popdown();
             self.name_filter.set_search(None);
+            self.obj().emit_by_name::<()>("font-activated", &[family]);
+        }
+
+        #[template_callback]
+        fn selection_changed(&self) {
+            let selected_item = self.selection.selected_item();
+            let family = selected_item
+                .and_downcast_ref::<FontFamily>()
+                .expect("Expected FontFamily");
+            self.obj().emit_by_name::<()>("font-selected", &[family]);
         }
 
         #[template_callback]
@@ -138,48 +152,22 @@ pub mod imp {
                 }
             });
 
-            factory.connect_setup(move |_, list_item| {
-                let label = Label::builder()
-                    .xalign(0.0)
-                    .ellipsize(gtk::pango::EllipsizeMode::End)
-                    .build();
-
-                let list_item = list_item
-                    .downcast_ref::<ListItem>()
-                    .expect("Expected ListItem");
-
-                list_item.set_child(Some(&label));
-                list_item
-                    .property_expression("item")
-                    .chain_property::<FontFamily>("name")
-                    .bind(&label, "label", Widget::NONE);
-            });
-
-            factory.connect_bind(move |_, list_item| {
-                let list_item = list_item
-                    .downcast_ref::<ListItem>()
-                    .expect("Expected ListItem");
-
-                let item = list_item
-                    .item()
-                    .and_downcast::<FontFamily>()
-                    .expect("Expected FontFamily");
-
-                let label = list_item
-                    .child()
-                    .expect("Expected Child")
-                    .downcast::<Label>()
-                    .expect("Expected Label");
-
-                let attr_list = AttrList::new();
-                if let Some(font_face) = item.face(None) {
-                    attr_list.insert(AttrFontDesc::new(&font_face.describe()));
-                }
-
-                label.set_attributes(Some(&attr_list));
-            });
+            factory.connect_setup(setup_item);
+            factory.connect_bind(bind_item);
 
             self.list.set_factory(Some(&factory));
+        }
+
+        fn signals() -> &'static [glib::subclass::Signal] {
+            static SIGNALS: once_cell::sync::Lazy<Vec<glib::subclass::Signal>> =
+                once_cell::sync::Lazy::new(|| {
+                    vec![
+                        Signal::builder("font-activated").param_types([FontFamily::static_type()]).build(),
+                        Signal::builder("font-selected").param_types([FontFamily::static_type()]).build(),
+                    ]
+                });
+
+            SIGNALS.as_ref()
         }
     }
 
@@ -195,6 +183,43 @@ pub mod imp {
             self.popover.set_size_request(width, -1);
             self.popover.queue_resize();
         }
+    }
+
+    fn setup_item(_: &SignalListItemFactory, obj: &Object) {
+        let list_item = obj.downcast_ref::<ListItem>().expect("Expected ListItem");
+
+        let label = Label::builder()
+            .xalign(0.0)
+            .ellipsize(gtk::pango::EllipsizeMode::End)
+            .build();
+
+        list_item.set_child(Some(&label));
+        list_item
+            .property_expression("item")
+            .chain_property::<FontFamily>("name")
+            .bind(&label, "label", Widget::NONE);
+    }
+
+    fn bind_item(_: &SignalListItemFactory, obj: &Object) {
+        let list_item = obj.downcast_ref::<ListItem>().expect("Expected ListItem");
+
+        let item = list_item
+            .item()
+            .and_downcast::<FontFamily>()
+            .expect("Expected FontFamily");
+
+        let label = list_item
+            .child()
+            .expect("Expected Child")
+            .downcast::<Label>()
+            .expect("Expected Label");
+
+        let attr_list = AttrList::new();
+        if let Some(font_face) = item.face(None) {
+            attr_list.insert(AttrFontDesc::new(&font_face.describe()));
+        }
+
+        label.set_attributes(Some(&attr_list));
     }
 }
 
@@ -215,6 +240,10 @@ impl FontFamilyChooser {
 
     pub fn list(&self) -> &gtk::ListView {
         &self.imp().list
+    }
+
+    pub fn selection(&self) -> &gtk::SingleSelection {
+        &self.imp().selection
     }
 }
 
