@@ -49,7 +49,7 @@ pub mod imp {
         filter_model: TemplateChild<gtk::FilterListModel>,
         #[template_child]
         monospace_filter: TemplateChild<gtk::CustomFilter>,
-        #[property(get)]
+        #[property(get, set)]
         pub selected_family: RefCell<Option<FontFamily>>,
         #[property(get, name = "monospace-filter")]
         pub monospace: Rc<RefCell<bool>>,
@@ -133,6 +133,15 @@ pub mod imp {
 
             let self_obj = self.obj();
             self_obj.set_accessible_role(gtk::AccessibleRole::ComboBox);
+
+            let label = self.label.clone();
+            self_obj.connect_selected_family_notify(move |obj| {
+                if let Some(family) = obj.selected_family() {
+                    label.set_text(&family.name());
+                } else {
+                    label.set_text("");
+                }
+            });
 
             let pango_context = self.obj().create_pango_context();
             let factory = SignalListItemFactory::default();
