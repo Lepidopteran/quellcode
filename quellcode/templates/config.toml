@@ -1,5 +1,5 @@
-# Core Application Settings 
-[core]
+# Code Editor & Generator Settings 
+[code]
 
 # Theme used for syntax highlighting, editor, and generators.
 # The name is case sensitive and must match the name of the theme.

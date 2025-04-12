@@ -12,7 +12,7 @@ use syntect::{
 
 use super::{
     code_theme_files,
-    config::{load_config, save_config, write_default_config_file, Config, Core},
+    config::{load_config, save_config, write_default_config_file, Config, CodeSettings},
     dir, ThemeFormat, Window,
 };
 
@@ -296,7 +296,7 @@ pub mod imp {
             theme_dropdown.connect_selected_notify(move |dropdown| {
                 let theme_name = themes.string(dropdown.selected()).unwrap();
                 self_.set_property("code-theme", &theme_name);
-                config.borrow_mut().core.theme = theme_name.to_string();
+                config.borrow_mut().code.theme = theme_name.to_string();
             });
 
             let self_ = self.obj().clone();
@@ -305,7 +305,7 @@ pub mod imp {
             syntax_dropdown.connect_selected_notify(move |dropdown| {
                 let syntax_name = syntaxes.string(dropdown.selected()).unwrap();
                 self_.set_property("code-syntax", &syntax_name);
-                config.borrow_mut().core.syntax = syntax_name.to_string();
+                config.borrow_mut().code.syntax = syntax_name.to_string();
             });
 
             let viewer = window.viewer().clone();
@@ -437,7 +437,7 @@ pub mod imp {
                         .first_key_value()
                         .expect("Failed to get theme");
                     let config = Config {
-                        core: Core {
+                        code: CodeSettings {
                             theme: theme.0.clone(),
                             syntax: self.syntax_set.borrow().syntaxes()[0].name.clone(),
                             ..Default::default()
@@ -468,11 +468,11 @@ pub mod imp {
 
             let theme: (&String, &Theme) = theme_set
                 .themes
-                .get_key_value(&config.core.theme)
+                .get_key_value(&config.code.theme)
                 .unwrap_or_else(|| {
                     log::warn!(
                         "Theme \"{}\" not found, using default theme",
-                        config.core.theme
+                        config.code.theme
                     );
                     theme_set
                         .themes
@@ -483,11 +483,11 @@ pub mod imp {
             let syntax_sets = &mut self.syntax_set.borrow_mut();
 
             let syntax = syntax_sets
-                .find_syntax_by_name(&config.core.syntax)
+                .find_syntax_by_name(&config.code.syntax)
                 .unwrap_or_else(|| {
                     log::warn!(
                         "Syntax \"{}\" not found, using default syntax",
-                        config.core.syntax
+                        config.code.syntax
                     );
                     syntax_sets
                         .syntaxes()

@@ -18,18 +18,18 @@ struct ConfigTemplate<'a> {
 
 #[derive(Debug, Default, Deserialize, Serialize)]
 pub struct Config {
-    pub core: Core,
+    pub code: CodeSettings,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
-pub struct Core {
+pub struct CodeSettings {
     pub theme: String,
     pub syntax: String,
     pub font_family: String,
     pub font_size: f64,
 }
 
-impl Default for Core {
+impl Default for CodeSettings {
     fn default() -> Self {
         Self {
             theme: String::new(),
@@ -43,7 +43,7 @@ impl Default for Core {
 impl Config {
     pub fn new() -> Self {
         Self {
-            core: Core::default(),
+            code: CodeSettings::default(),
         }
     }
 }
@@ -52,10 +52,10 @@ pub fn save_config(config: &Config) -> Result<()> {
     let contents = fs::read_to_string(config_file_path())?;
     let mut doc = contents.parse::<DocumentMut>()?;
 
-    doc["core"]["theme"] = config.core.theme.clone().into();
-    doc["core"]["syntax"] = config.core.syntax.clone().into();
-    doc["core"]["font_family"] = config.core.font_family.clone().into();
-    doc["core"]["font_size"] = config.core.font_size.into();
+    doc["code"]["theme"] = config.code.theme.clone().into();
+    doc["code"]["syntax"] = config.code.syntax.clone().into();
+    doc["code"]["font_family"] = config.code.font_family.clone().into();
+    doc["code"]["font_size"] = config.code.font_size.into();
 
     let mut file = fs::File::create(config_file_path())?;
     file.write_all(doc.to_string().as_bytes())?;
@@ -69,10 +69,10 @@ pub fn load_config() -> Result<Config> {
 
 pub fn write_default_config_file(config: &Config) -> Result<()> {
     let template = ConfigTemplate {
-        theme: &config.core.theme,
-        syntax: &config.core.syntax,
-        font_family: &config.core.font_family,
-        font_size: config.core.font_size,
+        theme: &config.code.theme,
+        syntax: &config.code.syntax,
+        font_family: &config.code.font_family,
+        font_size: config.code.font_size,
     };
 
     std::fs::write(config_file_path(), template.render()?)?;
