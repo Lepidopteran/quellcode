@@ -96,7 +96,7 @@ pub mod imp {
                 .expect("Expected FontFamily");
 
             self.label.set_text(&family.name());
-            self.selected_family.set(Some(family.clone()));
+            self.obj().set_selected_family(family.clone());
             self.popover.popdown();
             self.name_filter.set_search(None);
             self.obj().emit_by_name::<()>("font-activated", &[family]);
