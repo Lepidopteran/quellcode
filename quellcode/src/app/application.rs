@@ -3,16 +3,18 @@ use std::cell::{Ref, RefCell};
 use gtk::glib::Object;
 use gtk::prelude::*;
 use gtk::subclass::prelude::*;
-use gtk::{gdk, gio, glib};
+use gtk::{gdk, gio, glib, pango::FontFamily};
 use log::{debug, error};
 use syntect::{
     highlighting::{Theme, ThemeSet},
     parsing::SyntaxSet,
 };
 
+const FALLBACK_FONT_FAMILY: &str = "Monospace";
+
 use super::{
     code_theme_files,
-    config::{load_config, save_config, write_default_config_file, Config, CodeSettings},
+    config::{load_config, save_config, write_default_config_file, CodeSettings, Config},
     dir, ThemeFormat, Window,
 };
 
@@ -91,6 +93,8 @@ pub mod imp {
         pub theme_set: RefCell<ThemeSet>,
         pub syntax_set: RefCell<SyntaxSet>,
         pub config: Rc<RefCell<Config>>,
+        #[property(get, set)]
+        pub code_font: RefCell<Option<FontFamily>>,
         #[property(get, set)]
         pub code_theme: RefCell<String>,
         #[property(get, set)]
@@ -172,6 +176,7 @@ pub mod imp {
                 syntax_set: RefCell::new(SyntaxSet::load_defaults_nonewlines()),
                 code_theme: RefCell::new(String::new()),
                 code_syntax: RefCell::new(String::new()),
+                code_font: RefCell::new(None),
                 generator: Arc::new(Mutex::new(SvgGenerator::default())),
                 config: Rc::new(RefCell::new(Config::new())),
                 main_window: RefCell::new(None),
@@ -206,6 +211,12 @@ pub mod imp {
                 "code-syntax" => {
                     let syntax_name = value.get::<String>().expect("Failed to get syntax name");
                     self.code_syntax.replace(syntax_name);
+                }
+                "code-font" => {
+                    let font = value
+                        .get::<Option<FontFamily>>()
+                        .expect("Failed to get font");
+                    self.code_font.set(font);
                 }
                 _ => unimplemented!(),
             }
@@ -376,12 +387,11 @@ pub mod imp {
                 self_obj.imp().generate_code();
             });
 
-            let viewer = window.imp().viewer.clone();
-
             let editor = window.editor().clone();
             let font_chooser = window.font_family_chooser();
             let generator = self.generator.clone();
             let self_obj = self.obj().clone();
+            let config = self.config.clone();
 
             font_chooser.connect_closure(
                 "font-activated",
@@ -389,6 +399,7 @@ pub mod imp {
                 closure_local!(|_: &FontFamilyChooser, family: &gtk::pango::FontFamily| {
                     editor.global_tag().set_family(Some(&family.name()));
                     generator.lock().unwrap().set_font_family(&family.name());
+                    config.borrow_mut().code.font_family = family.name().to_string();
                     self_obj.imp().generate_code();
                 },),
             );
@@ -402,8 +413,44 @@ pub mod imp {
                 }),
             );
 
-
+            let self_obj = self.obj().clone();
+            font_chooser.connect_selected_family_notify(move |chooser| {
+                let family = chooser.selected_family();
+                self_obj.set_property("code-font", &family);
             });
+
+            let pango_context = window.pango_context();
+            let font_family = pango_context.list_families();
+            let config_font = self.config.borrow().code.font_family.clone();
+
+            if let Some(font) = font_family.iter().find(|f| f.name() == *config_font) {
+                debug!("Found font {} in list of available fonts", config_font);
+                font_chooser.set_selected_family(font);
+            } else {
+                warn!(
+                    "Could not find font {}, using fallback \"{}\"",
+                    config_font, FALLBACK_FONT_FAMILY
+                );
+                font_chooser.set_selected_family(
+                    font_family
+                        .iter()
+                        .find(|f| f.name() == FALLBACK_FONT_FAMILY)
+                        .unwrap(),
+                );
+            }
+
+            let editor = window.editor().clone();
+
+            editor
+                .global_tag()
+                .set_family(Some(&font_chooser.selected_family().unwrap().name()));
+
+            self.generator.lock().unwrap().set_font_family(
+                &font_chooser
+                    .selected_family()
+                    .expect("Failed to get font")
+                    .name(),
+            );
 
             let config = self.config.clone();
             window.connect_close_request(move |_| {
