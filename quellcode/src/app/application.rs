@@ -404,15 +404,6 @@ pub mod imp {
                 },),
             );
 
-            let editor = window.editor().clone();
-            font_chooser.connect_closure(
-                "font-selected",
-                false,
-                closure_local!(|_: &FontFamilyChooser, family: &gtk::pango::FontFamily| {
-                    editor.global_tag().set_family(Some(&family.name()));
-                }),
-            );
-
             let self_obj = self.obj().clone();
             font_chooser.connect_selected_family_notify(move |chooser| {
                 let family = chooser.selected_family();
