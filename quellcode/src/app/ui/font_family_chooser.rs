@@ -241,7 +241,7 @@ pub mod imp {
 glib::wrapper! {
     pub struct FontFamilyChooser(ObjectSubclass<imp::FontFamilyChooser>)
         @extends gtk::Widget,
-        @implements gtk::Accessible, gtk::Buildable, gtk::ConstraintTarget;
+        @implements gtk::Accessible, gtk::Actionable, gtk::Buildable, gtk::ConstraintTarget;
 }
 
 impl FontFamilyChooser {
