@@ -47,8 +47,16 @@ impl Generator for SvgGenerator {
         &self.options.font_family
     }
 
+    fn font_size(&self) -> f32 {
+        self.options.font_size
+    }
+
     fn set_font_family(&mut self, family: &str) {
         self.options.font_family = family.to_string();
+    }
+
+    fn set_font_size(&mut self, size: f32) {
+        self.options.font_size = size;
     }
 
     fn kind(&self) -> &RenderType {

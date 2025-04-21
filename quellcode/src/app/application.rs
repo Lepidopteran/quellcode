@@ -1,4 +1,4 @@
-use std::cell::{Ref, RefCell};
+use std::cell::{Cell, Ref, RefCell};
 
 use gtk::glib::Object;
 use gtk::prelude::*;
@@ -74,7 +74,7 @@ pub mod imp {
     use async_channel::{Receiver, Sender};
     use gdk::Display;
     use glib::{closure_local, property::PropertySet, subclass::Signal, Properties};
-    use gtk::pango::FontDescription;
+    use gtk::pango::{self, FontDescription};
     use log::warn;
 
     use crate::app::{
@@ -95,6 +95,8 @@ pub mod imp {
         pub config: Rc<RefCell<Config>>,
         #[property(get, set)]
         pub code_font: RefCell<Option<FontFamily>>,
+        #[property(get, set)]
+        pub code_font_size: Cell<u32>,
         #[property(get, set)]
         pub code_theme: RefCell<String>,
         #[property(get, set)]
@@ -177,6 +179,7 @@ pub mod imp {
                 code_theme: RefCell::new(String::new()),
                 code_syntax: RefCell::new(String::new()),
                 code_font: RefCell::new(None),
+                code_font_size: Cell::new(16),
                 generator: Arc::new(Mutex::new(SvgGenerator::default())),
                 config: Rc::new(RefCell::new(Config::new())),
                 main_window: RefCell::new(None),
@@ -442,6 +445,21 @@ pub mod imp {
                     .expect("Failed to get font")
                     .name(),
             );
+
+            let config = self.config.clone();
+            let scale = window.font_size_scale();
+            let generator = self.generator.clone();
+            let self_obj = self.obj().clone();
+            scale.connect_value_changed(move |scale| {
+                editor
+                    .global_tag()
+                    .set_size((scale.value() as f32 * 0.75 * pango::SCALE as f32) as i32);
+                generator
+                    .lock()
+                    .unwrap()
+                    .set_font_size(scale.value() as f32);
+                config.borrow_mut().code.font_size = scale.value();
+            });
 
             let config = self.config.clone();
             window.connect_close_request(move |_| {

@@ -1,3 +1,4 @@
+use evalexpr::*;
 use glib::subclass::InitializingObject;
 use glib::Object;
 use gtk::prelude::*;
@@ -5,8 +6,8 @@ use gtk::subclass::prelude::*;
 use gtk::{gio, glib, CompositeTemplate, TemplateChild};
 
 use super::application::QuellcodeApplication;
-use super::ui::code_view::CodeView;
-use super::ui::FontFamilyChooser;
+const UNITS: &[&str] = &["px", "pt", "pc", "in", "cm", "mm"];
+const ROUND_DIGITS: i32 = 4;
 
 pub mod imp {
     use crate::app::ui::code_view::CodeView;
@@ -44,6 +45,61 @@ pub mod imp {
 
         #[template_child]
         pub font_family_chooser: TemplateChild<FontFamilyChooser>,
+
+        #[template_child]
+        pub font_size_entry: TemplateChild<gtk::Entry>,
+
+        #[template_child]
+        pub font_size_scale: TemplateChild<gtk::Scale>,
+    }
+
+    #[gtk::template_callbacks]
+    impl Window {
+        #[template_callback]
+        fn font_size_scale_changed(&self) {
+            self.font_size_entry
+                .set_text(&self.font_size_scale.value().to_string());
+        }
+
+        #[template_callback]
+        fn font_size_entry_activate(&self, entry: &gtk::Entry) {
+            let mut text = entry.text().to_lowercase();
+            let context: HashMapContext = context_map! {
+                "px" => float 1.0,
+                "in" => float 96.0,
+                "pt" => float 1.3333333333,
+                "pc" => float 16.0,
+                "cm" => float 37.7952755906,
+                "mm" => float 3.7795275591
+            }
+            .expect("Failed to create context map");
+
+            for (long, short) in [
+                ("inch", "in"),
+                ("inches", "in"),
+                ("millimeter", "mm"),
+                ("millimeters", "mm"),
+                ("centimeter", "cm"),
+                ("centimeters", "cm"),
+                ("pica", "pc"),
+                ("picas", "pc"),
+                ("point", "pt"),
+                ("points", "pt"),
+                ("pixel", "px"),
+                ("pixels", "px"),
+            ] {
+                text = text.replace(long, short);
+            }
+
+            if let Ok(value) = eval_with_context(&preprocess_units(&text), &context) {
+                let factor = 10f64.powi(ROUND_DIGITS);
+                let value = value.as_number().unwrap();
+                self.font_size_scale
+                    .set_value((value * factor).round() / factor);
+            } else {
+                entry.set_text(&self.font_size_scale.value().to_string());
+            }
+        }
     }
 
     // The central trait for subclassing a GObject
@@ -56,6 +112,7 @@ pub mod imp {
 
         fn class_init(klass: &mut Self::Class) {
             klass.bind_template();
+            klass.bind_template_callbacks();
         }
 
         fn instance_init(obj: &InitializingObject<Self>) {
@@ -72,12 +129,51 @@ pub mod imp {
             self.syntax_label
                 .set_mnemonic_widget(Some(&self.syntax_dropdown.clone()));
 
+            self.font_size_entry
+                .set_text(&self.font_size_scale.value().to_string());
+
+            for snap_scale in (8..96).step_by(8) {
+                self.font_size_scale
+                    .add_mark(snap_scale as f64, gtk::PositionType::Top, None);
+            }
+
             self.inspector.set_size_request(300, -1);
         }
     }
     impl WidgetImpl for Window {}
     impl WindowImpl for Window {}
     impl ApplicationWindowImpl for Window {}
+
+    fn preprocess_units(input: &str) -> String {
+        let mut output = String::new();
+        let mut chars = input.chars().peekable();
+
+        while let Some(c) = chars.next() {
+            output.push(c);
+
+            if c.is_ascii_digit() || c == '.' {
+                let mut lookahead = String::new();
+
+                while let Some(&next_c) = chars.peek() {
+                    if next_c.is_ascii_alphabetic() {
+                        lookahead.push(next_c);
+                        chars.next();
+                    } else {
+                        break;
+                    }
+                }
+
+                if !lookahead.is_empty() && UNITS.contains(&lookahead.as_str()) {
+                    output.push_str(" * ");
+                    output.push_str(&lookahead);
+                } else {
+                    output.push_str(&lookahead);
+                }
+            }
+        }
+
+        output
+    }
 }
 
 glib::wrapper! {
@@ -117,5 +213,9 @@ impl Window {
 
     pub fn font_family_chooser(&self) -> &FontFamilyChooser {
         &self.imp().font_family_chooser
+    }
+
+    pub fn font_size_scale(&self) -> &gtk::Scale {
+        &self.imp().font_size_scale
     }
 }
