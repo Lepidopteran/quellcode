@@ -55,7 +55,6 @@ pub mod imp {
                 .replace(SyntaxSet::load_defaults_nonewlines());
 
             self.obj().add_css_class("code");
-            self.obj().set_wrap_mode(gtk::WrapMode::WordChar);
             self.obj().set_monospace(true);
 
             let syntax_set = self.syntax_set.clone();
