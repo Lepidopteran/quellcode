@@ -66,6 +66,7 @@ pub fn theme_to_gtk_css(theme: &Theme) -> String {
 
 pub mod imp {
     use std::{
+        cell::RefMut,
         io,
         rc::Rc,
         sync::{Arc, Mutex},
@@ -92,11 +93,10 @@ pub mod imp {
         pub code_theme_provider: RefCell<gtk::CssProvider>,
         pub theme_set: RefCell<ThemeSet>,
         pub syntax_set: RefCell<SyntaxSet>,
+        #[property(get = |s: &Self| s.config().code.font_size, set = |s: &Self, v: f64| s.config_mut().code.font_size = v, name = "code-font-size", type = f64)]
         pub config: Rc<RefCell<Config>>,
         #[property(get, set)]
         pub code_font: RefCell<Option<FontFamily>>,
-        #[property(get, set)]
-        pub code_font_size: Cell<u32>,
         #[property(get, set)]
         pub code_theme: RefCell<String>,
         #[property(get, set)]
@@ -110,6 +110,10 @@ pub mod imp {
 
         pub fn config(&self) -> Ref<Config> {
             self.config.borrow()
+        }
+
+        pub fn config_mut(&self) -> RefMut<Config> {
+            self.config.borrow_mut()
         }
 
         fn generate_code(&self) {
@@ -179,7 +183,6 @@ pub mod imp {
                 code_theme: RefCell::new(String::new()),
                 code_syntax: RefCell::new(String::new()),
                 code_font: RefCell::new(None),
-                code_font_size: Cell::new(16),
                 generator: Arc::new(Mutex::new(SvgGenerator::default())),
                 config: Rc::new(RefCell::new(Config::new())),
                 main_window: RefCell::new(None),
@@ -220,6 +223,16 @@ pub mod imp {
                         .get::<Option<FontFamily>>()
                         .expect("Failed to get font");
                     self.code_font.set(font);
+                }
+                "code-font-size" => {
+                    let font_size = value.get::<f64>().expect("Failed to get font size");
+                    self.config_mut().code.font_size = font_size;
+                    self.main_window
+                        .borrow()
+                        .as_ref()
+                        .unwrap()
+                        .font_size_scale()
+                        .set_value(font_size);
                 }
                 _ => unimplemented!(),
             }
@@ -450,15 +463,21 @@ pub mod imp {
             let scale = window.font_size_scale();
             let generator = self.generator.clone();
             let self_obj = self.obj().clone();
+
+            scale.set_value(config.borrow().code.font_size);
+
             scale.connect_value_changed(move |scale| {
+
                 editor
                     .global_tag()
                     .set_size((scale.value() as f32 * 0.75 * pango::SCALE as f32) as i32);
+
                 generator
                     .lock()
                     .unwrap()
                     .set_font_size(scale.value() as f32);
-                config.borrow_mut().code.font_size = scale.value();
+
+                self_obj.set_code_font_size(scale.value());
             });
 
             let config = self.config.clone();
