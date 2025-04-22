@@ -70,6 +70,7 @@ pub mod imp {
         io,
         rc::Rc,
         sync::{Arc, Mutex},
+        time::{Duration, Instant},
     };
 
     use async_channel::{Receiver, Sender};
@@ -464,9 +465,14 @@ pub mod imp {
             let generator = self.generator.clone();
             let self_obj = self.obj().clone();
 
+            let duration = Duration::from_secs(1);
+            let last_update_attempt_ref = Cell::new(Instant::now());
+            let last_update_attempt = last_update_attempt_ref.clone();
+
             scale.set_value(config.borrow().code.font_size);
 
             scale.connect_value_changed(move |scale| {
+                let current_time = Instant::now();
 
                 editor
                     .global_tag()
@@ -478,6 +484,16 @@ pub mod imp {
                     .set_font_size(scale.value() as f32);
 
                 self_obj.set_code_font_size(scale.value());
+
+                if current_time.duration_since(last_update_attempt.get()) >= duration {
+                    let self_obj = self_obj.clone();
+                    last_update_attempt.set(current_time);
+
+                    glib::timeout_add_local(duration, move || {
+                        self_obj.imp().generate_code();
+                        glib::ControlFlow::Break
+                    });
+                }
             });
 
             let config = self.config.clone();
@@ -537,6 +553,7 @@ pub mod imp {
                             err
                         );
                     }
+
                     config
                 }
             };
