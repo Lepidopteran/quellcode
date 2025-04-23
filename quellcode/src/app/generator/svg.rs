@@ -1,11 +1,12 @@
 use quellcode::generating::svg::{generate_svg, SvgOptions};
 
-use super::{Generator, Properties, Property, PropertyType, PropertyValue, RenderType};
+use super::{Extensions, Generator, Properties, Property, PropertyType, PropertyValue, RenderType};
 
 #[derive(Default, Clone)]
 pub struct SvgGenerator {
     options: SvgOptions,
     properties: Properties,
+    extensions: Extensions,
 }
 
 impl SvgGenerator {
@@ -29,6 +30,7 @@ impl SvgGenerator {
                     ..Default::default()
                 },
             ],
+            extensions: vec!["svg"],
             options,
         }
     }
@@ -65,6 +67,10 @@ impl Generator for SvgGenerator {
 
     fn saveable(&self) -> &bool {
         &true
+    }
+
+    fn extensions(&self) -> Option<&Vec<&'static str>> {
+        Some(&self.extensions)
     }
 
     fn properties(&self) -> &Properties {
