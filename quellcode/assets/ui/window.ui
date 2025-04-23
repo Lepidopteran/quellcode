@@ -43,82 +43,192 @@
           </object>
         </child>
         <child>
-          <object class="GtkScrolledWindow" id="inspector_scroll">
-            <property name="hscrollbar-policy">never</property>
+          <object class="GtkBox">
+            <property name="orientation">vertical</property>
+            <property name="vexpand">true</property>
+            <property name="overflow">hidden</property>
             <child>
-              <object class="GtkBox" id="inspector">
-                <property name="orientation">vertical</property>
+              <object class="GtkScrolledWindow" id="inspector_scroll">
+                <property name="hscrollbar-policy">never</property>
+                <property name="vexpand">true</property>
                 <child>
-                  <object class="GtkBox">
+                  <object class="GtkBox" id="inspector">
                     <property name="orientation">vertical</property>
+                    <property name="margin-top">8</property>
+                    <property name="margin-start">8</property>
+                    <property name="margin-end">8</property>
+                    <property name="margin-bottom">8</property>
                     <property name="spacing">8</property>
                     <child>
-                      <object class="GtkBox" id="theme_box">
-                        <property name="orientation">vertical</property>
-                        <child>
-                          <object class="GtkLabel" id="theme_label">
-                            <property name="label">Theme</property>
+                      <object class="GtkExpander">
+                        <property name="label-widget">
+                          <object class="GtkLabel">
+                            <property name="label">Code Settings</property>
                             <property name="xalign">0</property>
+                            <property name="margin-bottom">4</property>
+                            <property name="margin-top">4</property>
+                            <property name="margin-start">2</property>
                             <attributes>
                               <attribute name="weight" value="PANGO_WEIGHT_BOLD"></attribute>
-                              <attribute name="foreground-alpha" value="620000"></attribute>
                             </attributes>
                           </object>
-                        </child>
+                        </property>
+                        <property name="expanded">true</property>
                         <child>
-                          <object class="GtkDropDown" id="theme_dropdown">
-                            <property name="halign">fill</property>
-														<property name="enable-search">true</property>
+                          <object class="GtkBox">
+                            <property name="orientation">vertical</property>
+                            <property name="margin-start">8</property>
+                            <property name="margin-end">8</property>
+                            <property name="spacing">8</property>
+                            <child>
+                              <object class="GtkBox" id="theme_box">
+                                <property name="orientation">vertical</property>
+                                <child>
+                                  <object class="GtkLabel" id="theme_label">
+                                    <property name="label">Theme</property>
+                                    <property name="xalign">0</property>
+                                    <attributes>
+                                      <attribute name="weight" value="PANGO_WEIGHT_BOLD"></attribute>
+                                      <attribute name="foreground-alpha" value="620000"></attribute>
+                                    </attributes>
+                                  </object>
+                                </child>
+                                <child>
+                                  <object class="GtkDropDown" id="theme_dropdown">
+                                    <property name="halign">fill</property>
+                                    <property name="enable-search">true</property>
+                                  </object>
+                                </child>
+                              </object>
+                            </child>
+                            <child>
+                              <object class="GtkBox" id="syntax_box">
+                                <property name="orientation">vertical</property>
+                                <child>
+                                  <object class="GtkLabel" id="syntax_label">
+                                    <property name="label">Syntax</property>
+                                    <property name="xalign">0</property>
+                                    <attributes>
+                                      <attribute name="weight" value="PANGO_WEIGHT_BOLD"></attribute>
+                                      <attribute name="foreground-alpha" value="620000"></attribute>
+                                    </attributes>
+                                  </object>
+                                </child>
+                                <child>
+                                  <object class="GtkDropDown" id="syntax_dropdown">
+                                    <property name="halign">fill</property>
+                                    <property name="enable-search">true</property>
+                                  </object>
+                                </child>
+                              </object>
+                            </child>
+                            <child>
+                              <object class="GtkBox" id="font_box">
+                                <property name="orientation">vertical</property>
+                                <child>
+                                  <object class="GtkLabel" id="font_label">
+                                    <property name="label">Font</property>
+                                    <property name="xalign">0</property>
+                                    <attributes>
+                                      <attribute name="weight" value="PANGO_WEIGHT_BOLD"></attribute>
+                                      <attribute name="foreground-alpha" value="620000"></attribute>
+                                    </attributes>
+                                  </object>
+                                </child>
+                                <child>
+                                  <object class="QuellcodeFontFamilyChooser" id="font_family_chooser">
+                                    <property name="halign">fill</property>
+                                  </object>
+                                </child>
+                              </object>
+                            </child>
+                            <child>
+                              <object class="GtkBox" id="font_size_box">
+                                <property name="orientation">vertical</property>
+                                <child>
+                                  <object class="GtkLabel" id="font_size_label">
+                                    <property name="label">Font Size</property>
+                                    <property name="xalign">0</property>
+                                    <attributes>
+                                      <attribute name="weight" value="PANGO_WEIGHT_BOLD"></attribute>
+                                      <attribute name="foreground-alpha" value="620000"></attribute>
+                                    </attributes>
+                                  </object>
+                                </child>
+                                <child>
+                                  <object class="GtkBox">
+                                    <property name="orientation">horizontal</property>
+                                    <property name="hexpand">false</property>
+                                    <property name="halign">fill</property>
+                                    <property name="spacing">8</property>
+                                    <property name="margin-bottom">8</property>
+                                    <child>
+                                      <object class="GtkEntry" id="font_size_entry">
+                                        <signal handler="font_size_entry_activate" name="activate" swapped="true"></signal>
+                                      </object>
+                                    </child>
+                                    <child>
+                                      <object class="GtkLabel">
+                                        <property name="label">px</property>
+                                      </object>
+                                    </child>
+                                  </object>
+                                </child>
+                                <child>
+                                  <object class="GtkScale" id="font_size_scale">
+                                    <signal handler="font_size_scale_changed" name="value-changed" swapped="true"></signal>
+                                    <property name="margin-start">-8</property>
+                                    <property name="round-digits">4</property>
+                                    <property name="adjustment">
+                                      <object class="GtkAdjustment">
+                                        <property name="lower">1</property>
+                                        <property name="upper">96</property>
+                                        <property name="value">16</property>
+                                      </object>
+                                    </property>
+                                  </object>
+                                </child>
+                                <child>
+                                  <object class="GtkBox">
+                                    <property name="orientation">horizontal</property>
+                                    <property name="hexpand">false</property>
+                                    <property name="halign">fill</property>
+                                    <property name="margin-bottom">8</property>
+                                    <child>
+                                      <object class="GtkLabel">
+                                        <property name="hexpand">true</property>
+                                        <property name="halign">start</property>
+                                        <property name="label">a</property>
+                                        <attributes>
+                                          <attribute name="weight" value="PANGO_WEIGHT_BOLD"></attribute>
+                                          <attribute name="foreground-alpha" value="620000"></attribute>
+                                        </attributes>
+                                      </object>
+                                    </child>
+                                    <child>
+                                      <object class="GtkLabel">
+                                        <property name="hexpand">true</property>
+                                        <property name="halign">end</property>
+                                        <property name="label">A</property>
+                                        <attributes>
+                                          <attribute name="weight" value="PANGO_WEIGHT_BOLD"></attribute>
+                                          <attribute name="foreground-alpha" value="620000"></attribute>
+                                        </attributes>
+                                      </object>
+                                    </child>
+                                  </object>
+                                </child>
+                              </object>
+                            </child>
                           </object>
                         </child>
+                        <style>
+                          <class name="card"></class>
+                        </style>
                       </object>
                     </child>
-                    <child>
-                      <object class="GtkBox" id="syntax_box">
-                        <property name="orientation">vertical</property>
-                        <child>
-                          <object class="GtkLabel" id="syntax_label">
-                            <property name="label">Syntax</property>
-                            <property name="xalign">0</property>
-                            <attributes>
-                              <attribute name="weight" value="PANGO_WEIGHT_BOLD"></attribute>
-                              <attribute name="foreground-alpha" value="620000"></attribute>
-                            </attributes>
-                          </object>
-                        </child>
-                        <child>
-                          <object class="GtkDropDown" id="syntax_dropdown">
-                            <property name="halign">fill</property>
-														<property name="enable-search">true</property>
-                          </object>
-                        </child>
-                      </object>
-                    </child>
-										<child>
-											<object class="GtkBox" id="font_box">
-												<property name="orientation">vertical</property>
-												<child>
-													<object class="GtkLabel" id="font_label">
-														<property name="label">Font</property>
-														<property name="xalign">0</property>
-														<attributes>
-															<attribute name="weight" value="PANGO_WEIGHT_BOLD"></attribute>
-															<attribute name="foreground-alpha" value="620000"></attribute>
-														</attributes>
-													</object>
-												</child>
-												<child>
-													<object class="QuellcodeFontFamilyChooser" id="font_family_chooser">
-														<property name="halign">fill</property>
-													</object>
-												</child>
-											</object>
-										</child>
                   </object>
                 </child>
-                <style>
-                  <class name="inspector"></class>
-                </style>
               </object>
             </child>
           </object>
