@@ -1,0 +1,38 @@
+:root {
+  --highlight-color: rgb(from white r g b / calc(alpha * 0.5));
+	--accent-bg-hover-color: color-mix(in srgb, var(), transparent 75%);
+	--widget-bg-color: @theme_bg_color;
+	--base-bg-color: @theme_base_color;
+}
+
+codeview {
+	padding: 0.5rem;
+}
+
+codeview text {
+	background: none;
+}
+
+.card {
+	background-color: var(--base-bg-color);
+}
+
+.inspector {
+  border-left: 1px solid rgb( from var(--highlight-color) r g b / calc(alpha * 0.25));
+}
+
+.inspector__action-box {
+	border-top: 1px solid rgb( from var(--highlight-color) r g b / calc(alpha * 0.25));
+}
+
+split-button .toggle {
+	border-left: none;
+	border-top-left-radius: 0;
+	border-bottom-left-radius: 0;
+}
+
+split-button button:not(.toggle) {
+	border-right: none;
+	border-top-right-radius: 0;
+	border-bottom-right-radius: 0;
+}

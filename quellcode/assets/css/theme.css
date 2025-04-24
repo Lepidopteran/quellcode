@@ -1,0 +1,69 @@
+:root {
+  --accent-bg-color: oklch(0.606 0.25 292.717);
+  --shadow-color: rgb(from black r g b / calc(alpha * 0.5));
+  --lesser-shadow-color: color-mix(
+    in srgb,
+    var(--shadow-color),
+    transparent 50%
+  );
+  --highlight-color: rgb(from white r g b / calc(alpha * 0.5));
+  --lesser-highlight-color: color-mix(
+    in srgb,
+    var(--highlight-color),
+    transparent 50%
+  );
+  --metal-gradient: conic-gradient(
+    from 75deg at 50% 50%,
+    #ccc 0%,
+    #222 25%,
+    #ccc 50%,
+    #222 75%,
+    #ccc 100%
+  );
+}
+
+codeview {
+  box-shadow:
+    inset 0 0.05rem 0.1rem var(--highlight-color),
+    0.1rem 0.1rem 0.525em var(--shadow-color),
+    -0.1rem -0.1rem 0.25rem var(--lesser-highlight-color);
+  border-radius: 0.75em;
+  padding: 0.5rem 0.5rem;
+}
+
+separator {
+  border: none;
+}
+
+check:checked,
+radio:checked {
+  background-color: var(--accent-bg-color);
+}
+
+.inspector {
+  box-shadow: 0 0 1rem var(--shadow-color);
+}
+
+.inspector__action-box {
+  box-shadow: 0 0 1rem var(--shadow-color);
+}
+
+scale trough {
+  box-shadow:
+    inset 0.1rem 0.01rem 0.25rem var(--shadow-color),
+    0 0 0.1rem var(--lesser-shadow-color);
+}
+
+scale trough slider {
+  border-radius: 9999px;
+  background: var(--metal-gradient);
+  box-shadow: 0 0 0.25rem 0.1rem var(--shadow-color);
+  min-height: 0.75rem;
+  min-width: 0.75rem;
+}
+
+scale trough highlight {
+  background-color: var(--accent-bg-color);
+  box-shadow: inset 0 0 0.25rem var(--shadow-color);
+  padding: 0.25rem;
+}

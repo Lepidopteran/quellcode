@@ -267,7 +267,7 @@ pub mod imp {
             );
 
             let style = gtk::CssProvider::new();
-            style.load_from_string(include_str!("../../assets/style.css"));
+            style.load_from_string(include_str!("../../assets/css/style.css"));
             gtk::style_context_add_provider_for_display(
                 &Display::default().expect("Failed to get display"),
                 &style,
