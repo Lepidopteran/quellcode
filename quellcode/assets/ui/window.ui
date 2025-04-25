@@ -28,6 +28,9 @@
               </object>
             </child>
             <child>
+              <object class="GtkSeparator"></object>
+            </child>
+            <child>
               <object class="GtkScrolledWindow">
                 <property name="hexpand">true</property>
                 <property name="vexpand">true</property>
