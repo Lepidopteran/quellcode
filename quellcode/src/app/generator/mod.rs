@@ -57,7 +57,7 @@ pub enum PropertyType {
 pub enum PropertyValue {
     String(String),
     Int(i32),
-    Float(f32),
+    Float(f64),
     Bool(bool),
 }
 
@@ -115,9 +115,15 @@ impl From<i32> for PropertyValue {
     }
 }
 
+impl From<f64> for PropertyValue {
+    fn from(value: f64) -> Self {
+        PropertyValue::Float(value)
+    }
+}
+
 impl From<f32> for PropertyValue {
     fn from(value: f32) -> Self {
-        PropertyValue::Float(value)
+        PropertyValue::Float(value as f64)
     }
 }
 
@@ -138,12 +144,12 @@ impl std::string::ToString for PropertyValue {
     }
 }
 
-impl TryInto<f32> for PropertyValue {
+impl TryInto<f64> for PropertyValue {
     type Error = PropertyError;
-    fn try_into(self) -> Result<f32, Self::Error> {
+    fn try_into(self) -> Result<f64, Self::Error> {
         match self {
             PropertyValue::Float(float) => Ok(float),
-            PropertyValue::Int(int) => Ok(int as f32),
+            PropertyValue::Int(int) => Ok(int as f64),
             _ => Err(PropertyError::InvalidValueType),
         }
     }

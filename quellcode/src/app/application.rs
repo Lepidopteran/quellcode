@@ -80,7 +80,7 @@ pub mod imp {
     use log::warn;
 
     use crate::app::{
-        generator::{svg::SvgGenerator, Generator, RenderOutput},
+        generator::{svg::SvgGenerator, Generator, PropertyType, RenderOutput},
         ui::FontFamilyChooser,
     };
 
@@ -115,6 +115,158 @@ pub mod imp {
 
         pub fn config_mut(&self) -> RefMut<Config> {
             self.config.borrow_mut()
+        }
+
+        fn display_generator_properties(&self) {
+            let container = self
+                .main_window
+                .borrow()
+                .as_ref()
+                .expect("No main window")
+                .generator_box()
+                .clone();
+
+            for property in self.generator.lock().unwrap().properties().clone() {
+                debug!("Property: {}", property.name);
+                let generator = self.generator.clone();
+                match property.kind {
+                    PropertyType::Bool => {
+                        let check = gtk::CheckButton::builder()
+                            .label(create_property_display_name(property.name))
+                            .active(
+                                property
+                                    .default
+                                    .clone()
+                                    .is_some_and(|v| v.try_into().unwrap()),
+                            )
+                            .build();
+
+                        let self_obj = self.obj().clone();
+                        check.connect_toggled(move |check| {
+                            let _ = generator
+                                .lock()
+                                .unwrap()
+                                .set_property(property.name, check.is_active().into());
+
+                            self_obj.imp().generate_code();
+                        });
+
+                        container.append(&check);
+                    }
+                    PropertyType::String => {
+                        let wrapper = gtk::Box::builder()
+                            .orientation(gtk::Orientation::Vertical)
+                            .build();
+
+                        let label = gtk::Label::builder()
+                            .label(create_property_display_name(property.name))
+                            .build();
+
+                        let entry = gtk::Entry::builder()
+                            .text(
+                                property
+                                    .default
+                                    .clone()
+                                    .unwrap_or_else(|| "".into())
+                                    .to_string(),
+                            )
+                            .build();
+
+                        let self_obj = self.obj().clone();
+                        entry.connect_changed(move |entry| {
+                            let _ = generator
+                                .lock()
+                                .unwrap()
+                                .set_property(property.name, entry.text().to_string().into());
+
+                            self_obj.imp().generate_code();
+                        });
+
+                        wrapper.append(&label);
+                        wrapper.append(&entry);
+
+                        container.append(&wrapper);
+                    }
+                    PropertyType::Float => {
+                        let wrapper = gtk::Box::builder()
+                            .orientation(gtk::Orientation::Vertical)
+                            .build();
+
+                        let label = gtk::Label::builder()
+                            .label(create_property_display_name(property.name))
+                            .build();
+
+                        let adjustment = gtk::Adjustment::new(
+                            property.default.clone().unwrap_or_else(|| 0.0.into()).try_into().unwrap(),
+                            property.min.unwrap_or_else(|| 0.0.into()).try_into().unwrap(),
+                            property.max.unwrap_or_else(|| 0.0.into()).try_into().unwrap(),
+                            0.0,
+                            0.0,
+                            0.0,
+                        );
+
+                        let spinner = gtk::SpinButton::builder()
+                            .adjustment(&adjustment)
+                            .digits(2)
+                            .climb_rate(0.1)
+                            .build();
+
+                        let self_obj = self.obj().clone();
+                        spinner.connect_value_changed(move |spinner| {
+                            let _ = generator
+                                .lock()
+                                .unwrap()
+                                .set_property(property.name, spinner.value().to_string().into());
+
+                            self_obj.imp().generate_code();
+                        });
+
+                        wrapper.append(&label);
+                        wrapper.append(&spinner);
+
+                        container.append(&wrapper);
+                    },
+                    PropertyType::Int => {
+                        let wrapper = gtk::Box::builder()
+                            .orientation(gtk::Orientation::Vertical)
+                            .build();
+
+                        let label = gtk::Label::builder()
+                            .label(create_property_display_name(property.name))
+                            .build();
+
+                        let adjustment = gtk::Adjustment::new(
+                            property.default.clone().unwrap_or_else(|| 0.0.into()).try_into().unwrap(),
+                            property.min.unwrap_or_else(|| 0.0.into()).try_into().unwrap(),
+                            property.max.unwrap_or_else(|| 0.0.into()).try_into().unwrap(),
+                            1.0,
+                            0.0,
+                            0.0,
+                        );
+
+                        let spinner = gtk::SpinButton::builder()
+                            .adjustment(&adjustment)
+                            .digits(0)
+                            .climb_rate(1.0)
+                            .build();
+
+                        let self_obj = self.obj().clone();
+                        spinner.connect_value_changed(move |spinner| {
+                            let _ = generator
+                                .lock()
+                                .unwrap()
+                                .set_property(property.name, spinner.value().to_string().into());
+
+                            self_obj.imp().generate_code();
+                        });
+
+                        wrapper.append(&label);
+                        wrapper.append(&spinner);
+
+                        container.append(&wrapper);
+                    }
+                }
+            }
         }
 
         fn generate_code(&self) {
@@ -184,7 +336,7 @@ pub mod imp {
                 code_theme: RefCell::new(String::new()),
                 code_syntax: RefCell::new(String::new()),
                 code_font: RefCell::new(None),
-                generator: Arc::new(Mutex::new(SvgGenerator::default())),
+                generator: Arc::new(Mutex::new(SvgGenerator::new())),
                 config: Rc::new(RefCell::new(Config::new())),
                 main_window: RefCell::new(None),
             }
@@ -284,6 +436,8 @@ pub mod imp {
 
             // TODO: Organize the following code.
             let window = Window::new(&self.obj());
+            self.main_window.replace(Some(window.clone()));
+            self.display_generator_properties();
 
             let theme_set = self.theme_set.borrow();
             let themes = create_theme_model(&theme_set);
@@ -507,9 +661,8 @@ pub mod imp {
                 glib::Propagation::Proceed
             });
 
-            window.present();
 
-            self.main_window.replace(Some(window.clone()));
+            window.present();
         }
 
         fn startup(&self) {
@@ -596,6 +749,21 @@ pub mod imp {
                 .borrow()
                 .load_from_string(&theme_to_gtk_css(theme.1));
         }
+    }
+
+    fn create_property_display_name(input: &str) -> String {
+        input
+            .replace("_", " ")
+            .split_whitespace()
+            .map(|word| {
+                let mut c = word.chars();
+                match c.next() {
+                    Some(first) => first.to_uppercase().chain(c).collect::<String>(),
+                    None => String::new(),
+                }
+            })
+            .collect::<Vec<String>>()
+            .join(" ")
     }
 
     fn ensure_app_directories_exist() {

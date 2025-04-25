@@ -227,10 +227,40 @@
                         </style>
                       </object>
                     </child>
+                    <child>
+                      <object class="GtkExpander">
+                        <property name="label-widget">
+                          <object class="GtkLabel">
+                            <property name="label">Generator Settings</property>
+                            <property name="xalign">0</property>
+                            <property name="margin-bottom">4</property>
+                            <property name="margin-top">4</property>
+                            <property name="margin-start">2</property>
+                            <attributes>
+                              <attribute name="weight" value="PANGO_WEIGHT_BOLD"></attribute>
+                            </attributes>
+                          </object>
+                        </property>
+                        <property name="expanded">true</property>
+                        <child>
+                          <object class="GtkBox" id="generator_box">
+                            <property name="orientation">vertical</property>
+                            <property name="margin-start">8</property>
+                            <property name="margin-bottom">8</property>
+                          </object>
+                        </child>
+                        <style>
+                          <class name="card"></class>
+                        </style>
+                      </object>
+                    </child>
                   </object>
                 </child>
               </object>
             </child>
+            <style>
+              <class name="inspector"></class>
+            </style>
           </object>
         </child>
       </object>
