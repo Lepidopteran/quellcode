@@ -6,6 +6,8 @@ use gtk::subclass::prelude::*;
 use gtk::{gio, glib, CompositeTemplate, TemplateChild};
 
 use super::application::QuellcodeApplication;
+use super::ui::{code_view::CodeView, FontFamilyChooser};
+
 const UNITS: &[&str] = &["px", "pt", "pc", "in", "cm", "mm"];
 const ROUND_DIGITS: i32 = 4;
 
@@ -51,6 +53,12 @@ pub mod imp {
 
         #[template_child]
         pub font_size_scale: TemplateChild<gtk::Scale>,
+
+        #[template_child]
+        pub generator_box: TemplateChild<gtk::Box>,
+
+        #[template_child]
+        pub action_button: TemplateChild<gtk::Button>,
     }
 
     #[gtk::template_callbacks]
@@ -193,6 +201,14 @@ impl Window {
 
     pub fn inspector(&self) -> &gtk::Box {
         &self.imp().inspector
+    }
+
+    pub fn generator_box(&self) -> &gtk::Box {
+        &self.imp().generator_box
+    }
+
+    pub fn action_button(&self) -> &gtk::Button {
+        &self.imp().action_button
     }
 
     pub fn editor(&self) -> &CodeView {

@@ -261,6 +261,37 @@
                 </child>
               </object>
             </child>
+            <child>
+              <object class="GtkSeparator"></object>
+            </child>
+            <child>
+              <object class="GtkButton" id="action_button">
+                <property name="margin-start">8</property>
+                <property name="margin-top">8</property>
+                <property name="margin-end">8</property>
+                <property name="margin-bottom">8</property>
+                <property name="child">
+                  <object class="GtkBox">
+                    <property name="orientation">horizontal</property>
+                    <property name="halign">center</property>
+                    <property name="spacing">8</property>
+                    <child>
+                      <object class="GtkImage">
+                        <property name="icon-name">document-save</property>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkLabel" id="action_label">
+                        <property name="label">Export</property>
+                      </object>
+                    </child>
+                  </object>
+                </property>
+                <style>
+                  <class name="suggested-action"></class>
+                </style>
+              </object>
+            </child>
             <style>
               <class name="inspector"></class>
             </style>
