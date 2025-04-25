@@ -2,7 +2,7 @@ use quellcode::generating::svg::{generate_svg, SvgOptions};
 
 use super::{Extensions, Generator, Properties, Property, PropertyType, PropertyValue, RenderType};
 
-#[derive(Default, Clone)]
+#[derive(Clone, Debug)]
 pub struct SvgGenerator {
     options: SvgOptions,
     properties: Properties,

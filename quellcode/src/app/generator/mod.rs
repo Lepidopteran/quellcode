@@ -46,7 +46,6 @@ pub enum RenderOutput {
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum PropertyType {
     String,
-    Font,
     Int,
     Float,
     Bool,
@@ -55,7 +54,6 @@ pub enum PropertyType {
 #[derive(Debug, Clone, PartialEq)]
 pub enum PropertyValue {
     String(String),
-    Font(String),
     Int(i32),
     Float(f32),
     Bool(bool),
@@ -93,7 +91,6 @@ impl PropertyValue {
             PropertyValue::Int(_) => PropertyType::Int,
             PropertyValue::Float(_) => PropertyType::Float,
             PropertyValue::Bool(_) => PropertyType::Bool,
-            PropertyValue::Font(_) => PropertyType::Font,
         }
     }
 }
@@ -101,6 +98,12 @@ impl PropertyValue {
 impl From<&str> for PropertyValue {
     fn from(value: &str) -> Self {
         PropertyValue::String(value.to_string())
+    }
+}
+
+impl From<String> for PropertyValue {
+    fn from(value: String) -> Self {
+        PropertyValue::String(value)
     }
 }
 
@@ -122,15 +125,13 @@ impl From<bool> for PropertyValue {
     }
 }
 
-impl TryInto<String> for PropertyValue {
-    type Error = PropertyError;
-    fn try_into(self) -> Result<String, Self::Error> {
+impl std::string::ToString for PropertyValue {
+    fn to_string(&self) -> String {
         match self {
-            PropertyValue::String(string) => Ok(string),
-            PropertyValue::Int(int) => Ok(int.to_string()),
-            PropertyValue::Float(float) => Ok(float.to_string()),
-            PropertyValue::Font(font) => Ok(font),
-            _ => Err(PropertyError::InvalidValueType),
+            PropertyValue::String(string) => string.clone(),
+            PropertyValue::Int(int) => int.to_string(),
+            PropertyValue::Float(float) => float.to_string(),
+            PropertyValue::Bool(bool) => bool.to_string(),
         }
     }
 }
