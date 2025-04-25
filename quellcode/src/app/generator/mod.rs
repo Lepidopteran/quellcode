@@ -1,3 +1,5 @@
+use std::fmt::Debug;
+
 use syntect::{
     highlighting::Theme,
     parsing::{SyntaxReference, SyntaxSet},
@@ -169,7 +171,7 @@ impl TryInto<bool> for PropertyValue {
     }
 }
 
-pub trait Generator: Send + Sync {
+pub trait Generator: Send + Sync + Debug {
     fn name(&self) -> &str;
     fn description(&self) -> &str;
     fn saveable(&self) -> &bool;
