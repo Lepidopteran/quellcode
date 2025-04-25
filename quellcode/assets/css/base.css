@@ -1,0 +1,13 @@
+:root {
+  --widget-bg-color: @theme_bg_color;
+  --widget-fg-color: @theme_fg_color;
+  --base-bg-color: @theme_base_color;
+  --base-fg-color: @theme_text_color;
+}
+
+.card {
+  background-color: var(--base-bg-color);
+  color: var(--base-fg-color);
+  border-radius: 8px;
+  padding: 2px;
+}

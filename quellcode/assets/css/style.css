@@ -1,8 +1,6 @@
 :root {
   --highlight-color: rgb(from white r g b / calc(alpha * 0.5));
 	--accent-bg-hover-color: color-mix(in srgb, var(), transparent 75%);
-	--widget-bg-color: @theme_bg_color;
-	--base-bg-color: @theme_base_color;
 }
 
 codeview {
@@ -13,9 +11,6 @@ codeview text {
 	background: none;
 }
 
-.card {
-	background-color: var(--base-bg-color);
-}
 
 .inspector {
   border-left: 1px solid rgb( from var(--highlight-color) r g b / calc(alpha * 0.25));

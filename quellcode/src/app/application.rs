@@ -418,19 +418,19 @@ pub mod imp {
                 gtk::STYLE_PROVIDER_PRIORITY_APPLICATION,
             );
 
+            let base = gtk::CssProvider::new();
+            base.load_from_string(include_str!("../../assets/css/base.css"));
+            gtk::style_context_add_provider_for_display(
+                &Display::default().expect("Failed to get display"),
+                &base,
+                gtk::STYLE_PROVIDER_PRIORITY_THEME,
+            );
+
             let style = gtk::CssProvider::new();
             style.load_from_string(include_str!("../../assets/css/style.css"));
             gtk::style_context_add_provider_for_display(
                 &Display::default().expect("Failed to get display"),
                 &style,
-                gtk::STYLE_PROVIDER_PRIORITY_APPLICATION,
-            );
-
-            let app_theme = gtk::CssProvider::new();
-            app_theme.load_from_string(include_str!("../../assets/theme.css"));
-            gtk::style_context_add_provider_for_display(
-                &Display::default().expect("Failed to get display"),
-                &app_theme,
                 gtk::STYLE_PROVIDER_PRIORITY_APPLICATION,
             );
 
