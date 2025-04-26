@@ -74,8 +74,16 @@ pub fn generate_svg(
     for (index, line) in text.lines().enumerate() {
         let ranges = highlight.highlight_line(line, syntax_set)?;
 
+        let mut clean_font_family = font_family.to_string();
+        if clean_font_family
+            .chars()
+            .any(|char| !char.is_ascii_alphanumeric() && char != '_' && char != '-')
+        {
+            clean_font_family = format!("'{}'", clean_font_family);
+        }
+
         let mut text_element = Text::new("")
-            .set("font-family", font_family)
+            .set("font-family", clean_font_family)
             .set("font-size", format!("{text_size}px"))
             .set("font-weight", "normal")
             .set("y", ((index + 1) * text_size).to_string());
