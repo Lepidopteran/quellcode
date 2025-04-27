@@ -34,6 +34,12 @@ pub mod imp {
         pub viewer: TemplateChild<CodeView>,
 
         #[template_child]
+        pub viewer_loading_spinner: TemplateChild<gtk::Spinner>,
+
+        #[template_child]
+        pub viewer_loading_box: TemplateChild<gtk::Box>,
+
+        #[template_child]
         theme_label: TemplateChild<gtk::Label>,
 
         #[template_child]
@@ -140,6 +146,13 @@ pub mod imp {
             self.font_size_entry
                 .set_text(&self.font_size_scale.value().to_string());
 
+            let loading_spinner = self.viewer_loading_spinner.clone();
+
+            self.viewer_loading_box
+                .connect_visible_notify(move |container| {
+                    loading_spinner.set_spinning(container.is_visible());
+                });
+
             for snap_scale in (8..96).step_by(8) {
                 self.font_size_scale
                     .add_mark(snap_scale as f64, gtk::PositionType::Top, None);
@@ -213,6 +226,14 @@ impl Window {
 
     pub fn editor(&self) -> &CodeView {
         &self.imp().editor
+    }
+
+    pub fn viewer_loading_box(&self) -> &gtk::Box {
+        &self.imp().viewer_loading_box
+    }
+
+    pub fn viewer_loading_spinner(&self) -> &gtk::Spinner {
+        &self.imp().viewer_loading_spinner
     }
 
     pub fn viewer(&self) -> &CodeView {

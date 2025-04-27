@@ -31,14 +31,42 @@
               <object class="GtkSeparator"></object>
             </child>
             <child>
-              <object class="GtkScrolledWindow">
-                <property name="hexpand">true</property>
-                <property name="vexpand">true</property>
+              <object class="GtkOverlay" id="viewer_overlay">
                 <child>
-                  <object class="QuellcodeCodeView" id="viewer">
+                  <object class="GtkScrolledWindow">
                     <property name="hexpand">true</property>
                     <property name="vexpand">true</property>
-                    <property name="editable">false</property>
+                    <child>
+                      <object class="QuellcodeCodeView" id="viewer">
+                        <property name="hexpand">true</property>
+                        <property name="vexpand">true</property>
+                        <property name="editable">false</property>
+                      </object>
+                    </child>
+                  </object>
+                </child>
+                <child type="overlay">
+                  <object class="GtkBox" id="viewer_loading_box">
+                    <property name="orientation">vertical</property>
+                    <property name="vexpand">true</property>
+                    <property name="halign">center</property>
+                    <property name="valign">center</property>
+										<property name="visible">false</property>
+                    <child>
+                      <object class="GtkSpinner" id="viewer_loading_spinner"></object>
+                    </child>
+                    <child>
+                      <object class="GtkLabel" id="viewer_loading_label">
+                        <property name="label">Generating...</property>
+                        <attributes>
+                          <attribute name="weight" value="PANGO_WEIGHT_BOLD"></attribute>
+                        </attributes>
+                      </object>
+                    </child>
+										<style>
+											<class name="p-2"></class>
+											<class name="darken"></class>
+										</style>
                   </object>
                 </child>
               </object>

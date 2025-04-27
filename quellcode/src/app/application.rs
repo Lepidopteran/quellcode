@@ -66,7 +66,12 @@ pub fn theme_to_gtk_css(theme: &Theme) -> String {
 
 pub mod imp {
     use std::{
-        cell::RefMut, io, path::PathBuf, rc::Rc, sync::{Arc, Mutex}, time::{Duration, Instant}
+        cell::RefMut,
+        io,
+        path::PathBuf,
+        rc::Rc,
+        sync::{Arc, Mutex},
+        time::{Duration, Instant},
     };
 
     use async_channel::{Receiver, Sender};
@@ -306,6 +311,7 @@ pub mod imp {
                 .clone();
             let editor = window.editor().clone();
             let viewer = window.viewer().clone();
+            let viewer_loading_box = window.viewer_loading_box().clone();
             let editor_buffer = editor.buffer();
 
             let text =
@@ -316,6 +322,7 @@ pub mod imp {
             let editor_theme = editor.theme().clone();
 
             let generator_sender = sender.clone();
+            viewer_loading_box.set_visible(true);
             gio::spawn_blocking(move || {
                 let generated_svg = generator.lock().unwrap().generate(
                     &text,
@@ -336,10 +343,12 @@ pub mod imp {
                 }
             });
 
+            let viewer_loading_box = window.viewer_loading_box().clone();
             glib::spawn_future_local(async move {
                 while let Ok(svg) = receiver.recv().await {
                     if let RenderOutput::Text(svg) = svg {
                         viewer.buffer().set_text(&svg);
+                        viewer_loading_box.set_visible(false);
                     }
                 }
             });
@@ -690,7 +699,6 @@ pub mod imp {
 
             let viewer = window.viewer().clone();
             window.action_button().connect_clicked(move |_| {
-
                 let svg_filter = gtk::FileFilter::new();
                 svg_filter.add_mime_type("text/plain");
                 svg_filter.set_name(Some("SVG"));
@@ -704,23 +712,33 @@ pub mod imp {
                 list.append(&svg_filter);
                 list.append(&any_filter);
 
-                let text = viewer.buffer().text(
-                    &viewer.buffer().start_iter(),
-                    &viewer.buffer().end_iter(),
-                    true,
-                ).to_string();
+                let text = viewer
+                    .buffer()
+                    .text(
+                        &viewer.buffer().start_iter(),
+                        &viewer.buffer().end_iter(),
+                        true,
+                    )
+                    .to_string();
 
-                let dialog = gtk::FileDialog::builder().filters(&list).title("Save Generated Code").build();
-                dialog.save(None::<&gtk::Window>, None::<&gtk::gio::Cancellable>, move |result| {
-                    if let Ok(file) = result {
-                        let path = file.path();
-                        let text = text.as_bytes();
-                        
-                        if let Err(err) = std::fs::write(path.unwrap(), text) {
-                            error!("Failed to write to file, Error:\n{}", err);
+                let dialog = gtk::FileDialog::builder()
+                    .filters(&list)
+                    .title("Save Generated Code")
+                    .build();
+                dialog.save(
+                    None::<&gtk::Window>,
+                    None::<&gtk::gio::Cancellable>,
+                    move |result| {
+                        if let Ok(file) = result {
+                            let path = file.path();
+                            let text = text.as_bytes();
+
+                            if let Err(err) = std::fs::write(path.unwrap(), text) {
+                                error!("Failed to write to file, Error:\n{}", err);
+                            }
                         }
-                    }
-                });
+                    },
+                );
             });
         }
 

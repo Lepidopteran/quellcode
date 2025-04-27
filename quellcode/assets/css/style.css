@@ -31,3 +31,33 @@ split-button button:not(.toggle) {
 	border-top-right-radius: 0;
 	border-bottom-right-radius: 0;
 }
+
+/* Utilities */
+
+.highlight {
+	background-color: var(--accent-bg-hover-color);
+}
+
+.darken {
+	background-color: rgb(from black r g b / calc(alpha * 0.5));
+}
+
+.lighten {
+	background-color: rgb(from white r g b / calc(alpha * 0.5));
+}
+
+.p-1 {
+	padding: 0.5rem;
+}
+
+.p-2 {
+	padding: 1rem;
+}
+
+.p-3 {
+	padding: 1.5rem;
+}
+
+.p-4 {
+	padding: 2rem;
+}
