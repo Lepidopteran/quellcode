@@ -12,6 +12,11 @@ const UNITS: &[&str] = &["px", "pt", "pc", "in", "cm", "mm"];
 const ROUND_DIGITS: i32 = 4;
 
 pub mod imp {
+    use gtk::{
+        gio::{ListStore, SimpleAction},
+        FileDialog,
+    };
+
     use crate::app::ui::code_view::CodeView;
 
     use super::*;
@@ -25,7 +30,7 @@ pub mod imp {
         pub inspector: TemplateChild<gtk::Box>,
 
         #[template_child]
-        pub layout: TemplateChild<gtk::Box>,
+        pub layout: TemplateChild<gtk::Grid>,
 
         #[template_child]
         pub editor: TemplateChild<CodeView>,
@@ -157,6 +162,47 @@ pub mod imp {
                 self.font_size_scale
                     .add_mark(snap_scale as f64, gtk::PositionType::Top, None);
             }
+
+            let import_action = SimpleAction::new("import_file", None);
+            let editor = self.editor.clone();
+
+            import_action.connect_activate(move |_, _| {
+                let default_filter = gtk::FileFilter::new();
+                default_filter.add_mime_type("text/plain");
+                default_filter.set_name(Some("Plain Text"));
+
+                let any_filter = gtk::FileFilter::new();
+                any_filter.add_pattern("*");
+                any_filter.set_name(Some("Any"));
+
+                let list = ListStore::new::<gtk::FileFilter>();
+                list.append(&default_filter);
+                list.append(&any_filter);
+
+                let dialog = FileDialog::builder()
+                    .title("Import File")
+                    .filters(&list)
+                    .default_filter(&default_filter)
+                    .build();
+
+                let buffer = editor.buffer().clone();
+
+                dialog.open(
+                    None::<&gtk::Window>,
+                    None::<&gio::Cancellable>,
+                    move |result| {
+                        if let Ok(file) = result {
+                            let path = file.path();
+                            let text = std::fs::read_to_string(path.unwrap()).unwrap();
+
+                            buffer.set_text(&text);
+                        }
+                    },
+                );
+            });
+
+            let self_obj = self.obj().clone();
+            self_obj.add_action(&import_action);
 
             self.inspector.set_size_request(300, -1);
         }

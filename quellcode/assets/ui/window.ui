@@ -5,9 +5,7 @@
     <property name="default_width">800</property>
     <property name="default_height">600</property>
     <child>
-      <object class="GtkBox" id="layout">
-        <property name="orientation">horizontal</property>
-        <property name="spacing">8</property>
+      <object class="GtkGrid" id="layout">
         <property name="hexpand">true</property>
         <property name="vexpand">true</property>
         <child>
@@ -15,58 +13,126 @@
             <property name="orientation">vertical</property>
             <property name="hexpand">true</property>
             <property name="vexpand">true</property>
+            <layout>
+              <property name="column">0</property>
+              <property name="row">1</property>
+            </layout>
             <child>
-              <object class="GtkScrolledWindow" id="scroll">
-                <property name="hexpand">true</property>
-                <property name="vexpand">true</property>
-                <child>
-                  <object class="QuellcodeCodeView" id="editor">
-                    <property name="hexpand">true</property>
-                    <property name="vexpand">true</property>
+              <object class="GtkCenterBox">
+								<style>
+									<class name="toolbar"></class>
+								</style>
+                <child type="start">
+                  <object class="GtkBox">
+                    <property name="orientation">horizontal</property>
+                    <child>
+                      <object class="GtkButton">
+												<property name="action-name">win.import_file</property>
+                        <property name="child">
+                          <object class="GtkBox">
+                            <property name="can-focus">false</property>
+                            <property name="orientation">horizontal</property>
+                            <child>
+                              <object class="GtkImage">
+                                <property name="icon-name">document-open-symbolic</property>
+                              </object>
+                            </child>
+                            <child>
+                              <object class="GtkLabel">
+                                <property name="margin-start">4</property>
+                                <property name="label">Import</property>
+                              </object>
+                            </child>
+                          </object>
+                        </property>
+                      </object>
+                    </child>
                   </object>
                 </child>
               </object>
             </child>
             <child>
-              <object class="GtkSeparator"></object>
-            </child>
-            <child>
-              <object class="GtkOverlay" id="viewer_overlay">
+              <object class="GtkFrame">
+                <property name="margin-start">8</property>
+                <property name="margin-top">8</property>
+                <property name="margin-end">8</property>
+                <property name="margin-bottom">8</property>
                 <child>
-                  <object class="GtkScrolledWindow">
-                    <property name="hexpand">true</property>
-                    <property name="vexpand">true</property>
+                  <object class="GtkGrid" id="editor_viewer_grid">
+                    <property name="orientation">vertical</property>
                     <child>
-                      <object class="QuellcodeCodeView" id="viewer">
+                      <object class="GtkCenterBox">
+                        <child type="start">
+                          <object class="GtkBox">
+                            <property name="orientation">horizontal</property>
+                          </object>
+                        </child>
+												<!-- TODO: Add options for the toolbar. -->
+                        <!-- <style> -->
+                        <!--   <class name="toolbar"></class> -->
+                        <!-- </style> -->
+                      </object>
+                    </child>
+                    <!-- <child> -->
+                    <!--   <object class="GtkSeparator" id="editor_toolbar_separator"></object> -->
+                    <!-- </child> -->
+                    <child>
+                      <object class="GtkScrolledWindow" id="scroll">
                         <property name="hexpand">true</property>
                         <property name="vexpand">true</property>
-                        <property name="editable">false</property>
+                        <child>
+                          <object class="QuellcodeCodeView" id="editor">
+                            <property name="hexpand">true</property>
+                            <property name="vexpand">true</property>
+                          </object>
+                        </child>
                       </object>
                     </child>
-                  </object>
-                </child>
-                <child type="overlay">
-                  <object class="GtkBox" id="viewer_loading_box">
-                    <property name="orientation">vertical</property>
-                    <property name="vexpand">true</property>
-                    <property name="halign">center</property>
-                    <property name="valign">center</property>
-										<property name="visible">false</property>
                     <child>
-                      <object class="GtkSpinner" id="viewer_loading_spinner"></object>
+                      <object class="GtkSeparator" id="editor_separator"></object>
                     </child>
                     <child>
-                      <object class="GtkLabel" id="viewer_loading_label">
-                        <property name="label">Generating...</property>
-                        <attributes>
-                          <attribute name="weight" value="PANGO_WEIGHT_BOLD"></attribute>
-                        </attributes>
+                      <object class="GtkOverlay" id="viewer_overlay">
+                        <child>
+                          <object class="GtkScrolledWindow">
+                            <property name="hexpand">true</property>
+                            <property name="vexpand">true</property>
+                            <child>
+                              <object class="QuellcodeCodeView" id="viewer">
+                                <property name="hexpand">true</property>
+                                <property name="vexpand">true</property>
+                                <property name="cursor-visible">false</property>
+                                <property name="editable">false</property>
+                              </object>
+                            </child>
+                          </object>
+                        </child>
+                        <child type="overlay">
+                          <object class="GtkBox" id="viewer_loading_box">
+                            <property name="orientation">vertical</property>
+                            <property name="vexpand">true</property>
+                            <property name="halign">center</property>
+                            <property name="valign">center</property>
+                            <property name="visible">false</property>
+                            <child>
+                              <object class="GtkSpinner" id="viewer_loading_spinner"></object>
+                            </child>
+                            <child>
+                              <object class="GtkLabel" id="viewer_loading_label">
+                                <property name="label">Generating...</property>
+                                <attributes>
+                                  <attribute name="weight" value="PANGO_WEIGHT_BOLD"></attribute>
+                                </attributes>
+                              </object>
+                            </child>
+                            <style>
+                              <class name="p-2"></class>
+                              <class name="darken"></class>
+                            </style>
+                          </object>
+                        </child>
                       </object>
                     </child>
-										<style>
-											<class name="p-2"></class>
-											<class name="darken"></class>
-										</style>
                   </object>
                 </child>
               </object>
@@ -78,6 +144,10 @@
             <property name="orientation">vertical</property>
             <property name="vexpand">true</property>
             <property name="overflow">hidden</property>
+            <layout>
+              <property name="column">1</property>
+              <property name="row">1</property>
+            </layout>
             <child>
               <object class="GtkScrolledWindow" id="inspector_scroll">
                 <property name="hscrollbar-policy">never</property>

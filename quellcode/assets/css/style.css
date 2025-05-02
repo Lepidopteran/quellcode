@@ -61,3 +61,7 @@ split-button button:not(.toggle) {
 .p-4 {
 	padding: 2rem;
 }
+
+.rotate-90 {
+	transform: rotate(90deg);
+}
