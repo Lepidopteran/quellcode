@@ -79,7 +79,7 @@ pub mod imp {
     use glib::{closure_local, property::PropertySet, subclass::Signal, Properties};
     use gtk::{
         gio::ListStore,
-        pango::{self, FontDescription},
+        pango::{self, FontDescription, TabArray},
     };
     use log::warn;
 
@@ -637,9 +637,7 @@ pub mod imp {
 
             let editor = window.editor().clone();
 
-            editor
-                .global_tag()
-                .set_family(Some(&font_chooser.selected_family().unwrap().name()));
+            editor.set_font_family(font_chooser.selected_family().unwrap().name());
 
             self.generator.lock().unwrap().set_font_family(
                 &font_chooser
@@ -662,9 +660,7 @@ pub mod imp {
             scale.connect_value_changed(move |scale| {
                 let current_time = Instant::now();
 
-                editor
-                    .global_tag()
-                    .set_size((scale.value() as f32 * 0.75 * pango::SCALE as f32) as i32);
+                editor.set_font_size(scale.value());
 
                 generator
                     .lock()

@@ -8,17 +8,22 @@ use gtk::{
     TextTag,
 };
 
+use log::warn;
 use syntect::{
     highlighting::{HighlightState, Highlighter, RangedHighlightIterator, Theme},
     parsing::{ParseState, ScopeStack, SyntaxReference, SyntaxSet},
 };
 
 pub mod imp {
-    use std::{cell::RefCell, rc::Rc};
+    use std::{
+        cell::{Cell, RefCell},
+        rc::Rc,
+    };
 
     use super::*;
     use gtk::{
-        glib::subclass::prelude::*,
+        glib::{subclass::prelude::*, Properties},
+        pango,
         prelude::{TextViewExt, WidgetExt},
         subclass::{
             prelude::TextViewImpl,
@@ -26,11 +31,31 @@ pub mod imp {
         },
     };
 
-    #[derive(Default)]
+    #[derive(Properties)]
+    #[properties(wrapper_type = super::CodeView)]
     pub struct CodeView {
         pub syntax_set: Rc<RefCell<SyntaxSet>>,
         pub syntax: Rc<RefCell<Option<SyntaxReference>>>,
         pub theme: Rc<RefCell<Option<Theme>>>,
+        #[property(get, set = set_font_family)]
+        pub font_family: RefCell<String>,
+        #[property(get, set = set_font_size)]
+        pub font_size: Cell<f64>,
+        #[property(get, set)]
+        pub tab_width: Cell<u32>,
+    }
+
+    impl Default for CodeView {
+        fn default() -> Self {
+            Self {
+                syntax_set: Rc::new(RefCell::new(SyntaxSet::load_defaults_nonewlines())),
+                syntax: Rc::new(RefCell::new(None)),
+                theme: Rc::new(RefCell::new(None)),
+                font_family: RefCell::new("Monospace".to_string()),
+                tab_width: Cell::new(4),
+                font_size: Cell::new(12.0),
+            }
+        }
     }
 
     #[glib::object_subclass]
@@ -44,23 +69,30 @@ pub mod imp {
         }
     }
 
+    #[glib::derived_properties]
     impl ObjectImpl for CodeView {
         fn constructed(&self) {
             self.parent_constructed();
 
-            let buffer = self.obj().buffer();
-            buffer.create_tag(Some("global"), &[]);
+            let self_obj = self.obj().clone();
+            set_tab_stops(&self_obj);
 
-            self.syntax_set
-                .replace(SyntaxSet::load_defaults_nonewlines());
-
-            self.obj().add_css_class("code");
-            self.obj().set_monospace(true);
+            self_obj.add_css_class("code");
+            self_obj.set_monospace(true);
 
             let syntax_set = self.syntax_set.clone();
             let theme = self.theme.clone();
             let syntax = self.syntax.clone();
+            let buffer = self_obj.buffer();
+            let tag_table = buffer.tag_table();
 
+            tag_table.connect_tag_changed(move |_, _, size_changed| {
+                if size_changed {
+                    set_tab_stops(&self_obj);
+                }
+            });
+
+            buffer.create_tag(Some("global"), &[]);
             buffer.connect_changed(move |buffer| {
                 let start_iter = buffer.start_iter();
                 let end_iter = buffer.end_iter();
@@ -73,6 +105,36 @@ pub mod imp {
                 }
             });
         }
+    }
+
+    fn set_font_size(view: &CodeView, value: f64) {
+        view.obj().global_tag().set_size((value as f32 * 0.75 * pango::SCALE as f32) as i32);
+        view.font_size.set(value);
+    }
+
+    fn set_font_family(view: &CodeView, value: String) {
+        view.obj().global_tag().set_family(Some(&value));
+        view.font_family.replace(value);
+    }
+
+    fn set_tab_stops(view: &super::CodeView) {
+        let width = calculate_tab_width(view, ' ');
+        let mut tab_array = gtk::pango::TabArray::new(1, true);
+
+        tab_array.set_tab(0, gtk::pango::TabAlign::Left, width);
+
+        view.set_tabs(&tab_array);
+    }
+
+    fn calculate_tab_width(view: &super::CodeView, character: char) -> i32 {
+        let text = character.to_string().repeat(view.tab_width() as usize);
+        let layout = view.create_pango_layout(Some(&text));
+        let font_desc = pango::FontDescription::from_string(
+            format!("{} {}px", view.font_family(), view.font_size()).as_str(),
+        );
+
+        layout.set_font_description(Some(&font_desc));
+        layout.pixel_size().0
     }
 
     impl WidgetImpl for CodeView {}
