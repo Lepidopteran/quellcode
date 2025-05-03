@@ -184,31 +184,41 @@ fn highlight_code(
             RangedHighlightIterator::new(&mut highlight_state, &operations[..], line, &highlighter);
 
         for (style, _, range) in iter {
-            let start = buffer
-                .iter_at_line_offset(index as i32, range.start as i32)
-                .expect("Failed to get start iter");
-            let end = buffer
-                .iter_at_line_offset(index as i32, range.end as i32)
-                .expect("Failed to get end iter");
+            let start = buffer.iter_at_line_offset(index as i32, range.start as i32);
+            let end = buffer.iter_at_line_offset(index as i32, range.end as i32);
+            if let (Some(start), Some(end)) = (start, end) {
+                let tag = TextTag::builder()
+                    .foreground_rgba(&RGBA::new(
+                        style.foreground.r as f32 / 255.0,
+                        style.foreground.g as f32 / 255.0,
+                        style.foreground.b as f32 / 255.0,
+                        style.foreground.a as f32 / 255.0,
+                    ))
+                    .background_rgba(&RGBA::new(
+                        style.background.r as f32 / 255.0,
+                        style.background.g as f32 / 255.0,
+                        style.background.b as f32 / 255.0,
+                        style.background.a as f32 / 255.0,
+                    ))
+                    .build();
 
-            let tag = TextTag::builder()
-                .foreground_rgba(&RGBA::new(
-                    style.foreground.r as f32 / 255.0,
-                    style.foreground.g as f32 / 255.0,
-                    style.foreground.b as f32 / 255.0,
-                    style.foreground.a as f32 / 255.0,
-                ))
-                .background_rgba(&RGBA::new(
-                    style.background.r as f32 / 255.0,
-                    style.background.g as f32 / 255.0,
-                    style.background.b as f32 / 255.0,
-                    style.background.a as f32 / 255.0,
-                ))
-                .build();
+                buffer.tag_table().add(&tag);
 
-            buffer.tag_table().add(&tag);
-
-            buffer.apply_tag(&tag, &start, &end);
+                buffer.apply_tag(&tag, &start, &end);
+            } else {
+                if start.is_none() {
+                    warn!(
+                        "Failed to get start iter for line {}, start: {}, end: {}",
+                        index, range.start, range.end
+                    )
+                }
+                if end.is_none() {
+                    warn!(
+                        "Failed to get end iter for line {}, start: {}, end: {}",
+                        index, range.start, range.end
+                    )
+                }
+            }
         }
 
         buffer.apply_tag_by_name("global", start, end);
