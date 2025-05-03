@@ -33,7 +33,19 @@ pub mod imp {
         pub layout: TemplateChild<gtk::Grid>,
 
         #[template_child]
+        editor_viewer_layout: TemplateChild<gtk::Grid>,
+
+        #[template_child]
+        pub editor_scroll: TemplateChild<gtk::ScrolledWindow>,
+
+        #[template_child]
         pub editor: TemplateChild<CodeView>,
+
+        #[template_child]
+        editor_separator: TemplateChild<gtk::Separator>,
+
+        #[template_child]
+        viewer_overlay: TemplateChild<gtk::Overlay>,
 
         #[template_child]
         pub viewer: TemplateChild<CodeView>,
@@ -166,42 +178,59 @@ pub mod imp {
             let import_action = SimpleAction::new("import_file", None);
             let editor = self.editor.clone();
 
-            import_action.connect_activate(move |_, _| {
-                let default_filter = gtk::FileFilter::new();
-                default_filter.add_mime_type("text/plain");
-                default_filter.set_name(Some("Plain Text"));
+            import_action.connect_activate(move |_, _| import_file(&editor));
 
-                let any_filter = gtk::FileFilter::new();
-                any_filter.add_pattern("*");
-                any_filter.set_name(Some("Any"));
+            let layout_action = SimpleAction::new_stateful(
+                "change_layout",
+                Some(&String::static_variant_type()),
+                &"split_horizontal".to_variant(),
+            );
 
-                let list = ListStore::new::<gtk::FileFilter>();
-                list.append(&default_filter);
-                list.append(&any_filter);
+            let grid = self.editor_viewer_layout.clone();
+            let editor_container = self.editor_scroll.clone();
+            let separator = self.editor_separator.clone();
+            let viewer_container = self.viewer_overlay.clone();
+            layout_action.connect_activate(move |action, property| {
+                if let Some(layout) = property {
+                    let layout_id = layout.get::<String>().expect("Failed to get layout");
+                    if action.state().is_some_and(|state| state == *layout) {
+                        return;
+                    }
 
-                let dialog = FileDialog::builder()
-                    .title("Import File")
-                    .filters(&list)
-                    .default_filter(&default_filter)
-                    .build();
-
-                let buffer = editor.buffer().clone();
-
-                dialog.open(
-                    None::<&gtk::Window>,
-                    None::<&gio::Cancellable>,
-                    move |result| {
-                        if let Ok(file) = result {
-                            let path = file.path();
-                            let text = std::fs::read_to_string(path.unwrap()).unwrap();
-
-                            buffer.set_text(&text);
+                    action.set_state(layout);
+                    match layout_id.as_str() {
+                        "split_horizontal" => {
+                            position_grid_child(&grid, &editor_container, 0, 0, 1, 1);
+                            position_grid_child(&grid, &separator, 1, 0, 1, 1);
+                            position_grid_child(&grid, &viewer_container, 2, 0, 1, 1);
                         }
-                    },
-                );
+                        "split_vertical" => {
+                            position_grid_child(&grid, &editor_container, 1, 0, 1, 1);
+                            position_grid_child(&grid, &separator, 1, 1, 1, 1);
+                            position_grid_child(&grid, &viewer_container, 1, 2, 1, 1);
+                        }
+                        "editor" => {
+                            position_grid_child(&grid, &editor_container, 0, 0, 1, 1);
+                            grid.remove(&viewer_container);
+                            if separator.parent().is_some_and(|parent| parent == grid) {
+                                grid.remove(&separator);
+                            }
+                        }
+                        "viewer" => {
+                            position_grid_child(&grid, &viewer_container, 0, 0, 1, 1);
+                            grid.remove(&editor_container);
+                            if separator.parent().is_some_and(|parent| parent == grid) {
+                                grid.remove(&separator);
+                            }
+                        }
+                        _ => {}
+                    }
+                }
             });
 
             let self_obj = self.obj().clone();
+
+            self_obj.add_action(&layout_action);
             self_obj.add_action(&import_action);
 
             self.inspector.set_size_request(300, -1);
@@ -210,6 +239,54 @@ pub mod imp {
     impl WidgetImpl for Window {}
     impl WindowImpl for Window {}
     impl ApplicationWindowImpl for Window {}
+
+    fn import_file(editor: &CodeView) {
+        let default_filter = gtk::FileFilter::new();
+        default_filter.add_mime_type("text/plain");
+        default_filter.set_name(Some("Plain Text"));
+
+        let any_filter = gtk::FileFilter::new();
+        any_filter.add_pattern("*");
+        any_filter.set_name(Some("Any"));
+
+        let list = ListStore::new::<gtk::FileFilter>();
+        list.append(&default_filter);
+        list.append(&any_filter);
+
+        let dialog = FileDialog::builder()
+            .title("Import File")
+            .filters(&list)
+            .default_filter(&default_filter)
+            .build();
+
+        let buffer = editor.buffer().clone();
+        dialog.open(
+            None::<&gtk::Window>,
+            None::<&gio::Cancellable>,
+            move |result| {
+                if let Ok(file) = result {
+                    let path = file.path();
+                    let text = std::fs::read_to_string(path.unwrap()).unwrap();
+
+                    buffer.set_text(&text);
+                }
+            },
+        );
+    }
+
+    fn position_grid_child(
+        grid: &gtk::Grid,
+        child: &impl IsA<gtk::Widget>,
+        row: i32,
+        column: i32,
+        row_span: i32,
+        column_span: i32,
+    ) {
+        if child.parent().is_some_and(|parent| parent == *grid) {
+            grid.remove(child);
+        }
+        grid.attach(child, column, row, column_span, row_span);
+    }
 
     fn preprocess_units(input: &str) -> String {
         let mut output = String::new();
