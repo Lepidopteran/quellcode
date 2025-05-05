@@ -694,7 +694,7 @@ pub mod imp {
             window.present();
 
             let viewer = window.viewer().clone();
-            window.action_button().connect_clicked(move |_| {
+            window.action_button().clone().connect_clicked(move |_| {
                 let svg_filter = gtk::FileFilter::new();
                 svg_filter.add_mime_type("text/plain");
                 svg_filter.set_name(Some("SVG"));
@@ -722,7 +722,7 @@ pub mod imp {
                     .title("Save Generated Code")
                     .build();
                 dialog.save(
-                    None::<&gtk::Window>,
+                    Some(&window),
                     None::<&gtk::gio::Cancellable>,
                     move |result| {
                         if let Ok(file) = result {
