@@ -550,14 +550,6 @@ pub mod imp {
                     .cloned(),
             );
 
-            // viewer.set_syntax(Some(
-            //     viewer
-            //         .syntax_set()
-            //         .find_syntax_by_name("XML")
-            //         .unwrap()
-            //         .clone(),
-            // ));
-
             let self_obj = self.obj().clone();
             self_obj.connect_closure(
                 "theme-changed",
@@ -660,8 +652,6 @@ pub mod imp {
             scale.connect_value_changed(move |scale| {
                 let current_time = Instant::now();
 
-                editor.set_font_size(scale.value());
-
                 generator
                     .lock()
                     .unwrap()
@@ -692,50 +682,6 @@ pub mod imp {
             });
 
             window.present();
-
-            let viewer = window.viewer().clone();
-            window.action_button().clone().connect_clicked(move |_| {
-                let svg_filter = gtk::FileFilter::new();
-                svg_filter.add_mime_type("text/plain");
-                svg_filter.set_name(Some("SVG"));
-                svg_filter.add_pattern("*.svg");
-
-                let any_filter = gtk::FileFilter::new();
-                any_filter.add_pattern("*");
-                any_filter.set_name(Some("Any"));
-
-                let list = ListStore::new::<gtk::FileFilter>();
-                list.append(&svg_filter);
-                list.append(&any_filter);
-
-                let text = viewer
-                    .buffer()
-                    .text(
-                        &viewer.buffer().start_iter(),
-                        &viewer.buffer().end_iter(),
-                        true,
-                    )
-                    .to_string();
-
-                let dialog = gtk::FileDialog::builder()
-                    .filters(&list)
-                    .title("Save Generated Code")
-                    .build();
-                dialog.save(
-                    Some(&window),
-                    None::<&gtk::gio::Cancellable>,
-                    move |result| {
-                        if let Ok(file) = result {
-                            let path = file.path();
-                            let text = text.as_bytes();
-
-                            if let Err(err) = std::fs::write(path.unwrap(), text) {
-                                error!("Failed to write to file, Error:\n{}", err);
-                            }
-                        }
-                    },
-                );
-            });
         }
 
         fn startup(&self) {

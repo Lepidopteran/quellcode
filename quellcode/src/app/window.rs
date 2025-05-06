@@ -4,6 +4,7 @@ use glib::Object;
 use gtk::prelude::*;
 use gtk::subclass::prelude::*;
 use gtk::{gio, glib, CompositeTemplate, TemplateChild};
+use log::{debug, error};
 
 use super::application::QuellcodeApplication;
 use super::ui::{code_view::CodeView, FontFamilyChooser};
@@ -12,12 +13,19 @@ const UNITS: &[&str] = &["px", "pt", "pc", "in", "cm", "mm"];
 const ROUND_DIGITS: i32 = 4;
 
 pub mod imp {
+    use std::{
+        cell::RefCell,
+        collections::BTreeMap,
+        sync::{Arc, Mutex},
+    };
+
     use gtk::{
         gio::{ListStore, SimpleAction},
         FileDialog,
     };
+    use syntect::{highlighting::Theme, parsing::SyntaxSet};
 
-    use crate::app::ui::code_view::CodeView;
+    use crate::app::{generator::Generator, ui::code_view::CodeView};
 
     use super::*;
     #[derive(CompositeTemplate, Default)]
@@ -88,8 +96,9 @@ pub mod imp {
     impl Window {
         #[template_callback]
         fn font_size_scale_changed(&self) {
-            self.font_size_entry
-                .set_text(&self.font_size_scale.value().to_string());
+            let value = self.font_size_scale.value();
+            self.font_size_entry.set_text(&value.to_string());
+            self.editor.set_font_size(value);
         }
 
         #[template_callback]
@@ -154,6 +163,7 @@ pub mod imp {
     impl ObjectImpl for Window {
         fn constructed(&self) {
             self.parent_constructed();
+
             self.theme_label
                 .set_mnemonic_widget(Some(&self.theme_dropdown.clone()));
 
@@ -175,10 +185,13 @@ pub mod imp {
                     .add_mark(snap_scale as f64, gtk::PositionType::Top, None);
             }
 
-            let import_action = SimpleAction::new("import_file", None);
-            let editor = self.editor.clone();
+            let import_action = SimpleAction::new("import-file", None);
+            let outer_self = self.obj().clone();
+            import_action.connect_activate(move |_, _| import_file(&outer_self));
 
-            import_action.connect_activate(move |_, _| import_file(&editor));
+            let export_action = SimpleAction::new("export-generated-code", None);
+            let outer_self = self.obj().clone();
+            export_action.connect_activate(move |_, _| export_generated_code(&outer_self));
 
             let layout_action = SimpleAction::new_stateful(
                 "change_layout",
@@ -232,6 +245,7 @@ pub mod imp {
 
             self_obj.add_action(&layout_action);
             self_obj.add_action(&import_action);
+            self_obj.add_action(&export_action);
 
             self.inspector.set_size_request(300, -1);
         }
@@ -240,7 +254,7 @@ pub mod imp {
     impl WindowImpl for Window {}
     impl ApplicationWindowImpl for Window {}
 
-    fn import_file(editor: &CodeView) {
+    fn import_file(window: &super::Window) {
         let default_filter = gtk::FileFilter::new();
         default_filter.add_mime_type("text/plain");
         default_filter.set_name(Some("Plain Text"));
@@ -259,16 +273,61 @@ pub mod imp {
             .default_filter(&default_filter)
             .build();
 
-        let buffer = editor.buffer().clone();
-        dialog.open(
-            None::<&gtk::Window>,
-            None::<&gio::Cancellable>,
+        let buffer = window.imp().editor.buffer().clone();
+        dialog.open(Some(window), None::<&gio::Cancellable>, move |result| {
+            if let Ok(file) = result {
+                let path = file.path();
+                let text = std::fs::read_to_string(path.unwrap()).unwrap();
+
+                buffer.set_text(&text);
+            }
+        });
+    }
+
+    fn export_generated_code(window: &super::Window) {
+        let svg_filter = gtk::FileFilter::new();
+        svg_filter.add_mime_type("text/plain");
+        svg_filter.set_name(Some("SVG"));
+        svg_filter.add_pattern("*.svg");
+
+        let any_filter = gtk::FileFilter::new();
+        any_filter.add_pattern("*");
+        any_filter.set_name(Some("Any"));
+
+        let list = ListStore::new::<gtk::FileFilter>();
+        list.append(&svg_filter);
+        list.append(&any_filter);
+
+        let viewer = window.imp().viewer.clone();
+        let text = viewer
+            .buffer()
+            .text(
+                &viewer.buffer().start_iter(),
+                &viewer.buffer().end_iter(),
+                true,
+            )
+            .to_string();
+
+        let dialog = gtk::FileDialog::builder()
+            .filters(&list)
+            .title("Save Generated Code")
+            .build();
+
+        dialog.save(
+            Some(window),
+            None::<&gtk::gio::Cancellable>,
             move |result| {
                 if let Ok(file) = result {
-                    let path = file.path();
-                    let text = std::fs::read_to_string(path.unwrap()).unwrap();
+                    if let Some(path) = file.path() {
+                        let mut path = path.to_path_buf();
+                        if path.extension().is_none() {
+                            path.set_extension("svg");
+                        }
 
-                    buffer.set_text(&text);
+                        if let Err(err) = std::fs::write(path, text.as_bytes()) {
+                            error!("Failed to write to file, Error:\n{}", err);
+                        }
+                    }
                 }
             },
         );
@@ -331,6 +390,11 @@ impl Window {
     pub fn new(app: &QuellcodeApplication) -> Self {
         let window: Self = Object::builder().build();
         window.set_application(Some(app));
+
+        let window_inner = window.imp();
+
+        window_inner.syntax_set.replace(app.syntax_set().clone());
+        window_inner.themes.replace(app.theme_set().themes.clone());
 
         window
     }
