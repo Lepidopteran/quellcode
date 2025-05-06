@@ -1,4 +1,4 @@
-use std::fmt::Debug;
+use std::fmt::{Debug, Display};
 
 use syntect::{
     highlighting::Theme,
@@ -133,13 +133,13 @@ impl From<bool> for PropertyValue {
     }
 }
 
-impl std::string::ToString for PropertyValue {
-    fn to_string(&self) -> String {
+impl Display for PropertyValue {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            PropertyValue::String(string) => string.clone(),
-            PropertyValue::Int(int) => int.to_string(),
-            PropertyValue::Float(float) => float.to_string(),
-            PropertyValue::Bool(bool) => bool.to_string(),
+            PropertyValue::String(string) => write!(f, "{}", string),
+            PropertyValue::Int(int) => write!(f, "{}", int),
+            PropertyValue::Float(float) => write!(f, "{}", float),
+            PropertyValue::Bool(bool) => write!(f, "{}", bool),
         }
     }
 }
