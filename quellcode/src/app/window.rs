@@ -31,6 +31,11 @@ pub mod imp {
     #[derive(CompositeTemplate, Default)]
     #[template(resource = "/org/quellcode/quellcode/window.ui")]
     pub struct Window {
+        pub generator: Option<Arc<Mutex<dyn Generator>>>,
+        pub themes: RefCell<BTreeMap<String, Theme>>,
+        pub syntax_set: RefCell<SyntaxSet>,
+
+        // Children
         #[template_child]
         pub content: TemplateChild<gtk::Box>,
 
