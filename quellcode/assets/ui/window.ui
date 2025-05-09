@@ -252,6 +252,7 @@
                                   <object class="GtkDropDown" id="theme_dropdown">
                                     <property name="halign">fill</property>
                                     <property name="enable-search">true</property>
+																		<signal name="notify::selected-item" handler="theme_changed" swapped="true"></signal>
                                   </object>
                                 </child>
                               </object>
@@ -273,6 +274,7 @@
                                   <object class="GtkDropDown" id="syntax_dropdown">
                                     <property name="halign">fill</property>
                                     <property name="enable-search">true</property>
+																		<signal name="notify::selected-item" handler="syntax_changed" swapped="true"></signal>
                                   </object>
                                 </child>
                               </object>
@@ -292,6 +294,7 @@
                                 </child>
                                 <child>
                                   <object class="QuellcodeFontFamilyChooser" id="font_family_chooser">
+																		<signal name="notify::selected-family" handler="font_changed" swapped="true"></signal>
                                     <property name="halign">fill</property>
                                   </object>
                                 </child>

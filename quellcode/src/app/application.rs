@@ -120,239 +120,6 @@ pub mod imp {
         pub fn config_mut(&self) -> RefMut<Config> {
             self.config.borrow_mut()
         }
-
-        fn display_generator_properties(&self) {
-            let container = self
-                .main_window
-                .borrow()
-                .as_ref()
-                .expect("No main window")
-                .generator_box()
-                .clone();
-
-            for property in self.generator.lock().unwrap().properties().clone() {
-                debug!("Property: {}", property.name);
-                let generator = self.generator.clone();
-                match property.kind {
-                    PropertyType::Bool => {
-                        let check = gtk::CheckButton::builder()
-                            .label(create_property_display_name(property.name))
-                            .active(
-                                property
-                                    .default
-                                    .clone()
-                                    .is_some_and(|v| v.try_into().unwrap()),
-                            )
-                            .build();
-
-                        let self_obj = self.obj().clone();
-                        check.connect_toggled(move |check| {
-                            let _ = generator
-                                .lock()
-                                .unwrap()
-                                .set_property(property.name, check.is_active().into());
-
-                            self_obj.imp().generate_code();
-                        });
-
-                        container.append(&check);
-                    }
-                    PropertyType::String => {
-                        let wrapper = gtk::Box::builder()
-                            .orientation(gtk::Orientation::Vertical)
-                            .build();
-
-                        let label = gtk::Label::builder()
-                            .label(create_property_display_name(property.name))
-                            .build();
-
-                        let entry = gtk::Entry::builder()
-                            .text(
-                                property
-                                    .default
-                                    .clone()
-                                    .unwrap_or_else(|| "".into())
-                                    .to_string(),
-                            )
-                            .build();
-
-                        let self_obj = self.obj().clone();
-                        entry.connect_changed(move |entry| {
-                            let _ = generator
-                                .lock()
-                                .unwrap()
-                                .set_property(property.name, entry.text().to_string().into());
-
-                            self_obj.imp().generate_code();
-                        });
-
-                        wrapper.append(&label);
-                        wrapper.append(&entry);
-
-                        container.append(&wrapper);
-                    }
-                    PropertyType::Float => {
-                        let wrapper = gtk::Box::builder()
-                            .orientation(gtk::Orientation::Vertical)
-                            .build();
-
-                        let label = gtk::Label::builder()
-                            .label(create_property_display_name(property.name))
-                            .build();
-
-                        let adjustment = gtk::Adjustment::new(
-                            property
-                                .default
-                                .clone()
-                                .unwrap_or_else(|| 0.0.into())
-                                .try_into()
-                                .unwrap(),
-                            property
-                                .min
-                                .unwrap_or_else(|| 0.0.into())
-                                .try_into()
-                                .unwrap(),
-                            property
-                                .max
-                                .unwrap_or_else(|| 0.0.into())
-                                .try_into()
-                                .unwrap(),
-                            0.0,
-                            0.0,
-                            0.0,
-                        );
-
-                        let spinner = gtk::SpinButton::builder()
-                            .adjustment(&adjustment)
-                            .digits(2)
-                            .climb_rate(0.1)
-                            .build();
-
-                        let self_obj = self.obj().clone();
-                        spinner.connect_value_changed(move |spinner| {
-                            let _ = generator
-                                .lock()
-                                .unwrap()
-                                .set_property(property.name, spinner.value().to_string().into());
-
-                            self_obj.imp().generate_code();
-                        });
-
-                        wrapper.append(&label);
-                        wrapper.append(&spinner);
-
-                        container.append(&wrapper);
-                    }
-                    PropertyType::Int => {
-                        let wrapper = gtk::Box::builder()
-                            .orientation(gtk::Orientation::Vertical)
-                            .build();
-
-                        let label = gtk::Label::builder()
-                            .label(create_property_display_name(property.name))
-                            .build();
-
-                        let adjustment = gtk::Adjustment::new(
-                            property
-                                .default
-                                .clone()
-                                .unwrap_or_else(|| 0.0.into())
-                                .try_into()
-                                .unwrap(),
-                            property
-                                .min
-                                .unwrap_or_else(|| 0.0.into())
-                                .try_into()
-                                .unwrap(),
-                            property
-                                .max
-                                .unwrap_or_else(|| 0.0.into())
-                                .try_into()
-                                .unwrap(),
-                            1.0,
-                            0.0,
-                            0.0,
-                        );
-
-                        let spinner = gtk::SpinButton::builder()
-                            .adjustment(&adjustment)
-                            .digits(0)
-                            .climb_rate(1.0)
-                            .build();
-
-                        let self_obj = self.obj().clone();
-                        spinner.connect_value_changed(move |spinner| {
-                            let _ = generator
-                                .lock()
-                                .unwrap()
-                                .set_property(property.name, spinner.value().to_string().into());
-
-                            self_obj.imp().generate_code();
-                        });
-
-                        wrapper.append(&label);
-                        wrapper.append(&spinner);
-
-                        container.append(&wrapper);
-                    }
-                }
-            }
-        }
-
-        fn generate_code(&self) {
-            let generator = self.generator.clone();
-            let (sender, receiver) = async_channel::bounded(1);
-
-            let window = self
-                .main_window
-                .borrow()
-                .as_ref()
-                .expect("No main window")
-                .clone();
-            let editor = window.editor().clone();
-            let viewer = window.viewer().clone();
-            let viewer_loading_box = window.viewer_loading_box().clone();
-            let editor_buffer = editor.buffer();
-
-            let text =
-                editor_buffer.text(&editor_buffer.start_iter(), &editor_buffer.end_iter(), true);
-
-            let editor_syntax = editor.syntax().clone();
-            let editor_syntax_set = editor.syntax_set().clone();
-            let editor_theme = editor.theme().clone();
-
-            let generator_sender = sender.clone();
-            viewer_loading_box.set_visible(true);
-            gio::spawn_blocking(move || {
-                let generated_svg = generator.lock().unwrap().generate(
-                    &text,
-                    &editor_theme.unwrap(),
-                    &editor_syntax.unwrap(),
-                    &editor_syntax_set,
-                );
-
-                match generated_svg {
-                    Ok(svg) => {
-                        generator_sender
-                            .send_blocking(svg)
-                            .expect("Failed to send svg");
-                    }
-                    Err(err) => {
-                        warn!("Failed to generate svg: {}", err);
-                    }
-                }
-            });
-
-            let viewer_loading_box = window.viewer_loading_box().clone();
-            glib::spawn_future_local(async move {
-                while let Ok(svg) = receiver.recv().await {
-                    if let RenderOutput::Text(svg) = svg {
-                        viewer.buffer().set_text(&svg);
-                        viewer_loading_box.set_visible(false);
-                    }
-                }
-            });
-        }
     }
 
     #[glib::object_subclass]
@@ -471,7 +238,6 @@ pub mod imp {
             // TODO: Organize the following code.
             let window = Window::new(&self.obj());
             self.main_window.replace(Some(window.clone()));
-            self.display_generator_properties();
 
             let theme_set = self.theme_set.borrow();
             let themes = create_theme_model(&theme_set);
@@ -566,44 +332,22 @@ pub mod imp {
                         editor.set_theme(Some(theme.clone()));
                         viewer.set_theme(Some(theme.clone()));
                     }
-                    app.imp().generate_code();
                 }),
             );
 
             let editor = window.editor().clone();
-            let editor_buffer = editor.buffer().clone();
-
             self_obj.connect_code_syntax_notify(move |app| {
                 if let Some(syntax) = app.syntax_set().find_syntax_by_name(&app.code_syntax()) {
                     editor.set_syntax(Some(syntax.clone()));
-                    app.imp().generate_code();
                 }
-            });
-
-            editor_buffer.connect_changed(move |_| {
-                self_obj.imp().generate_code();
             });
 
             let editor = window.editor().clone();
             let font_chooser = window.font_family_chooser();
-            let generator = self.generator.clone();
-            let self_obj = self.obj().clone();
-            let config = self.config.clone();
-
-            font_chooser.connect_closure(
-                "font-activated",
-                false,
-                closure_local!(|_: &FontFamilyChooser, family: &gtk::pango::FontFamily| {
-                    editor.global_tag().set_family(Some(&family.name()));
-                    generator.lock().unwrap().set_font_family(&family.name());
-                    config.borrow_mut().code.font_family = family.name().to_string();
-                    self_obj.imp().generate_code();
-                },),
-            );
-
             let self_obj = self.obj().clone();
             font_chooser.connect_selected_family_notify(move |chooser| {
-                let family = chooser.selected_family();
+                let family = chooser.selected_family().clone();
+                editor.set_font_family(family.clone().expect("Failed to get font").name());
                 self_obj.set_property("code-font", &family);
             });
 
@@ -640,35 +384,7 @@ pub mod imp {
 
             let config = self.config.clone();
             let scale = window.font_size_scale();
-            let generator = self.generator.clone();
-            let self_obj = self.obj().clone();
-
-            let duration = Duration::from_secs(1);
-            let last_update_attempt_ref = Cell::new(Instant::now());
-            let last_update_attempt = last_update_attempt_ref.clone();
-
             scale.set_value(config.borrow().code.font_size);
-
-            scale.connect_value_changed(move |scale| {
-                let current_time = Instant::now();
-
-                generator
-                    .lock()
-                    .unwrap()
-                    .set_font_size(scale.value() as f32);
-
-                self_obj.set_code_font_size(scale.value());
-
-                if current_time.duration_since(last_update_attempt.get()) >= duration {
-                    let self_obj = self_obj.clone();
-                    last_update_attempt.set(current_time);
-
-                    glib::timeout_add_local(duration, move || {
-                        self_obj.imp().generate_code();
-                        glib::ControlFlow::Break
-                    });
-                }
-            });
 
             let config = self.config.clone();
             window.connect_close_request(move |_| {
@@ -768,21 +484,6 @@ pub mod imp {
                 .borrow()
                 .load_from_string(&theme_to_gtk_css(theme.1));
         }
-    }
-
-    fn create_property_display_name(input: &str) -> String {
-        input
-            .replace("_", " ")
-            .split_whitespace()
-            .map(|word| {
-                let mut c = word.chars();
-                match c.next() {
-                    Some(first) => first.to_uppercase().chain(c).collect::<String>(),
-                    None => String::new(),
-                }
-            })
-            .collect::<Vec<String>>()
-            .join(" ")
     }
 
     fn ensure_app_directories_exist() {

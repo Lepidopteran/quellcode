@@ -11,6 +11,12 @@ pub struct SvgGenerator {
 
 impl SvgGenerator {
     pub fn new() -> SvgGenerator {
+        SvgGenerator::default()
+    }
+}
+
+impl Default for SvgGenerator {
+     fn default() -> SvgGenerator {
         let options = SvgOptions::default();
 
         SvgGenerator {
