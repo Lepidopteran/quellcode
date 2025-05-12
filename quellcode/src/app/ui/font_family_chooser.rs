@@ -21,8 +21,8 @@ pub mod imp {
             CompositeTemplateCallbacksClass, CompositeTemplateClass,
             CompositeTemplateInitializingExt, WidgetClassExt, WidgetImpl, WidgetImplExt,
         },
-        Allocation, CompositeTemplate, CustomSorter, Label, ListItem, SignalListItemFactory,
-        SortListModel, SortType, TemplateChild, Widget,
+        Allocation, CompositeTemplate, Label, ListItem, SignalListItemFactory, TemplateChild,
+        Widget,
     };
 
     #[derive(CompositeTemplate, Properties, Default)]
