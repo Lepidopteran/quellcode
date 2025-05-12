@@ -16,12 +16,12 @@ struct ConfigTemplate<'a> {
     font_size: f64,
 }
 
-#[derive(Debug, Default, Deserialize, Serialize)]
+#[derive(Debug, Default, Deserialize, Serialize, Clone)]
 pub struct Config {
     pub code: CodeSettings,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct CodeSettings {
     pub theme: String,
     pub syntax: String,

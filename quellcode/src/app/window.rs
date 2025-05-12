@@ -11,9 +11,12 @@ use std::{
     rc::Rc,
     sync::{Arc, Mutex},
 };
+
 use syntect::{highlighting::Theme, parsing::SyntaxSet};
 
-use super::application::QuellcodeApplication;
+use crate::app::config::CodeSettings;
+
+use super::application::{QuellcodeApplication, FALLBACK_FONT_FAMILY};
 use super::generator::RenderOutput;
 use super::generator::{svg::SvgGenerator, Generator as GeneratorTrait};
 use super::ui::{code_view::CodeView, FontFamilyChooser};
@@ -25,15 +28,20 @@ type Generator = Arc<Mutex<dyn GeneratorTrait>>;
 
 pub mod imp {
 
-    use std::{collections::HashMap, time::Duration};
+    use std::{
+        cell::{Ref, RefMut},
+        collections::BTreeMap,
+        time::Duration,
+    };
 
     use gtk::{
-        gio::{ActionEntry, ListStore, SimpleAction},
-        Application, FileDialog,
+        gdk::Display,
+        gio::{ListStore, SimpleAction},
+        FileDialog,
     };
-    use log::warn;
 
     use crate::app::{
+        config::{save_config, CodeSettings, Config},
         generator::{PropertyType, RenderOutput},
         ui::code_view::CodeView,
     };
@@ -44,10 +52,39 @@ pub mod imp {
     const BUFFER_DEBOUNCE_DELAY: Duration = Duration::from_millis(300);
 
     #[derive(Default, Debug)]
-    struct State {
+    pub struct State {
         generator: Option<Generator>,
+        syntax_set: Option<SyntaxSet>,
+        themes: BTreeMap<String, Theme>,
+        css_provider: gtk::CssProvider,
         font_scale_debounce_id: Option<glib::SourceId>,
         buffer_debounce_id: Option<glib::SourceId>,
+    }
+
+    impl State {
+        pub fn generator(&self) -> Option<Generator> {
+            self.generator.clone()
+        }
+
+        pub fn set_generator(&mut self, generator: Option<Generator>) {
+            self.generator = generator;
+        }
+
+        pub fn themes(&self) -> &BTreeMap<String, Theme> {
+            &self.themes
+        }
+
+        pub fn themes_mut(&mut self) -> &mut BTreeMap<String, Theme> {
+            &mut self.themes
+        }
+
+        pub fn syntax_set(&self) -> Option<&SyntaxSet> {
+            self.syntax_set.as_ref()
+        }
+
+        pub fn set_syntax_set(&mut self, syntax_set: Option<SyntaxSet>) {
+            self.syntax_set = syntax_set;
+        }
     }
 
     #[derive(CompositeTemplate, Default)]
@@ -119,12 +156,22 @@ pub mod imp {
 
     #[gtk::template_callbacks]
     impl Window {
-        pub fn generator(&self) -> Option<Generator> {
-            self.state.clone().borrow().generator.clone()
+        pub fn state(&self) -> Ref<State> {
+            self.state.borrow()
         }
 
+        pub fn state_mut(&self) -> RefMut<State> {
+            self.state.borrow_mut()
+        }
+
+        /// Returns the current generator
+        pub fn generator(&self) -> Option<Generator> {
+            self.state().generator()
+        }
+
+        /// Sets the generator and updates the UI
         pub fn set_generator(&self, generator: Option<Generator>) {
-            self.state.clone().borrow_mut().generator = generator;
+            self.state_mut().set_generator(generator);
             self.display_generator_properties();
         }
 
@@ -297,6 +344,29 @@ pub mod imp {
 
         #[template_callback]
         fn theme_changed(&self) {
+            let state = self.state.borrow();
+            let theme_dropdown = self.theme_dropdown.clone();
+            let name = theme_dropdown
+                .model()
+                .expect("Could not get model")
+                .downcast_ref::<gtk::StringList>()
+                .expect("Could not downcast model")
+                .string(theme_dropdown.selected())
+                .map(|s| s.to_string())
+                .expect("Could not get syntax name");
+
+            let (_, theme) = state
+                .themes
+                .iter()
+                .find(|t| *t.0 == name)
+                .expect("Could not find theme");
+
+            state
+                .css_provider
+                .load_from_string(&theme_to_gtk_css(theme));
+
+            self.editor.set_theme(Some(theme.clone()));
+
             let _ = self
                 .theme_dropdown
                 .activate_action("win.generate-code", None);
@@ -304,9 +374,25 @@ pub mod imp {
 
         #[template_callback]
         fn syntax_changed(&self) {
-            let _ = self
-                .syntax_dropdown
-                .activate_action("win.generate-code", None);
+            let syntax_dropdown = self.syntax_dropdown.clone();
+            if let Some(syntax_set) = self.state.borrow().syntax_set.clone() {
+                let name = syntax_dropdown
+                    .model()
+                    .expect("Could not get model")
+                    .downcast_ref::<gtk::StringList>()
+                    .expect("Could not downcast model")
+                    .string(syntax_dropdown.selected())
+                    .map(|s| s.to_string())
+                    .expect("Could not get syntax name");
+
+                let syntax = syntax_set
+                    .find_syntax_by_name(&name)
+                    .expect("Could not find syntax");
+
+                self.editor.set_syntax(Some(syntax.clone()));
+            }
+
+            let _ = syntax_dropdown.activate_action("win.generate-code", None);
         }
 
         #[template_callback]
@@ -408,6 +494,12 @@ pub mod imp {
     impl ObjectImpl for Window {
         fn constructed(&self) {
             self.parent_constructed();
+            let provider: &gtk::CssProvider = &self.state.borrow().css_provider;
+            gtk::style_context_add_provider_for_display(
+                &Display::default().expect("Failed to get display"),
+                provider,
+                gtk::STYLE_PROVIDER_PRIORITY_APPLICATION,
+            );
 
             self.theme_label
                 .set_mnemonic_widget(Some(&self.theme_dropdown.clone()));
@@ -521,6 +613,30 @@ pub mod imp {
             });
 
             let self_obj = self.obj().clone();
+
+            self_obj.connect_close_request(|window| {
+                let editor = window.imp().editor.clone();
+                let config = Config {
+                    code: CodeSettings {
+                        theme: editor
+                            .theme()
+                            .clone()
+                            .map(|t| t.name.unwrap_or_default())
+                            .unwrap_or_default(),
+                        syntax: editor.syntax().clone().map(|s| s.name).unwrap_or_default(),
+                        font_family: editor.font_family(),
+                        font_size: editor.font_size(),
+                    },
+                };
+
+                if let Err(err) = save_config(&config) {
+                    error!("Failed to save config: {}", err);
+                } else {
+                    log::info!("Saved config: {:#?}, exiting...", config);
+                }
+
+                glib::Propagation::Proceed
+            });
 
             self_obj.add_action(&layout_action);
             self_obj.add_action(&import_action);
@@ -642,6 +758,52 @@ pub mod imp {
         grid.attach(child, column, row, column_span, row_span);
     }
 
+    /// Generate gtk css theme for a [Theme]
+    ///
+    /// > Does not generate scopes as [gtk::TextView] uses [gtk::TextTag] for syntax highlighting.
+    fn theme_to_gtk_css(theme: &Theme) -> String {
+        let mut css = String::new();
+
+        css.push_str("/*\n");
+        let name = theme
+            .name
+            .clone()
+            .unwrap_or_else(|| "unknown theme".to_string());
+
+        css.push_str(&format!(" * theme \"{}\" generated by Quellcode\n", name));
+        css.push_str(" */\n\n");
+        css.push_str(".code {\n");
+
+        if let Some(foreground) = theme.settings.foreground {
+            css.push_str(&format!(
+                " color: rgb({} {} {});\n",
+                foreground.r, foreground.g, foreground.b
+            ));
+        }
+
+        if let Some(background) = theme.settings.background {
+            css.push_str(&format!(
+                " background: rgb({} {} {});\n",
+                background.r, background.g, background.b
+            ));
+        }
+
+        css.push_str("}\n\n");
+
+        if let Some(selection) = theme.settings.selection {
+            css.push_str(".code text selection {\n");
+
+            css.push_str(&format!(
+                " background-color: rgb({} {} {} / 0.5);\n",
+                selection.r, selection.g, selection.b
+            ));
+
+            css.push_str("}\n\n");
+        }
+
+        css
+    }
+
     fn preprocess_units(input: &str) -> String {
         let mut output = String::new();
         let mut chars = input.chars().peekable();
@@ -685,18 +847,134 @@ impl Window {
     pub fn new(app: &QuellcodeApplication) -> Self {
         let window: Self = Object::builder().build();
         window.set_application(Some(app));
+        window.load_config(app);
 
-        let imp = window.imp();
-        imp.set_generator(Some(Arc::new(Mutex::new(SvgGenerator::new()))));
+        let inner = window.imp();
+        inner.set_generator(Some(Arc::new(Mutex::new(SvgGenerator::new()))));
 
         window
+    }
+
+    fn load_config(&self, app: &QuellcodeApplication) {
+        self.load_syntaxes(app);
+        self.load_themes(app);
+
+        let config = app.config();
+        let inner = self.imp();
+
+        let CodeSettings {
+            theme,
+            syntax,
+            font_family,
+            font_size,
+        } = &config.code;
+
+
+        let themes = app.theme_set().themes.clone();
+        let theme: (&String, &Theme) = themes.get_key_value(theme).unwrap_or_else(|| {
+            log::warn!("Theme \"{}\" not found, using default theme", theme);
+            themes.first_key_value().expect("Failed to get theme")
+        });
+
+        debug!(
+            "Selected theme: {}, position {}",
+            theme.0,
+            themes.iter().position(|t| t.0 == theme.0).unwrap() as u32
+        );
+
+        inner
+            .theme_dropdown
+            .set_selected(themes.iter().position(|t| t.0 == theme.0).unwrap() as u32);
+
+        let syntax_sets = app.syntax_set();
+        let syntax = syntax_sets
+            .find_syntax_by_name(&syntax)
+            .unwrap_or_else(|| {
+                log::warn!(
+                    "Syntax \"{}\" not found, using default syntax",
+                    syntax
+                );
+                syntax_sets
+                    .syntaxes()
+                    .first()
+                    .expect("Failed to get syntax")
+            });
+
+        debug!(
+            "Selected syntax: {}, position {}",
+            syntax.name,
+            syntax_sets
+                .syntaxes()
+                .iter()
+                .position(|s| s.name == syntax.name)
+                .unwrap() as u32
+        );
+
+        inner.syntax_dropdown.set_selected(
+            syntax_sets
+                .syntaxes()
+                .iter()
+                .position(|s| s.name == syntax.name)
+                .unwrap() as u32,
+        );
+
+        let pango_context = self.pango_context();
+        let font_families = pango_context.list_families();
+        if let Some(font) = font_families.iter().find(|f| f.name() == *font_family) {
+            debug!("Found font {} in list of available fonts", font_family);
+            inner.font_family_chooser.set_selected_family(font);
+        } else {
+            warn!(
+                "Could not find font {}, using fallback \"{}\"",
+                font_family, FALLBACK_FONT_FAMILY
+            );
+            inner.font_family_chooser.set_selected_family(
+                font_families
+                    .iter()
+                    .find(|f| f.name() == FALLBACK_FONT_FAMILY)
+                    .unwrap(),
+            );
+        }
+
+        inner.font_size_scale.set_value(*font_size);
+    }
+
+    fn load_themes(&self, app: &QuellcodeApplication) {
+        let inner = self.imp();
+        *inner.state_mut().themes_mut() = app.theme_set().themes.clone();
+
+        let theme_list = gtk::StringList::new(
+            &inner
+                .state()
+                .themes()
+                .iter()
+                .map(|t| t.0.as_str())
+                .collect::<Vec<_>>(),
+        );
+
+        inner.theme_dropdown.set_model(Some(&theme_list));
+    }
+
+    fn load_syntaxes(&self, app: &QuellcodeApplication) {
+        let inner = self.imp();
+        let syntax_set = app.syntax_set().clone();
+        let syntax_list = gtk::StringList::new(
+            &syntax_set
+                .syntaxes()
+                .iter()
+                .map(|s| s.name.as_str())
+                .collect::<Vec<_>>(),
+        );
+
+        inner.state_mut().set_syntax_set(Some(syntax_set));
+        inner.syntax_dropdown.set_model(Some(&syntax_list));
     }
 
     fn setup_actions(&self, sender: async_channel::Sender<RenderOutput>) {
         let generate_code = ActionEntry::builder("generate-code")
             .activate(move |window: &Self, _, _| {
-                if let Some(generator) = window.imp().generator() {
-                    let inner = window.imp();
+                let inner = window.imp();
+                if let Some(generator) = inner.generator() {
                     let editor = &inner.editor;
                     let editor_syntax = editor.syntax().clone();
                     let editor_syntax_set = editor.syntax_set().clone();
