@@ -1,14 +1,12 @@
 use std::{fs, io::Write};
 
-use askama::Template;
 use color_eyre::eyre::Result;
 use serde::{Deserialize, Serialize};
 use toml_edit::DocumentMut;
 
 use super::dir::config_dir;
 
-#[derive(Template)]
-#[template(path = "config.toml", escape = "none")]
+#[derive(Serialize)]
 struct ConfigTemplate<'a> {
     theme: &'a str,
     syntax: &'a str,
@@ -68,14 +66,17 @@ pub fn load_config() -> Result<Config> {
 }
 
 pub fn write_default_config_file(config: &Config) -> Result<()> {
-    let template = ConfigTemplate {
+    let context = ConfigTemplate {
         theme: &config.code.theme,
         syntax: &config.code.syntax,
         font_family: &config.code.font_family,
         font_size: config.code.font_size,
     };
 
-    std::fs::write(config_file_path(), template.render()?)?;
+    let mut engine = tinytemplate::TinyTemplate::new();
+
+    engine.add_template("config", include_str!("../../templates/config.toml"))?;
+    std::fs::write(config_file_path(), engine.render("config", &context)?)?;
     Ok(())
 }
 

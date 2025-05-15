@@ -21,10 +21,10 @@ log = "0.4.26"
 env_logger = "0.11.7"
 color-eyre = "0.6.3"
 once_cell = "1.21.1"
-askama = "0.12.1"
 toml = "0.8.20"
 toml_edit = "0.22.24"
 evalexpr = "12.0.2"
+tinytemplate = "1.2.1"
 
 [build-dependencies]
 glib-build-tools = "0.20.0"
