@@ -70,7 +70,7 @@ pub mod imp {
             self.parent_activate();
 
             let base = gtk::CssProvider::new();
-            base.load_from_string(include_str!("../../assets/css/base.css"));
+            base.load_from_string(include_str!("../../data/css/base.css"));
             gtk::style_context_add_provider_for_display(
                 &Display::default().expect("Failed to get display"),
                 &base,
@@ -78,7 +78,7 @@ pub mod imp {
             );
 
             let style = gtk::CssProvider::new();
-            style.load_from_string(include_str!("../../assets/css/style.css"));
+            style.load_from_string(include_str!("../../data/css/style.css"));
             gtk::style_context_add_provider_for_display(
                 &Display::default().expect("Failed to get display"),
                 &style,

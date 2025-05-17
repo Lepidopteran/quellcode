@@ -109,6 +109,17 @@
                     </child>
                   </object>
                 </child>
+								<child type="end">
+									<object class="GtkBox">
+										<property name="orientation">horizontal</property>
+										<child>
+											<object class="GtkButton">
+												<property name="icon-name">preferences-system-symbolic</property>
+												<property name="action-name">win.preferences</property>
+											</object>
+										</child>
+									</object>
+								</child>
               </object>
             </child>
             <child>
