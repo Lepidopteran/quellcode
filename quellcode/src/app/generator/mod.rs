@@ -29,22 +29,6 @@ pub enum PropertyError {
     InvalidValueType,
 }
 
-#[derive(Debug)]
-#[non_exhaustive]
-pub enum RenderType {
-    Text,
-    Image,
-    Both,
-}
-
-#[derive(Debug)]
-#[non_exhaustive]
-pub enum RenderOutput {
-    Text(String),
-    Image(Vec<u8>),
-    Both(String, Option<Vec<u8>>),
-}
-
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum PropertyType {
     String,
@@ -180,10 +164,6 @@ impl TryInto<bool> for PropertyValue {
 pub trait Generator: Send + Sync + Debug {
     fn name(&self) -> &str;
     fn description(&self) -> &str;
-    fn saveable(&self) -> &bool;
-    fn extensions(&self) -> Option<&Extensions> {
-        None
-    }
     fn properties(&self) -> &Properties;
     fn font_family(&self) -> &str;
     fn set_font_family(&mut self, family: &str);
@@ -191,13 +171,16 @@ pub trait Generator: Send + Sync + Debug {
     fn set_font_size(&mut self, size: f32);
     fn get_property(&self, name: &str) -> Result<PropertyValue, GeneratorError>;
     fn set_property(&mut self, name: &str, value: PropertyValue) -> Result<(), GeneratorError>;
-    fn kind(&self) -> &RenderType;
+    fn saveable(&self) -> bool;
+    fn extensions(&self) -> Option<&Extensions> {
+        None
+    }
 
-    fn generate(
+    fn generate_code(
         &self,
-        text: &str,
-        theme: &Theme,
-        syntax: &SyntaxReference,
-        syntax_set: &SyntaxSet,
-    ) -> Result<RenderOutput, GeneratorError>;
+        _text: &str,
+        _theme: &Theme,
+        _syntax: &SyntaxReference,
+        _syntax_set: &SyntaxSet,
+    ) -> Result<String, GeneratorError>;
 }

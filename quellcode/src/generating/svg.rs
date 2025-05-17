@@ -22,9 +22,10 @@ pub enum SvgGeneratorError {
 pub struct SvgOptions {
     pub write_options: WriteOptions,
     pub font_size: f32,
+    pub line_height: f32,
+    pub padding: f32,
     pub font_family: String,
     pub include_background: bool,
-    pub padding: f32,
 }
 
 impl Default for SvgOptions {
@@ -32,6 +33,7 @@ impl Default for SvgOptions {
         Self {
             write_options: WriteOptions::default(),
             font_size: 12.0,
+            line_height: 0.0,
             padding: 0.0,
             font_family: "monospace".to_string(),
             include_background: true,
@@ -114,7 +116,7 @@ pub fn generate_svg(
         document = document.add(text_element);
     }
 
-    let height = text.lines().count() * text_size;
+    let height = text.lines().count() * (text_size + options.line_height as usize) + options.padding as usize;
     let width = text.lines().map(|line| line.len()).max().unwrap_or(0) * text_size;
 
     document = document.set("viewBox", format!("0 0 {} {}", width, height));

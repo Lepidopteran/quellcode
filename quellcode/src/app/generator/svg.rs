@@ -1,6 +1,8 @@
+use super::{
+    Extensions, Generator, GeneratorError, Properties, Property, PropertyError, PropertyType,
+    PropertyValue,
+};
 use quellcode::generating::svg::{generate_svg, SvgOptions};
-
-use super::{Extensions, Generator, Properties, Property, PropertyType, PropertyValue, RenderType};
 
 #[derive(Clone, Debug)]
 pub struct SvgGenerator {
@@ -16,7 +18,7 @@ impl SvgGenerator {
 }
 
 impl Default for SvgGenerator {
-     fn default() -> SvgGenerator {
+    fn default() -> SvgGenerator {
         let options = SvgOptions::default();
 
         SvgGenerator {
@@ -51,6 +53,14 @@ impl Generator for SvgGenerator {
         "Generate SVG"
     }
 
+    fn saveable(&self) -> bool {
+        true
+    }
+
+    fn extensions(&self) -> Option<&Vec<&'static str>> {
+        Some(&self.extensions)
+    }
+
     fn font_family(&self) -> &str {
         &self.options.font_family
     }
@@ -65,18 +75,6 @@ impl Generator for SvgGenerator {
 
     fn set_font_size(&mut self, size: f32) {
         self.options.font_size = size;
-    }
-
-    fn kind(&self) -> &RenderType {
-        &RenderType::Text
-    }
-
-    fn saveable(&self) -> &bool {
-        &true
-    }
-
-    fn extensions(&self) -> Option<&Vec<&'static str>> {
-        Some(&self.extensions)
     }
 
     fn properties(&self) -> &Properties {
@@ -107,25 +105,21 @@ impl Generator for SvgGenerator {
             "bake_font" => {
                 self.options.write_options.preserve_text = !value.try_into()?;
             }
-            _ => {
-                return Err(super::GeneratorError::PropertyError(
-                    super::PropertyError::UnknownProperty,
-                ))
-            }
+            _ => return Err(PropertyError::UnknownProperty)?,
         }
 
         Ok(())
     }
 
-    fn generate(
+    fn generate_code(
         &self,
         text: &str,
         theme: &syntect::highlighting::Theme,
         syntax: &syntect::parsing::SyntaxReference,
         syntax_set: &syntect::parsing::SyntaxSet,
-    ) -> Result<super::RenderOutput, super::GeneratorError> {
+    ) -> Result<String, GeneratorError> {
         if let Ok(svg) = generate_svg(text, theme, syntax, syntax_set, &self.options) {
-            return Ok(super::RenderOutput::Text(svg));
+            return Ok(svg);
         }
 
         Err(super::GeneratorError::Other(

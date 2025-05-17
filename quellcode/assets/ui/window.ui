@@ -19,15 +19,15 @@
             </layout>
             <child>
               <object class="GtkCenterBox">
-								<style>
-									<class name="toolbar"></class>
-								</style>
+                <style>
+                  <class name="toolbar"></class>
+                </style>
                 <child type="start">
                   <object class="GtkBox">
                     <property name="orientation">horizontal</property>
                     <child>
                       <object class="GtkButton">
-												<property name="action-name">win.import-file</property>
+                        <property name="action-name">win.import-file</property>
                         <property name="child">
                           <object class="GtkBox">
                             <property name="can-focus">false</property>
@@ -52,53 +52,59 @@
                 <child type="center">
                   <object class="GtkBox">
                     <property name="orientation">horizontal</property>
-                    <property name="homogeneous">true</property>
-                    <style>
-                      <class name="linked"></class>
-                    </style>
+                    <property name="spacing">8</property>
                     <child>
-                      <object class="GtkToggleButton">
-                        <property name="action-name">win.change_layout</property>
-                        <property name="action-target">'editor'</property>
-                        <property name="icon-name">document-edit</property>
-                      </object>
-                    </child>
-                    <child>
-                      <object class="GtkToggleButton">
-                        <property name="action-name">win.change_layout</property>
-                        <property name="action-target">'viewer'</property>
-												<property name="label">&lt;/&gt;</property>
-												<property name="tooltip-text">Viewer</property>
-												<child type="label">
-													<object class="GtkLabel">
-														<property name="accessible-role">generic</property>
-														<property name="label">&lt;/&gt;</property>
-													</object>
-												</child>
-                      </object>
-                    </child>
-                    <child>
-                      <object class="GtkToggleButton">
-                        <property name="action-name">win.change_layout</property>
-                        <property name="action-target">'split_horizontal'</property>
-												<property name="tooltip-text">Split Horizontal</property>
-                        <child type="label">
-                          <object class="GtkImage">
-                            <property name="icon-name">view-dual</property>
-														<!-- NOTE: Avoids creating a new icon. -->
-                            <style>
-                              <class name="rotate-90"></class>
-                            </style>
+                      <object class="GtkBox">
+                        <property name="orientation">horizontal</property>
+                        <property name="homogeneous">true</property>
+                        <style>
+                          <class name="linked"></class>
+                        </style>
+                        <child>
+                          <object class="GtkToggleButton">
+                            <property name="action-name">win.change_layout</property>
+                            <property name="action-target">'editor'</property>
+                            <property name="icon-name">document-edit</property>
                           </object>
                         </child>
-                      </object>
-                    </child>
-                    <child>
-                      <object class="GtkToggleButton">
-                        <property name="action-name">win.change_layout</property>
-                        <property name="action-target">'split_vertical'</property>
-												<property name="tooltip-text">Split Vertical</property>
-                        <property name="icon-name">view-dual</property>
+                        <child>
+                          <object class="GtkToggleButton">
+                            <property name="action-name">win.change_layout</property>
+                            <property name="action-target">'viewer'</property>
+                            <property name="label">&lt;/></property>
+                            <property name="tooltip-text">Viewer</property>
+                            <child type="label">
+                              <object class="GtkLabel">
+                                <property name="accessible-role">generic</property>
+                                <property name="label">&lt;/></property>
+                              </object>
+                            </child>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="GtkToggleButton">
+                            <property name="action-name">win.change_layout</property>
+                            <property name="action-target">'split_horizontal'</property>
+                            <property name="tooltip-text">Split Horizontal</property>
+                            <child type="label">
+                              <object class="GtkImage">
+                                <property name="icon-name">view-dual</property>
+                                <!-- NOTE: Avoids creating a new icon. -->
+                                <style>
+                                  <class name="rotate-90"></class>
+                                </style>
+                              </object>
+                            </child>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="GtkToggleButton">
+                            <property name="action-name">win.change_layout</property>
+                            <property name="action-target">'split_vertical'</property>
+                            <property name="tooltip-text">Split Vertical</property>
+                            <property name="icon-name">view-dual</property>
+                          </object>
+                        </child>
                       </object>
                     </child>
                   </object>
@@ -121,7 +127,7 @@
                             <property name="orientation">horizontal</property>
                           </object>
                         </child>
-												<!-- TODO: Add options for the toolbar. -->
+                        <!-- TODO: Add options for the toolbar. -->
                         <!-- <style> -->
                         <!--   <class name="toolbar"></class> -->
                         <!-- </style> -->
@@ -148,15 +154,28 @@
                     <child>
                       <object class="GtkOverlay" id="viewer_overlay">
                         <child>
-                          <object class="GtkScrolledWindow">
+                          <object class="GtkStack" id="viewer_stack">
+                            <property name="accessible-role">generic</property>
                             <property name="hexpand">true</property>
                             <property name="vexpand">true</property>
+                            <property name="hhomogeneous">false</property>
                             <child>
-                              <object class="QuellcodeCodeView" id="viewer">
-                                <property name="hexpand">true</property>
-                                <property name="vexpand">true</property>
-                                <property name="cursor-visible">false</property>
-                                <property name="editable">false</property>
+                              <object class="GtkStackPage">
+                                <property name="name">source</property>
+                                <property name="child">
+                                  <object class="GtkScrolledWindow">
+                                    <property name="hexpand">true</property>
+                                    <property name="vexpand">true</property>
+                                    <child>
+                                      <object class="QuellcodeCodeView" id="viewer">
+                                        <property name="hexpand">true</property>
+                                        <property name="vexpand">true</property>
+                                        <property name="cursor-visible">false</property>
+                                        <property name="editable">false</property>
+                                      </object>
+                                    </child>
+                                  </object>
+                                </property>
                               </object>
                             </child>
                           </object>
@@ -252,7 +271,7 @@
                                   <object class="GtkDropDown" id="theme_dropdown">
                                     <property name="halign">fill</property>
                                     <property name="enable-search">true</property>
-																		<signal name="notify::selected-item" handler="theme_changed" swapped="true"></signal>
+                                    <signal handler="theme_changed" name="notify::selected-item" swapped="true"></signal>
                                   </object>
                                 </child>
                               </object>
@@ -274,7 +293,7 @@
                                   <object class="GtkDropDown" id="syntax_dropdown">
                                     <property name="halign">fill</property>
                                     <property name="enable-search">true</property>
-																		<signal name="notify::selected-item" handler="syntax_changed" swapped="true"></signal>
+                                    <signal handler="syntax_changed" name="notify::selected-item" swapped="true"></signal>
                                   </object>
                                 </child>
                               </object>
@@ -294,7 +313,7 @@
                                 </child>
                                 <child>
                                   <object class="QuellcodeFontFamilyChooser" id="font_family_chooser">
-																		<signal name="notify::selected-family" handler="font_changed" swapped="true"></signal>
+                                    <signal handler="font_changed" name="notify::selected-family" swapped="true"></signal>
                                     <property name="halign">fill</property>
                                   </object>
                                 </child>
@@ -425,7 +444,7 @@
                 <property name="margin-top">8</property>
                 <property name="margin-end">8</property>
                 <property name="margin-bottom">8</property>
-								<property name="action-name">win.export-generated-code</property>
+                <property name="action-name">win.export-generated-code</property>
                 <property name="child">
                   <object class="GtkBox">
                     <property name="orientation">horizontal</property>

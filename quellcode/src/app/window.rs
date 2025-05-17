@@ -7,9 +7,10 @@ use gtk::subclass::prelude::*;
 use gtk::{gio, glib, CompositeTemplate, TemplateChild};
 use log::{debug, error, warn};
 use std::{
-    cell::RefCell,
+    cell::{Ref, RefCell, RefMut},
     rc::Rc,
     sync::{Arc, Mutex},
+    time::Duration,
 };
 
 use syntect::{highlighting::Theme, parsing::SyntaxSet};
@@ -17,77 +18,47 @@ use syntect::{highlighting::Theme, parsing::SyntaxSet};
 use crate::app::config::CodeSettings;
 
 use super::application::{QuellcodeApplication, FALLBACK_FONT_FAMILY};
-use super::generator::RenderOutput;
 use super::generator::{svg::SvgGenerator, Generator as GeneratorTrait};
 use super::ui::{code_view::CodeView, FontFamilyChooser};
 
 const UNITS: &[&str] = &["px", "pt", "pc", "in", "cm", "mm"];
 const ROUND_DIGITS: i32 = 4;
+const FONT_SCALE_DEBOUNCE_DELAY: Duration = Duration::from_millis(200);
+const BUFFER_DEBOUNCE_DELAY: Duration = Duration::from_millis(300);
 
 type Generator = Arc<Mutex<dyn GeneratorTrait>>;
 
 pub mod imp {
 
-    use std::{
-        cell::{Ref, RefMut},
-        collections::BTreeMap,
-        time::Duration,
-    };
+    use std::{collections::BTreeMap};
 
     use gtk::{
-        gdk::Display,
+        gdk::{Display},
         gio::{ListStore, SimpleAction},
+        glib::Properties,
         FileDialog,
     };
 
     use crate::app::{
         config::{save_config, CodeSettings, Config},
-        generator::{PropertyType, RenderOutput},
+        generator::PropertyType,
         ui::code_view::CodeView,
     };
 
     use super::*;
 
-    const FONT_SCALE_DEBOUNCE_DELAY: Duration = Duration::from_millis(200);
-    const BUFFER_DEBOUNCE_DELAY: Duration = Duration::from_millis(300);
-
     #[derive(Default, Debug)]
     pub struct State {
+        pub syntax_set: Option<SyntaxSet>,
+        pub themes: BTreeMap<String, Theme>,
         generator: Option<Generator>,
-        syntax_set: Option<SyntaxSet>,
-        themes: BTreeMap<String, Theme>,
         css_provider: gtk::CssProvider,
         font_scale_debounce_id: Option<glib::SourceId>,
         buffer_debounce_id: Option<glib::SourceId>,
     }
 
-    impl State {
-        pub fn generator(&self) -> Option<Generator> {
-            self.generator.clone()
-        }
-
-        pub fn set_generator(&mut self, generator: Option<Generator>) {
-            self.generator = generator;
-        }
-
-        pub fn themes(&self) -> &BTreeMap<String, Theme> {
-            &self.themes
-        }
-
-        pub fn themes_mut(&mut self) -> &mut BTreeMap<String, Theme> {
-            &mut self.themes
-        }
-
-        pub fn syntax_set(&self) -> Option<&SyntaxSet> {
-            self.syntax_set.as_ref()
-        }
-
-        pub fn set_syntax_set(&mut self, syntax_set: Option<SyntaxSet>) {
-            self.syntax_set = syntax_set;
-        }
-    }
-
-    #[derive(CompositeTemplate, Default)]
+    #[derive(CompositeTemplate, Default, Properties)]
+    #[properties(wrapper_type = super::Window)]
     #[template(resource = "/org/quellcode/quellcode/window.ui")]
     pub struct Window {
         state: Rc<RefCell<State>>,
@@ -116,6 +87,9 @@ pub mod imp {
 
         #[template_child]
         viewer_overlay: TemplateChild<gtk::Overlay>,
+
+        #[template_child]
+        pub viewer_stack: TemplateChild<gtk::Stack>,
 
         #[template_child]
         pub viewer: TemplateChild<CodeView>,
@@ -166,12 +140,12 @@ pub mod imp {
 
         /// Returns the current generator
         pub fn generator(&self) -> Option<Generator> {
-            self.state().generator()
+            self.state().generator.clone()
         }
 
         /// Sets the generator and updates the UI
         pub fn set_generator(&self, generator: Option<Generator>) {
-            self.state_mut().set_generator(generator);
+            self.state_mut().generator = generator;
             self.display_generator_properties();
         }
 
@@ -491,6 +465,7 @@ pub mod imp {
         }
     }
 
+    #[glib::derived_properties]
     impl ObjectImpl for Window {
         fn constructed(&self) {
             self.parent_constructed();
@@ -598,17 +573,15 @@ pub mod imp {
                 state.borrow_mut().buffer_debounce_id = Some(id);
             });
 
-            let (sender, receiver) = async_channel::unbounded();
+            let (code_tx, code_rx) = async_channel::unbounded::<String>();
 
             let viewer = self.viewer.clone();
             let viewer_loading_box = self.viewer_loading_box.clone();
 
             glib::spawn_future_local(async move {
-                while let Ok(svg) = receiver.recv().await {
-                    if let RenderOutput::Text(svg) = svg {
-                        viewer.buffer().set_text(&svg);
-                        viewer_loading_box.set_visible(false);
-                    }
+                while let Ok(svg) = code_rx.recv().await {
+                    viewer.buffer().set_text(svg.as_str());
+                    viewer_loading_box.set_visible(false);
                 }
             });
 
@@ -641,7 +614,7 @@ pub mod imp {
             self_obj.add_action(&layout_action);
             self_obj.add_action(&import_action);
             self_obj.add_action(&export_action);
-            self_obj.setup_actions(sender);
+            self_obj.setup_actions(code_tx);
 
             self.inspector.set_size_request(300, -1);
         }
@@ -869,7 +842,6 @@ impl Window {
             font_size,
         } = &config.code;
 
-
         let themes = app.theme_set().themes.clone();
         let theme: (&String, &Theme) = themes.get_key_value(theme).unwrap_or_else(|| {
             log::warn!("Theme \"{}\" not found, using default theme", theme);
@@ -887,18 +859,13 @@ impl Window {
             .set_selected(themes.iter().position(|t| t.0 == theme.0).unwrap() as u32);
 
         let syntax_sets = app.syntax_set();
-        let syntax = syntax_sets
-            .find_syntax_by_name(&syntax)
-            .unwrap_or_else(|| {
-                log::warn!(
-                    "Syntax \"{}\" not found, using default syntax",
-                    syntax
-                );
-                syntax_sets
-                    .syntaxes()
-                    .first()
-                    .expect("Failed to get syntax")
-            });
+        let syntax = syntax_sets.find_syntax_by_name(syntax).unwrap_or_else(|| {
+            log::warn!("Syntax \"{}\" not found, using default syntax", syntax);
+            syntax_sets
+                .syntaxes()
+                .first()
+                .expect("Failed to get syntax")
+        });
 
         debug!(
             "Selected syntax: {}, position {}",
@@ -941,12 +908,12 @@ impl Window {
 
     fn load_themes(&self, app: &QuellcodeApplication) {
         let inner = self.imp();
-        *inner.state_mut().themes_mut() = app.theme_set().themes.clone();
+        inner.state_mut().themes = app.theme_set().themes.clone();
 
         let theme_list = gtk::StringList::new(
             &inner
                 .state()
-                .themes()
+                .themes
                 .iter()
                 .map(|t| t.0.as_str())
                 .collect::<Vec<_>>(),
@@ -966,16 +933,19 @@ impl Window {
                 .collect::<Vec<_>>(),
         );
 
-        inner.state_mut().set_syntax_set(Some(syntax_set));
+        inner.state_mut().syntax_set = Some(syntax_set);
         inner.syntax_dropdown.set_model(Some(&syntax_list));
     }
 
-    fn setup_actions(&self, sender: async_channel::Sender<RenderOutput>) {
+    fn setup_actions(
+        &self,
+        code_tx: async_channel::Sender<String>,
+    ) {
         let generate_code = ActionEntry::builder("generate-code")
             .activate(move |window: &Self, _, _| {
                 let inner = window.imp();
                 if let Some(generator) = inner.generator() {
-                    let editor = &inner.editor;
+                    let editor = &inner.editor.clone();
                     let editor_syntax = editor.syntax().clone();
                     let editor_syntax_set = editor.syntax_set().clone();
                     let editor_theme = editor.theme().clone();
@@ -987,8 +957,7 @@ impl Window {
                         true,
                     );
 
-                    let tx = sender.clone();
-
+                    let code_tx = code_tx.clone();
                     gio::spawn_blocking(move || {
                         let mut generator = generator.lock().unwrap();
                         generator.set_font_size(font_size as f32);
@@ -997,7 +966,7 @@ impl Window {
                         if let (Some(editor_syntax), Some(editor_theme)) =
                             (editor_syntax, editor_theme)
                         {
-                            let generated_svg = generator.generate(
+                            let generated_svg = generator.generate_code(
                                 &text,
                                 &editor_theme,
                                 &editor_syntax,
@@ -1006,7 +975,7 @@ impl Window {
 
                             match generated_svg {
                                 Ok(svg) => {
-                                    tx.send_blocking(svg).expect("Failed to send svg");
+                                    code_tx.send_blocking(svg).expect("Failed to send svg");
                                 }
                                 Err(err) => {
                                     warn!("Failed to generate svg: {}", err);
