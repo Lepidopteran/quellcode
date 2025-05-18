@@ -19,7 +19,7 @@ use gtk::{
 
 use crate::app::{
     config::{save_config, CodeSettings, Config},
-    generator::PropertyType,
+    property::PropertyType,
     ui::code_view::CodeView,
 };
 

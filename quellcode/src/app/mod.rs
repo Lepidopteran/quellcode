@@ -1,6 +1,7 @@
 mod application;
 mod dir;
 mod generator;
+mod property;
 mod ui;
 mod window;
 
@@ -12,7 +13,6 @@ use application::QuellcodeApplication;
 pub use window::Window;
 
 use quellcode::ThemeFormat;
-
 pub const APP_ID: &str = "org.quellcode.Quellcode";
 
 pub fn new() -> QuellcodeApplication {

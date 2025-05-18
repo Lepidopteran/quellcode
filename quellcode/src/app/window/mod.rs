@@ -5,13 +5,13 @@ use gtk::subclass::prelude::*;
 use gtk::{gio, glib};
 use log::{debug, warn};
 use std::sync::{Arc, Mutex};
-
 use syntect::{highlighting::Theme, parsing::SyntaxSet};
-use crate::app::config::CodeSettings;
+
 use super::{
     application::{QuellcodeApplication, FALLBACK_FONT_FAMILY},
+    config::CodeSettings,
     generator::{svg::SvgGenerator, Generator as GeneratorTrait},
-    ui::{code_view::CodeView, FontFamilyChooser},
+    ui::FontFamilyChooser,
 };
 
 mod imp;
