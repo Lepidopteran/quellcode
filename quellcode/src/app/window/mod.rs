@@ -193,48 +193,4 @@ impl Window {
 
         self.add_action_entries([generate_code]);
     }
-
-    pub fn inspector(&self) -> &gtk::Box {
-        &self.imp().inspector
-    }
-
-    pub fn generator_box(&self) -> &gtk::Box {
-        &self.imp().generator_box
-    }
-
-    pub fn action_button(&self) -> &gtk::Button {
-        &self.imp().action_button
-    }
-
-    pub fn editor(&self) -> &CodeView {
-        &self.imp().editor
-    }
-
-    pub fn viewer_loading_box(&self) -> &gtk::Box {
-        &self.imp().viewer_loading_box
-    }
-
-    pub fn viewer_loading_spinner(&self) -> &gtk::Spinner {
-        &self.imp().viewer_loading_spinner
-    }
-
-    pub fn viewer(&self) -> &CodeView {
-        &self.imp().viewer
-    }
-
-    pub fn theme_dropdown(&self) -> &gtk::DropDown {
-        &self.imp().theme_dropdown
-    }
-
-    pub fn syntax_dropdown(&self) -> &gtk::DropDown {
-        &self.imp().syntax_dropdown
-    }
-
-    pub fn font_family_chooser(&self) -> &FontFamilyChooser {
-        &self.imp().font_family_chooser
-    }
-
-    pub fn font_size_scale(&self) -> &gtk::Scale {
-        &self.imp().font_size_scale
-    }
 }
