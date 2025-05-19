@@ -36,6 +36,44 @@ pub struct Property {
     pub max: Option<PropertyValue>,
 }
 
+impl Property {
+    /// Converts the property's name from snake_case to a prettified title case string.
+    ///
+    /// # Returns
+    ///
+    /// A `String` that represents the property's name converted to title case, with underscores replaced by spaces and each word capitalized.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let property = Property {
+    ///     name: "example_property_name",
+    ///     kind: PropertyType::String,
+    ///     value: PropertyValue::String("".to_string()),
+    ///     description: "",
+    ///     default: None,
+    ///     min: None,
+    ///     max: None,
+    /// };
+    ///
+    /// assert_eq!(property.pretty_name(), "Example Property Name");
+    /// ```
+    pub fn pretty_name(&self) -> String {
+        self.name
+            .replace("_", " ")
+            .split_whitespace()
+            .map(|word| {
+                let mut c = word.chars();
+                match c.next() {
+                    Some(first) => first.to_uppercase().chain(c).collect::<String>(),
+                    None => String::new(),
+                }
+            })
+            .collect::<Vec<String>>()
+            .join(" ")
+    }
+}
+
 impl Default for Property {
     fn default() -> Self {
         Property {
