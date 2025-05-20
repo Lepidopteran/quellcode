@@ -115,7 +115,10 @@
 										<child>
 											<object class="GtkButton">
 												<property name="icon-name">preferences-system-symbolic</property>
-												<property name="action-name">win.preferences</property>
+												<property name="action-name">app.open-preferences</property>
+												<style>
+													<class name="raised"></class>
+												</style>
 											</object>
 										</child>
 									</object>

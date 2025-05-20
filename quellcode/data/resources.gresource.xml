@@ -4,5 +4,6 @@
 		<file compressed="true" preprocess="xml-stripblanks" alias="window.ui">ui/window.ui</file>
 		<file compressed="true" preprocess="xml-stripblanks" alias="font_family_chooser.ui">ui/font_family_chooser.ui</file>
 		<file compressed="true" preprocess="xml-stripblanks" alias="split_button.ui">ui/split_button.ui</file>
+		<file compressed="true" preprocess="xml-stripblanks" alias="settings.ui">ui/settings.ui</file>
   </gresource>
 </gresources>
