@@ -12,6 +12,7 @@ use syntect::{
 
 pub const FALLBACK_FONT_FAMILY: &str = "Monospace";
 
+use super::ui::SettingsWindow;
 use super::{
     code_theme_files,
     config::{load_config, write_default_config_file, CodeSettings, Config},
@@ -20,6 +21,8 @@ use super::{
 
 pub mod imp {
     use std::{cell::RefMut, io, rc::Rc};
+
+    use crate::app::ui::SettingsWindow;
 
     use super::*;
     use gdk::Display;
@@ -63,7 +66,12 @@ pub mod imp {
         }
     }
 
-    impl ObjectImpl for QuellcodeApplication {}
+    impl ObjectImpl for QuellcodeApplication {
+        fn constructed(&self) {
+            self.parent_constructed();
+            self.obj().setup_actions();
+        }
+    }
     impl GtkApplicationImpl for QuellcodeApplication {}
     impl ApplicationImpl for QuellcodeApplication {
         fn activate(&self) {
@@ -215,6 +223,24 @@ impl QuellcodeApplication {
         app.set_application_id(Some(application_id));
 
         app
+    }
+
+    fn setup_actions(&self) {
+        let open_preferences = gio::ActionEntry::builder("open-preferences")
+            .activate(move |app: &QuellcodeApplication, _, _| {
+                for window in app.windows() {
+                    if let Ok(settings_window) = window.downcast::<SettingsWindow>() {
+                        settings_window.present();
+
+                        return
+                    }
+                }
+
+                let settings_window = SettingsWindow::new(app);
+                settings_window.present();
+            })
+            .build();
+        self.add_action_entries([open_preferences]);
     }
 
     pub fn theme_set(&self) -> Ref<ThemeSet> {
