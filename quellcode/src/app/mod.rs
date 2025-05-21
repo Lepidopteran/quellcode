@@ -2,13 +2,14 @@ mod application;
 mod dir;
 mod generator;
 mod property;
+mod settings;
 mod ui;
 mod window;
 
 pub mod config;
 
-use std::path::PathBuf;
 use application::QuellcodeApplication;
+use std::path::PathBuf;
 
 pub use window::Window;
 
