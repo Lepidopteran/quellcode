@@ -21,9 +21,6 @@ use super::{
 
 pub mod imp {
     use std::{cell::RefMut, io, rc::Rc};
-
-    use crate::app::ui::SettingsWindow;
-
     use super::*;
     use gdk::Display;
 
@@ -83,6 +80,14 @@ pub mod imp {
                 &Display::default().expect("Failed to get display"),
                 &base,
                 gtk::STYLE_PROVIDER_PRIORITY_THEME,
+            );
+
+            let theme = gtk::CssProvider::new();
+            theme.load_from_string(include_str!("../../data/css/theme.css"));
+            gtk::style_context_add_provider_for_display(
+                &Display::default().expect("Failed to get display"),
+                &theme,
+                gtk::STYLE_PROVIDER_PRIORITY_USER,
             );
 
             let style = gtk::CssProvider::new();
