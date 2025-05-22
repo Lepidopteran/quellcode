@@ -1,21 +1,22 @@
-@use "libadwaita/libadwaita";
-@use "libadwaita/gtk-dark";
-@use "libadwaita/libadwaita-tweaks";
-
 :root {
   --accent-bg-color: oklch(0.606 0.25 292.717);
-  --shadow-color: rgb(from black r g b / calc(alpha * 0.5));
-  --lesser-shadow-color: color-mix(
-    in srgb,
-    var(--shadow-color),
-    transparent 50%
-  );
-  --highlight-color: rgb(from white r g b / calc(alpha * 0.5));
-  --lesser-highlight-color: color-mix(
-    in srgb,
-    var(--highlight-color),
-    transparent 50%
-  );
+
+  /* Shadow */
+  --shadow-color: #111;
+  --shadow-50: rgb(from var(--shadow-color) r g b / calc(alpha * 0.5));
+  --shadow-25: rgb(from var(--shadow-color) r g b / calc(alpha * 0.25));
+  --shadow-10: rgb(from var(--shadow-color) r g b / calc(alpha * 0.1));
+  --shadow-5: rgb(from var(--shadow-color) r g b / calc(alpha * 0.05));
+  --shadow: var(--shadow-50);
+
+  /* Highlight */
+  --highlight-color: #eee;
+  --highlight-50: rgb(from var(--highlight-color) r g b / calc(alpha * 0.5));
+  --highlight-25: rgb(from var(--highlight-color) r g b / calc(alpha * 0.25));
+  --highlight-10: rgb(from var(--highlight-color) r g b / calc(alpha * 0.1));
+  --highlight-5: rgb(from var(--highlight-color) r g b / calc(alpha * 0.05));
+  --highlight: var(--highlight-50);
+
   --metal-gradient: conic-gradient(
     from 75deg at 50% 50%,
     #ccc 0%,
@@ -24,6 +25,10 @@
     #222 75%,
     #ccc 100%
   );
+
+  --radius: 6px;
+  --radius-md: calc(var(--radius) * 0.5);
+  --radius-lg: calc(var(--radius) * 2);
 }
 
 codeview {
@@ -40,40 +45,55 @@ radio:checked {
 }
 
 .inspector {
-  box-shadow: 0 0 1rem var(--shadow-color);
+  box-shadow: 0 0 1rem var(--shadow);
 }
 
 .inspector__action-box {
-  box-shadow: 0 0 1rem var(--shadow-color);
+  box-shadow: 0 0 1rem var(--shadow);
 }
 
 button {
-  border-top: 1px solid rgb( from var(--highlight-color) r g b / calc(alpha * 0.25));
+  border-top: 1px solid var(--highlight-10);
 }
 
 entry {
-  box-shadow: inset 0 0 0.25rem var(--shadow-color);
-  border: 1px solid rgb( from var(--shadow-color) r g b / calc(alpha * 0.1));
+  border: none;
+  border-radius: var(--radius);
+  box-shadow:
+    inset 0 0 0.25rem var(--shadow),
+    0 0 0 1px var(--shadow);
 }
 
 scale {
   trough {
     box-shadow:
-      inset 0.1rem 0.01rem 0.25rem var(--shadow-color),
-      0 0 0.1rem var(--lesser-shadow-color);
+      inset 0 0 0.25rem var(--shadow),
+      0 0 1px var(--shadow);
 
     slider {
-      border-radius: 9999px;
+      border-top-left-radius: 9999px;
+      border-bottom-left-radius: 9999px;
+      border-top-right-radius: 9999px;
+      border-bottom-right-radius: 9999px;
       background: var(--metal-gradient);
-      box-shadow: 0 0 0.25rem 0.1rem var(--shadow-color);
-      min-height: 0.75rem;
-      min-width: 0.75rem;
+      box-shadow: 0 0 0.25rem 0.1rem var(--shadow);
+      min-height: 12px;
+      min-width: 12px;
+      margin: -8px;
     }
 
     highlight {
       background-color: var(--accent-bg-color);
-      box-shadow: inset 0 0 0.25rem var(--shadow-color);
+      box-shadow: inset 0 0 0.25rem var(--shadow);
       padding: 0.25rem;
     }
   }
+}
+
+.card {
+  box-shadow:
+    0 0 0 1px var(--shadow-25),
+    0 1px 3px 1px var(--shadow-25),
+    0 2px 6px 2px var(--shadow-25);
+  border-radius: var(--radius-lg);
 }

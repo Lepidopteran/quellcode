@@ -82,14 +82,6 @@ pub mod imp {
                 gtk::STYLE_PROVIDER_PRIORITY_THEME,
             );
 
-            let theme = gtk::CssProvider::new();
-            theme.load_from_string(include_str!("../../data/css/theme.css"));
-            gtk::style_context_add_provider_for_display(
-                &Display::default().expect("Failed to get display"),
-                &theme,
-                gtk::STYLE_PROVIDER_PRIORITY_USER,
-            );
-
             let style = gtk::CssProvider::new();
             style.load_from_string(include_str!("../../data/css/style.css"));
             gtk::style_context_add_provider_for_display(

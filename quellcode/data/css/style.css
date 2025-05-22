@@ -1,5 +1,4 @@
 :root {
-  --highlight-color: rgb(from white r g b / calc(alpha * 0.5));
 	--accent-bg-hover-color: color-mix(in srgb, var(), transparent 75%);
 }
 
