@@ -6,7 +6,7 @@ mod settings;
 mod ui;
 mod window;
 
-pub mod config;
+pub mod state;
 
 use application::QuellcodeApplication;
 use std::path::PathBuf;

@@ -15,34 +15,34 @@ pub const FALLBACK_FONT_FAMILY: &str = "Monospace";
 use super::ui::SettingsWindow;
 use super::{
     code_theme_files,
-    config::{load_config, write_default_config_file, CodeSettings, Config},
+    state::{load_state, CodeState, State},
     dir, ThemeFormat, Window,
 };
 
 pub mod imp {
-    use std::{cell::RefMut, io, rc::Rc};
     use super::*;
     use gdk::Display;
+    use std::{cell::RefMut, io, rc::Rc};
 
     #[derive(Debug)]
     pub struct QuellcodeApplication {
         pub code_theme_provider: RefCell<gtk::CssProvider>,
         pub theme_set: RefCell<ThemeSet>,
         pub syntax_set: RefCell<SyntaxSet>,
-        pub config: Rc<RefCell<Config>>,
+        pub state: Rc<RefCell<State>>,
     }
 
     impl QuellcodeApplication {
-        pub fn set_config(&self, config: Config) {
-            *self.config.borrow_mut() = config;
+        pub fn set_config(&self, config: State) {
+            *self.state.borrow_mut() = config;
         }
 
-        pub fn config(&self) -> Ref<Config> {
-            self.config.borrow()
+        pub fn config(&self) -> Ref<State> {
+            self.state.borrow()
         }
 
-        pub fn config_mut(&self) -> RefMut<Config> {
-            self.config.borrow_mut()
+        pub fn config_mut(&self) -> RefMut<State> {
+            self.state.borrow_mut()
         }
     }
 
@@ -58,7 +58,7 @@ pub mod imp {
                 code_theme_provider: RefCell::new(provider),
                 theme_set: RefCell::new(ThemeSet::load_defaults()),
                 syntax_set: RefCell::new(SyntaxSet::load_defaults_nonewlines()),
-                config: Rc::new(RefCell::new(Config::new())),
+                state: Rc::new(RefCell::new(State::new())),
             }
         }
     }
@@ -102,29 +102,22 @@ pub mod imp {
 
             load_custom_themes(theme_set);
 
-            let config = match load_config() {
+            let config = match load_state() {
                 Ok(config) => config,
                 Err(err) => {
                     let theme = theme_set
                         .themes
                         .first_key_value()
                         .expect("Failed to get theme");
-                    let config = Config {
-                        code: CodeSettings {
-                            theme: theme.0.clone(),
-                            syntax: self.syntax_set.borrow().syntaxes()[0].name.clone(),
+                    let config = State {
+                        code: CodeState {
+                            theme: Some(theme.0.clone()),
+                            syntax: Some(self.syntax_set.borrow().syntaxes()[0].name.clone()),
                             ..Default::default()
                         },
+                        ..Default::default()
                     };
                     if let Some(io_err) = err.downcast_ref::<io::Error>() {
-                        if io_err.kind() == io::ErrorKind::NotFound {
-                            let result = write_default_config_file(&config);
-                            if let Err(err) = result {
-                                error!("Failed to write default config file, Error:\n{}", err);
-                            }
-                            return;
-                        }
-
                         error!(
                             "Failed to read config, using default config instead, Error:\n{}",
                             io_err
@@ -141,7 +134,7 @@ pub mod imp {
             };
 
             debug!("Loaded config");
-            self.config.replace(config);
+            self.state.replace(config);
         }
     }
 
@@ -229,7 +222,7 @@ impl QuellcodeApplication {
                     if let Ok(settings_window) = window.downcast::<SettingsWindow>() {
                         settings_window.present();
 
-                        return
+                        return;
                     }
                 }
 
@@ -248,7 +241,7 @@ impl QuellcodeApplication {
         self.imp().syntax_set.borrow()
     }
 
-    pub fn config(&self) -> Ref<Config> {
-        self.imp().config.borrow()
+    pub fn state(&self) -> Ref<State> {
+        self.imp().state.borrow()
     }
 }

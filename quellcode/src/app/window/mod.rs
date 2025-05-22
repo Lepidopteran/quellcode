@@ -7,9 +7,10 @@ use log::{debug, warn};
 use std::sync::{Arc, Mutex};
 use syntect::{highlighting::Theme, parsing::SyntaxSet};
 
+use super::state::WindowState;
 use super::{
     application::{QuellcodeApplication, FALLBACK_FONT_FAMILY},
-    config::CodeSettings,
+    state::CodeState,
     generator::{svg::SvgGenerator, Generator as GeneratorTrait},
     ui::FontFamilyChooser,
 };
@@ -27,7 +28,7 @@ impl Window {
     pub fn new(app: &QuellcodeApplication) -> Self {
         let window: Self = Object::builder().build();
         window.set_application(Some(app));
-        window.load_config(app);
+        window.load_state(app);
 
         let inner = window.imp();
         inner.set_generator(Some(Arc::new(Mutex::new(SvgGenerator::new()))));
@@ -35,82 +36,116 @@ impl Window {
         window
     }
 
-    fn load_config(&self, app: &QuellcodeApplication) {
+    fn load_state(&self, app: &QuellcodeApplication) {
         self.load_syntaxes(app);
         self.load_themes(app);
 
-        let config = app.config();
+        let state = app.state();
         let inner = self.imp();
 
-        let CodeSettings {
+        debug!("Loading config...");
+
+        let CodeState {
             theme,
             syntax,
             font_family,
             font_size,
-        } = &config.code;
+        } = &state.code;
 
-        let themes = app.theme_set().themes.clone();
-        let theme: (&String, &Theme) = themes.get_key_value(theme).unwrap_or_else(|| {
-            log::warn!("Theme \"{}\" not found, using default theme", theme);
-            themes.first_key_value().expect("Failed to get theme")
-        });
+        if let Some(theme) = theme {
+            let themes = app.theme_set().themes.clone();
+            let theme: (&String, &Theme) = themes.get_key_value(theme).unwrap_or_else(|| {
+                log::warn!("Theme \"{}\" not found, using default theme", theme);
+                themes.first_key_value().expect("Failed to get theme")
+            });
 
-        debug!(
-            "Selected theme: {}, position {}",
-            theme.0,
-            themes.iter().position(|t| t.0 == theme.0).unwrap() as u32
-        );
-
-        inner
-            .theme_dropdown
-            .set_selected(themes.iter().position(|t| t.0 == theme.0).unwrap() as u32);
-
-        let syntax_sets = app.syntax_set();
-        let syntax = syntax_sets.find_syntax_by_name(syntax).unwrap_or_else(|| {
-            log::warn!("Syntax \"{}\" not found, using default syntax", syntax);
-            syntax_sets
-                .syntaxes()
-                .first()
-                .expect("Failed to get syntax")
-        });
-
-        debug!(
-            "Selected syntax: {}, position {}",
-            syntax.name,
-            syntax_sets
-                .syntaxes()
-                .iter()
-                .position(|s| s.name == syntax.name)
-                .unwrap() as u32
-        );
-
-        inner.syntax_dropdown.set_selected(
-            syntax_sets
-                .syntaxes()
-                .iter()
-                .position(|s| s.name == syntax.name)
-                .unwrap() as u32,
-        );
-
-        let pango_context = self.pango_context();
-        let font_families = pango_context.list_families();
-        if let Some(font) = font_families.iter().find(|f| f.name() == *font_family) {
-            debug!("Found font {} in list of available fonts", font_family);
-            inner.font_family_chooser.set_selected_family(font);
-        } else {
-            warn!(
-                "Could not find font {}, using fallback \"{}\"",
-                font_family, FALLBACK_FONT_FAMILY
+            debug!(
+                "Selected theme: {}, position {}",
+                theme.0,
+                themes.iter().position(|t| t.0 == theme.0).unwrap() as u32
             );
-            inner.font_family_chooser.set_selected_family(
-                font_families
+
+            inner
+                .theme_dropdown
+                .set_selected(themes.iter().position(|t| t.0 == theme.0).unwrap() as u32);
+        }
+
+        if let Some(syntax) = syntax {
+            let syntax_sets = app.syntax_set();
+            let syntax = syntax_sets.find_syntax_by_name(syntax).unwrap_or_else(|| {
+                log::warn!("Syntax \"{}\" not found, using default syntax", syntax);
+                syntax_sets
+                    .syntaxes()
+                    .first()
+                    .expect("Failed to get syntax")
+            });
+
+            debug!(
+                "Selected syntax: {}, position {}",
+                syntax.name,
+                syntax_sets
+                    .syntaxes()
                     .iter()
-                    .find(|f| f.name() == FALLBACK_FONT_FAMILY)
-                    .unwrap(),
+                    .position(|s| s.name == syntax.name)
+                    .unwrap() as u32
+            );
+
+            inner.syntax_dropdown.set_selected(
+                syntax_sets
+                    .syntaxes()
+                    .iter()
+                    .position(|s| s.name == syntax.name)
+                    .unwrap() as u32,
             );
         }
 
-        inner.font_size_scale.set_value(*font_size);
+        if let Some(font_family) = font_family {
+            let pango_context = self.pango_context();
+            let font_families = pango_context.list_families();
+            if let Some(font) = font_families.iter().find(|f| f.name() == *font_family) {
+                debug!("Found font {} in list of available fonts", font_family);
+                inner.font_family_chooser.set_selected_family(font);
+            } else {
+                warn!(
+                    "Could not find font {}, using fallback \"{}\"",
+                    font_family, FALLBACK_FONT_FAMILY
+                );
+                inner.font_family_chooser.set_selected_family(
+                    font_families
+                        .iter()
+                        .find(|f| f.name() == FALLBACK_FONT_FAMILY)
+                        .unwrap(),
+                );
+            }
+        }
+
+        if let Some(font_size) = font_size {
+            debug!("Setting font size to {}", font_size);
+            inner.font_size_scale.set_value(*font_size);
+        }
+
+        let WindowState {
+            width,
+            height,
+            maximized,
+        } = &state.window;
+
+        if let Some(width) = width {
+            debug!("Setting window width to {}", width);
+            self.set_default_width(*width);
+        }
+
+        if let Some(height) = height {
+            debug!("Setting window height to {}", height);
+            self.set_default_height(*height);
+        }
+
+        if let Some(maximized) = maximized {
+            debug!("Setting window maximized to {}", maximized);
+            self.set_maximized(*maximized);
+        }
+
+        debug!("Finished loading config");
     }
 
     fn load_themes(&self, app: &QuellcodeApplication) {

@@ -18,7 +18,7 @@ use gtk::{
 };
 
 use crate::app::{
-    config::{save_config, CodeSettings, Config},
+    state::{save_state, CodeState, State as AppState, WindowState},
     property::PropertyType,
     ui::code_view::CodeView,
 };
@@ -574,23 +574,30 @@ impl ObjectImpl for Window {
 
         self_obj.connect_close_request(|window| {
             let editor = window.imp().editor.clone();
-            let config = Config {
-                code: CodeSettings {
-                    theme: editor
-                        .theme()
-                        .clone()
-                        .map(|t| t.name.unwrap_or_default())
-                        .unwrap_or_default(),
-                    syntax: editor.syntax().clone().map(|s| s.name).unwrap_or_default(),
-                    font_family: editor.font_family(),
-                    font_size: editor.font_size(),
+            let state = AppState {
+                code: CodeState {
+                    theme: Some(
+                        editor
+                            .theme()
+                            .clone()
+                            .map(|t| t.name.unwrap_or_default())
+                            .unwrap_or_default(),
+                    ),
+                    syntax: Some(editor.syntax().clone().map(|s| s.name).unwrap_or_default()),
+                    font_family: Some(editor.font_family()),
+                    font_size: Some(editor.font_size()),
                 },
+                window: WindowState {
+                    width: Some(window.width()),
+                    height: Some(window.height()),
+                    maximized: Some(window.is_maximized()),
+                }
             };
 
-            if let Err(err) = save_config(&config) {
-                error!("Failed to save config: {}", err);
+            if let Err(err) = save_state(&state) {
+                error!("Failed to save state: {}", err);
             } else {
-                log::info!("Saved config: {:#?}, exiting...", config);
+                log::info!("Saved state: {:#?}, exiting...", state);
             }
 
             glib::Propagation::Proceed
