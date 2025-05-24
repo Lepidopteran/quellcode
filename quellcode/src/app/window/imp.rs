@@ -86,6 +86,9 @@ pub struct Window {
     pub viewer_loading_box: TemplateChild<gtk::Box>,
 
     #[template_child]
+    pub generator_dropdown: TemplateChild<gtk::DropDown>,
+
+    #[template_child]
     theme_label: TemplateChild<gtk::Label>,
 
     #[template_child]
@@ -299,6 +302,11 @@ impl Window {
                 }
             }
         };
+    }
+
+    #[template_callback] 
+    fn generator_changed(&self) {
+
     }
 
     #[template_callback]

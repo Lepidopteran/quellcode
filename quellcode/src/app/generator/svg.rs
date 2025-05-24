@@ -1,6 +1,6 @@
 use super::{
-    Extensions, Generator, GeneratorError, Properties, Property, PropertyError, PropertyType,
-    PropertyValue,
+    Generator, GeneratorError, GeneratorInfo, Info, Properties, Property,
+    PropertyError, PropertyType, PropertyValue,
 };
 use quellcode::generating::svg::{generate_svg, SvgOptions};
 
@@ -8,7 +8,6 @@ use quellcode::generating::svg::{generate_svg, SvgOptions};
 pub struct SvgGenerator {
     options: SvgOptions,
     properties: Properties,
-    extensions: Extensions,
 }
 
 impl SvgGenerator {
@@ -38,43 +37,42 @@ impl Default for SvgGenerator {
                     ..Default::default()
                 },
             ],
-            extensions: vec!["svg"],
             options,
         }
     }
 }
 
 impl Generator for SvgGenerator {
-    fn name(&self) -> &str {
-        "SVG"
-    }
-
-    fn description(&self) -> &str {
-        "Generate SVG"
-    }
-
-    fn saveable(&self) -> bool {
-        true
-    }
-
-    fn extensions(&self) -> Option<&Vec<&'static str>> {
-        Some(&self.extensions)
-    }
-
     fn font_family(&self) -> &str {
         &self.options.font_family
-    }
-
-    fn font_size(&self) -> f32 {
-        self.options.font_size
     }
 
     fn set_font_family(&mut self, family: &str) {
         self.options.font_family = family.to_string();
     }
 
+    fn font_size(&self) -> f32 {
+        self.options.font_size
+    }
+
     fn set_font_size(&mut self, size: f32) {
         self.options.font_size = size;
+    }
+
+    fn generate_code(
+        &self,
+        text: &str,
+        theme: &syntect::highlighting::Theme,
+        syntax: &syntect::parsing::SyntaxReference,
+        syntax_set: &syntect::parsing::SyntaxSet,
+    ) -> Result<String, GeneratorError> {
+        if let Ok(svg) = generate_svg(text, theme, syntax, syntax_set, &self.options) {
+            return Ok(svg);
+        }
+
+        Err(super::GeneratorError::Other(
+            "Failed to generate svg".to_string(),
+        ))
     }
 
     fn properties(&self) -> &Properties {
@@ -110,20 +108,15 @@ impl Generator for SvgGenerator {
 
         Ok(())
     }
+}
 
-    fn generate_code(
-        &self,
-        text: &str,
-        theme: &syntect::highlighting::Theme,
-        syntax: &syntect::parsing::SyntaxReference,
-        syntax_set: &syntect::parsing::SyntaxSet,
-    ) -> Result<String, GeneratorError> {
-        if let Ok(svg) = generate_svg(text, theme, syntax, syntax_set, &self.options) {
-            return Ok(svg);
+impl GeneratorInfo for SvgGenerator {
+    fn information() -> Info {
+        Info {
+            name: "SVG".to_string(),
+            description: "Generates svg".to_string(),
+            extensions: Some(vec!["svg"]),
+            saveable: true,
         }
-
-        Err(super::GeneratorError::Other(
-            "Failed to generate svg".to_string(),
-        ))
     }
 }

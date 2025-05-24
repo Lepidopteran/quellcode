@@ -109,20 +109,20 @@
                     </child>
                   </object>
                 </child>
-								<child type="end">
-									<object class="GtkBox">
-										<property name="orientation">horizontal</property>
-										<child>
-											<object class="GtkButton">
-												<property name="icon-name">preferences-system-symbolic</property>
-												<property name="action-name">app.open-preferences</property>
-												<style>
-													<class name="raised"></class>
-												</style>
-											</object>
-										</child>
-									</object>
-								</child>
+                <child type="end">
+                  <object class="GtkBox">
+                    <property name="orientation">horizontal</property>
+                    <child>
+                      <object class="GtkButton">
+                        <property name="icon-name">preferences-system-symbolic</property>
+                        <property name="action-name">app.open-preferences</property>
+                        <style>
+                          <class name="raised"></class>
+                        </style>
+                      </object>
+                    </child>
+                  </object>
+                </child>
               </object>
             </child>
             <child>
@@ -247,6 +247,27 @@
                     <property name="margin-end">8</property>
                     <property name="margin-bottom">8</property>
                     <property name="spacing">8</property>
+                    <child>
+                      <object class="GtkBox">
+                        <property name="orientation">vertical</property>
+                        <child>
+                          <object class="GtkLabel">
+                            <property name="label">Generator</property>
+                            <property name="xalign">0</property>
+                            <attributes>
+                              <attribute name="weight" value="PANGO_WEIGHT_BOLD"></attribute>
+                              <attribute name="foreground-alpha" value="620000"></attribute>
+                            </attributes>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="GtkDropDown" id="generator_dropdown">
+                            <property name="halign">fill</property>
+                            <signal handler="generator_changed" name="notify::selected-item" swapped="true"></signal>
+                          </object>
+                        </child>
+                      </object>
+                    </child>
                     <child>
                       <object class="GtkExpander">
                         <property name="label-widget">

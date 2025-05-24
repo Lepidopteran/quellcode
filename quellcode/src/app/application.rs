@@ -14,22 +14,29 @@ pub const FALLBACK_FONT_FAMILY: &str = "Monospace";
 
 use super::ui::SettingsWindow;
 use super::{
-    code_theme_files,
+    code_theme_files, dir,
+    generator::{
+        svg::SvgGenerator, Generator as GeneratorTrait, GeneratorInfo, Info as GeneratorDetails,
+    },
     state::{load_state, CodeState, State},
-    dir, ThemeFormat, Window,
+    ThemeFormat, Window,
 };
 
+type GeneratorFactory = Box<dyn Fn() -> Box<dyn GeneratorTrait>>;
+type Generator = (GeneratorDetails, GeneratorFactory);
+
 pub mod imp {
+
     use super::*;
     use gdk::Display;
     use std::{cell::RefMut, io, rc::Rc};
 
-    #[derive(Debug)]
     pub struct QuellcodeApplication {
         pub code_theme_provider: RefCell<gtk::CssProvider>,
         pub theme_set: RefCell<ThemeSet>,
         pub syntax_set: RefCell<SyntaxSet>,
         pub state: Rc<RefCell<State>>,
+        pub generator_registry: RefCell<Vec<(GeneratorDetails, GeneratorFactory)>>,
     }
 
     impl QuellcodeApplication {
@@ -59,6 +66,7 @@ pub mod imp {
                 theme_set: RefCell::new(ThemeSet::load_defaults()),
                 syntax_set: RefCell::new(SyntaxSet::load_defaults_nonewlines()),
                 state: Rc::new(RefCell::new(State::new())),
+                generator_registry: RefCell::new(Vec::new()),
             }
         }
     }
@@ -134,6 +142,14 @@ pub mod imp {
             };
 
             debug!("Loaded config");
+
+            let generators = &mut self.generator_registry.borrow_mut();
+
+            generators.push((
+                SvgGenerator::information(),
+                Box::new(|| Box::new(SvgGenerator::new())),
+            ));
+
             self.state.replace(config);
         }
     }
@@ -231,6 +247,10 @@ impl QuellcodeApplication {
             })
             .build();
         self.add_action_entries([open_preferences]);
+    }
+
+    pub fn generator_registry(&self) -> Ref<Vec<Generator>> {
+        self.imp().generator_registry.borrow()
     }
 
     pub fn theme_set(&self) -> Ref<ThemeSet> {

@@ -10,8 +10,8 @@ use syntect::{highlighting::Theme, parsing::SyntaxSet};
 use super::state::WindowState;
 use super::{
     application::{QuellcodeApplication, FALLBACK_FONT_FAMILY},
-    state::CodeState,
     generator::{svg::SvgGenerator, Generator as GeneratorTrait},
+    state::CodeState,
     ui::FontFamilyChooser,
 };
 
@@ -39,6 +39,7 @@ impl Window {
     fn load_state(&self, app: &QuellcodeApplication) {
         self.load_syntaxes(app);
         self.load_themes(app);
+        self.load_generators(app);
 
         let state = app.state();
         let inner = self.imp();
@@ -146,6 +147,18 @@ impl Window {
         }
 
         debug!("Finished loading config");
+    }
+    fn load_generators(&self, app: &QuellcodeApplication) {
+        let inner = self.imp();
+
+        let generator_list = gtk::StringList::new(
+            &app.generator_registry()
+                .iter()
+                .map(|g| g.0.name())
+                .collect::<Vec<_>>(),
+        );
+
+        inner.generator_dropdown.set_model(Some(&generator_list));
     }
 
     fn load_themes(&self, app: &QuellcodeApplication) {

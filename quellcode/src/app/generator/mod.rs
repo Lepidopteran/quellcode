@@ -9,6 +9,7 @@ use syntect::{
 use super::property::*;
 
 pub mod svg;
+pub use svg::SvgGenerator;
 
 type Properties = Vec<Property>;
 type Extensions = Vec<&'static str>;
@@ -23,20 +24,37 @@ pub enum GeneratorError {
     Other(String),
 }
 
+#[derive(Debug, Default, Clone)]
+pub struct Info {
+    name: String,
+    description: String,
+    extensions: Option<Extensions>,
+    saveable: bool,
+}
+
+impl Info {
+    pub fn name(&self) -> &str {
+        &self.name
+    }
+    pub fn description(&self) -> &str {
+        &self.description
+    }
+    pub fn extensions(&self) -> Option<Extensions> {
+        self.extensions.clone()
+    }
+    pub fn saveable(&self) -> bool {
+        self.saveable
+    }
+}
+
 pub trait Generator: Send + Sync + Debug {
-    fn name(&self) -> &str;
-    fn description(&self) -> &str;
     fn properties(&self) -> &Properties;
+    fn get_property(&self, name: &str) -> Result<PropertyValue, GeneratorError>;
+    fn set_property(&mut self, name: &str, value: PropertyValue) -> Result<(), GeneratorError>;
     fn font_family(&self) -> &str;
     fn set_font_family(&mut self, family: &str);
     fn font_size(&self) -> f32;
     fn set_font_size(&mut self, size: f32);
-    fn get_property(&self, name: &str) -> Result<PropertyValue, GeneratorError>;
-    fn set_property(&mut self, name: &str, value: PropertyValue) -> Result<(), GeneratorError>;
-    fn saveable(&self) -> bool;
-    fn extensions(&self) -> Option<&Extensions> {
-        None
-    }
 
     fn generate_code(
         &self,
@@ -45,4 +63,8 @@ pub trait Generator: Send + Sync + Debug {
         _syntax: &SyntaxReference,
         _syntax_set: &SyntaxSet,
     ) -> Result<String, GeneratorError>;
+}
+
+pub trait GeneratorInfo {
+    fn information() -> Info;
 }
