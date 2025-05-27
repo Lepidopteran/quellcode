@@ -9,9 +9,6 @@ use syntect::{
 use super::property::*;
 
 pub mod svg;
-mod html;
-
-pub use html::HtmlGenerator;
 pub use svg::SvgGenerator;
 
 type Properties = Vec<Property>;
