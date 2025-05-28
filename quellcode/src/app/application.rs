@@ -27,9 +27,12 @@ type Generator = (GeneratorDetails, GeneratorFactory);
 
 pub mod imp {
 
+    use crate::app::dir::code_syntax_dir;
+
     use super::*;
     use gdk::Display;
-    use std::{cell::RefMut, io, rc::Rc};
+    use std::{cell::RefMut, io, path::PathBuf, rc::Rc};
+    use syntect::parsing::SyntaxDefinition;
 
     pub struct QuellcodeApplication {
         pub code_theme_provider: RefCell<gtk::CssProvider>,
@@ -109,6 +112,10 @@ pub mod imp {
             let theme_set = &mut self.theme_set.borrow_mut();
 
             load_custom_themes(theme_set);
+
+            let syntax_set = load_code_syntaxes();
+
+            self.syntax_set.replace(syntax_set);
 
             let config = match load_state() {
                 Ok(config) => config,
@@ -214,6 +221,44 @@ pub mod imp {
                 }
             }
         }
+    }
+
+    fn load_code_syntaxes() -> SyntaxSet {
+        let syntax_set = SyntaxSet::load_defaults_newlines();
+        let mut builder = syntax_set.into_builder();
+
+        match code_syntax_dir().read_dir() {
+            Ok(dir) => {
+                for entry in dir {
+                    match entry {
+                        Ok(entry) => {
+                            let path = entry.path();
+                            if path.extension().is_some_and(|ext| ext == "sublime-syntax") {
+                                let s = std::fs::read_to_string(&path).unwrap();
+                                match SyntaxDefinition::load_from_str(
+                                    &s,
+                                    true,
+                                    path.file_stem().and_then(|x| x.to_str()),
+                                ) {
+                                    Ok(syntax) => builder.add(syntax),
+                                    Err(err) => {
+                                        error!("Failed to parse code syntax file, Error: {}", err)
+                                    }
+                                }
+                            }
+                        }
+                        Err(err) => {
+                            error!("Failed to read code syntax file, Error: {}", err);
+                        }
+                    }
+                }
+            }
+            Err(err) => {
+                error!("Failed to read code syntax directory, Error: {}", err);
+            }
+        }
+
+        builder.build()
     }
 }
 
