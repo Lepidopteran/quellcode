@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <interface>
-	<object class="GtkStringList" id="window_style">
-		<items>
-			<item>Default</item>
-			<item>Native</item>
-			<item>Gtk</item>
-		</items>
-	</object>
+  <object class="GtkStringList" id="window_style">
+    <items>
+      <item>Default</item>
+      <item>Native</item>
+      <item>Gtk</item>
+    </items>
+  </object>
   <template class="QuellcodeSettingsWindow" parent="GtkWindow">
     <property name="title">QuellCode - Settings</property>
     <property name="default_width">800</property>
@@ -83,15 +83,15 @@
                             </child>
                             <child>
                               <object class="GtkListBox">
-																<property name="halign">center</property>
+                                <property name="halign">center</property>
                                 <style>
                                   <class name="rich-list"></class>
                                   <class name="boxed-list"></class>
                                 </style>
                                 <child>
                                   <object class="GtkBox">
-																		<property name="orientation">horizontal</property>
-																		<property name="spacing">40</property>
+                                    <property name="orientation">horizontal</property>
+                                    <property name="spacing">40</property>
                                     <child>
                                       <object class="GtkLabel">
                                         <property name="label">Window Bar Style</property>
@@ -99,11 +99,58 @@
                                     </child>
                                     <child>
                                       <object class="GtkDropDown">
-																				<property name="hexpand">true</property>
-																				<property name="model">window_style</property>	
+                                        <property name="hexpand">true</property>
+                                        <property name="model">window_style</property>
                                       </object>
                                     </child>
                                   </object>
+                                </child>
+                              </object>
+                            </child>
+                          </object>
+                        </child>
+                      </object>
+                    </property>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkStackPage">
+                    <property name="name">syntax_and_theme</property>
+                    <property name="title">Syntaxes and Themes</property>
+                    <property name="child">
+                      <object class="GtkBox">
+                        <property name="hexpand">true</property>
+                        <property name="orientation">vertical</property>
+                        <child>
+                          <object class="GtkBox">
+                            <property name="orientation">vertical</property>
+                            <property name="margin-start">8</property>
+                            <property name="margin-bottom">8</property>
+                            <child>
+                              <object class="GtkLabel">
+                                <property name="label">Syntaxes and Themes</property>
+                                <property name="xalign">0</property>
+                                <property name="margin-bottom">4</property>
+                                <property name="margin-top">4</property>
+                                <property name="margin-start">2</property>
+                                <attributes>
+                                  <attribute name="weight" value="PANGO_WEIGHT_BOLD"></attribute>
+                                </attributes>
+                              </object>
+                            </child>
+                            <child>
+                              <object class="GtkEntry" id="syntaxes_and_themes_entry"></object>
+                            </child>
+                            <child>
+                              <object class="GtkScrolledWindow">
+                                <property name="hscrollbar-policy">never</property>
+                                <property name="max-content-height">500</property>
+                                <property name="propagate-natural-height">true</property>
+                                <child>
+																	<object class="GtkListBox" id="syntaxes_and_themes_list">
+																		<property name="vexpand">true</property>
+																		<property name="hexpand">true</property>
+																	</object>
                                 </child>
                               </object>
                             </child>
