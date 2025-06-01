@@ -1,6 +1,6 @@
 [package]
 name = "sublime-color-scheme"
-version = "0.1.2"
+version = "0.1.3"
 edition = "2021"
 description = "Parse Sublime Text color schemes to Syntect Themes"
 license = "Apache-2.0"
