@@ -147,7 +147,7 @@
                                 <property name="max-content-height">500</property>
                                 <property name="propagate-natural-height">true</property>
                                 <child>
-																	<object class="GtkListBox" id="syntaxes_and_themes_list">
+																	<object class="GtkGridView" id="store_view">
 																		<property name="vexpand">true</property>
 																		<property name="hexpand">true</property>
 																	</object>

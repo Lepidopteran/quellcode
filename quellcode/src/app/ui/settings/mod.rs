@@ -6,6 +6,7 @@ use gtk::{
 
 use crate::app::application::QuellcodeApplication;
 mod imp;
+mod asset_store;
 
 glib::wrapper! {
     pub struct SettingsWindow(ObjectSubclass<imp::SettingsWindow>)

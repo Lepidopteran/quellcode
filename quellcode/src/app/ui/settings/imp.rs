@@ -1,14 +1,12 @@
-use super::*;
+use super::{asset_store::{Asset, AssetData, AssetWidget}, *};
 use glib::{subclass::InitializingObject, Properties};
 use gtk::{
-    glib::subclass::prelude::*,
-    subclass::{
+    glib::subclass::prelude::*, subclass::{
         widget::{
             CompositeTemplateClass, CompositeTemplateInitializingExt, WidgetClassExt, WidgetImpl,
         },
         window::WindowImpl,
-    },
-    CompositeTemplate, SignalListItemFactory, Stack, TemplateChild,
+    }, CompositeTemplate, Label, ListItem, SignalListItemFactory, SingleSelection, Stack, TemplateChild
 };
 
 use crate::app::{
@@ -23,7 +21,7 @@ pub struct SettingsWindow {
     #[template_child]
     stack: TemplateChild<Stack>,
     #[template_child]
-    syntaxes_and_themes_list: TemplateChild<gtk::ListBox>,
+    store_view: TemplateChild<gtk::GridView>,
 }
 
 #[glib::object_subclass]
@@ -54,21 +52,53 @@ impl ObjectImpl for SettingsWindow {
             let _ = tx_clone.send(package_list).await;
         });
 
-        let list_widget = self.syntaxes_and_themes_list.clone();
+        let model = gio::ListStore::new::<Asset>();
+        
+        let model_clone = model.clone();
         glib::spawn_future_local(async move {
             while let Ok(package_list) = rx.recv().await {
-                let package_names: Vec<String> = package_list
+                let entries: Vec<Asset> = package_list
                     .packages
-                    .iter()
-                    .map(|p| p.name.clone())
+                    .into_iter()
+                    .map(AssetData::from)
+                    .map(Asset::from)
                     .collect();
 
-                for package_name in package_names {
-                    let item = gtk::Label::new(Some(&package_name));
-                    list_widget.append(&item);
-                }
+                model_clone.extend_from_slice(&entries);
             }
         });
+
+        let factory = SignalListItemFactory::new();
+        factory.connect_setup(move |_, item| {
+            let details = AssetWidget::new();
+            item.downcast_ref::<ListItem>()
+                .expect("Item must be a ListItem")
+                .set_child(Some(&details));
+        });
+
+        factory.connect_bind(move |_, item| {
+            let entry = item
+                .downcast_ref::<ListItem>()
+                .expect("Item must be a ListItem")
+                .item()
+                .and_downcast::<Asset>()
+                .expect("Item must be a StoreEntry");
+
+            let details = item
+                .downcast_ref::<ListItem>()
+                .expect("Item must be a ListItem")
+                .child()
+                .and_downcast::<AssetWidget>()
+                .expect("Item must be a AssetWidget");
+
+            details.bind_data(&entry);
+        });
+
+        let selection_model = SingleSelection::new(Some(model));
+        let store_view = self.store_view.clone();
+
+        store_view.set_model(Some(&selection_model));
+        store_view.set_factory(Some(&factory));
     }
 }
 
