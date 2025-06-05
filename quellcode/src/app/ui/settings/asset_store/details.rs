@@ -62,7 +62,16 @@ impl AssetWidget {
         let inner = self.imp();
         inner.name.set_text(&asset.name());
         inner.description.set_text(&asset.description());
-        inner.installs.set_text(&asset.installs().to_string());
+        inner.installs.set_text(&{
+            let installs = asset.installs();
+            if installs >= 1_000_000 {
+                format!("{:.1}M", installs as f64 / 1_000_000.0)
+            } else if installs >= 1_000 {
+                format!("{:.1}K", installs as f64 / 1_000.0)
+            } else {
+                installs.to_string()
+            }
+        });
     }
 }
 
