@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <interface>
   <template class="QuellcodeStoreAssetDetails" parent="GtkGrid">
-    <property name="column_spacing">4</property>
-    <property name="row_spacing">4</property>
+    <property name="column_spacing">8</property>
+    <property name="row_spacing">8</property>
     <child>
       <object class="GtkLabel" id="name">
         <property name="xalign">0</property>
