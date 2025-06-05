@@ -1,15 +1,19 @@
-use super::{asset_store::{Asset, AssetData, AssetWidget}, *};
 use glib::{subclass::InitializingObject, Properties};
 use gtk::{
-    glib::subclass::prelude::*, subclass::{
+    glib::subclass::prelude::*,
+    subclass::{
         widget::{
             CompositeTemplateClass, CompositeTemplateInitializingExt, WidgetClassExt, WidgetImpl,
         },
         window::WindowImpl,
-    }, CompositeTemplate, Label, ListItem, SignalListItemFactory, SingleSelection, Stack, TemplateChild
+    },
+    CompositeTemplate, Label, ListItem, SignalListItemFactory, SingleSelection, Stack,
+    TemplateChild,
 };
 
+use super::*;
 use crate::app::{
+    asset_store::{Asset, AssetData, AssetWidget},
     scraping::package_control::{get_packages_by_label, LANGUAGE_SYNTAX},
     tokio_runtime,
 };

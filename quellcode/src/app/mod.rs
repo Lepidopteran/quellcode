@@ -1,4 +1,5 @@
 mod application;
+mod asset_store;
 mod dir;
 mod generator;
 mod property;
