@@ -142,16 +142,37 @@
                               <object class="GtkEntry" id="syntaxes_and_themes_entry"></object>
                             </child>
                             <child>
-                              <object class="GtkScrolledWindow">
-                                <property name="hscrollbar-policy">never</property>
-                                <property name="max-content-height">500</property>
-                                <property name="propagate-natural-height">true</property>
-                                <child>
-																	<object class="GtkGridView" id="store_view">
-																		<property name="vexpand">true</property>
-																		<property name="hexpand">true</property>
-																	</object>
+                              <object class="GtkOverlay">
+                                <child type="overlay">
+                                  <object class="GtkGrid" id="store_loading_container">
+                                    <property name="orientation">vertical</property>
+                                    <property name="vexpand">true</property>
+                                    <property name="halign">center</property>
+                                    <property name="valign">center</property>
+                                    <property name="visible">false</property>
+                                    <child>
+                                      <object class="GtkProgressBar" id="store_loading_progress"></object>
+                                    </child>
+                                    <child>
+                                      <object class="GtkLabel">
+                                        <property name="label">Loading...</property>
+                                      </object>
+                                    </child>
+                                  </object>
                                 </child>
+                                <property name="child">
+                                  <object class="GtkScrolledWindow">
+                                    <property name="hscrollbar-policy">never</property>
+                                    <property name="max-content-height">500</property>
+                                    <property name="propagate-natural-height">true</property>
+                                    <child>
+                                      <object class="GtkGridView" id="store_view">
+                                        <property name="vexpand">true</property>
+                                        <property name="hexpand">true</property>
+                                      </object>
+                                    </child>
+                                  </object>
+                                </property>
                               </object>
                             </child>
                           </object>
