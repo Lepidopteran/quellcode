@@ -1,39 +1,71 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <interface>
-  <template class="QuellcodeStoreAssetDetails" parent="GtkGrid">
-    <property name="column_spacing">8</property>
-    <property name="row_spacing">8</property>
+  <template class="QuellcodeStoreAssetDetails" parent="GtkWidget">
     <child>
-      <object class="GtkLabel" id="name">
-        <property name="xalign">0</property>
-        <property name="hexpand">true</property>
-        <property name="label">Name</property>
-        <layout>
-          <property name="column">0</property>
-          <property name="row">0</property>
-        </layout>
+      <object class="GtkGrid" id="container">
+				<property name="margin-start">8</property>
+				<property name="margin-end">8</property>
+				<property name="margin-top">8</property>
+				<property name="margin-bottom">8</property>
+        <property name="column_spacing">8</property>
+        <property name="row_spacing">8</property>
+        <child>
+          <object class="GtkLabel" id="name">
+            <property name="xalign">0</property>
+            <property name="hexpand">true</property>
+            <property name="label">Name</property>
+            <layout>
+              <property name="column">0</property>
+              <property name="row">0</property>
+            </layout>
+          </object>
+        </child>
+        <child>
+          <object class="GtkLabel" id="description">
+            <property name="xalign">0</property>
+            <property name="ellipsize">end</property>
+            <property name="label">Description</property>
+            <layout>
+              <property name="column">0</property>
+              <property name="row">1</property>
+            </layout>
+          </object>
+        </child>
+        <child>
+          <object class="GtkLabel" id="installs">
+            <property name="xalign">1</property>
+            <property name="label">Installs</property>
+            <layout>
+              <property name="column">1</property>
+              <property name="row">1</property>
+            </layout>
+          </object>
+        </child>
+        <child>
+          <object class="GtkButton" id="install_button">
+            <child>
+              <object class="GtkBox">
+                <property name="orientation">horizontal</property>
+                <property name="spacing">4</property>
+                <child>
+                  <object class="GtkLabel">
+                    <property name="label">Install</property>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkImage">
+                    <property name="icon_name">document-save-symbolic</property>
+                  </object>
+                </child>
+              </object>
+            </child>
+            <layout>
+              <property name="column">1</property>
+              <property name="row">2</property>
+            </layout>
+          </object>
+        </child>
       </object>
     </child>
-		<child>
-			<object class="GtkLabel" id="description">
-				<property name="xalign">0</property>
-				<property name="ellipsize">end</property>
-				<property name="label">Description</property>
-				<layout>
-					<property name="column">0</property>
-					<property name="row">1</property>
-				</layout>
-			</object>
-		</child>
-		<child>
-			<object class="GtkLabel" id="installs">
-				<property name="xalign">1</property>
-				<property name="label">Installs</property>
-				<layout>
-					<property name="column">1</property>
-					<property name="row">1</property>
-				</layout>
-			</object>
-		</child>
   </template>
 </interface>
