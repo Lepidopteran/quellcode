@@ -74,19 +74,6 @@ struct Installs {
     windows: u32,
     osx: u32,
     linux: u32,
-    daily: DailyInstalls,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-struct DailyInstalls {
-    dates: Vec<String>,
-    data: Vec<PlatformData>,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-struct PlatformData {
-    platform: String,
-    totals: Vec<u32>,
 }
 
 pub async fn get_packages_by_label(label: &str) -> Result<LabeledPackageList, reqwest::Error> {
