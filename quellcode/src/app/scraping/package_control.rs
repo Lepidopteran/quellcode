@@ -31,7 +31,7 @@ pub struct Entry {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-struct Package {
+pub struct Package {
     name: String,
     description: String,
     homepage: String,
