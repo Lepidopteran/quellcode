@@ -1,5 +1,5 @@
-use serde::{Deserialize, Serialize};
 use super::*;
+use serde::{Deserialize, Serialize};
 
 pub const LANGUAGE_SYNTAX: &str = "language syntax";
 pub const COLOR_SCHEME: &str = "color scheme";
@@ -32,48 +32,48 @@ pub struct Entry {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Package {
-    name: String,
-    description: String,
-    homepage: String,
-    previous_names: Vec<String>,
-    labels: Vec<String>,
-    platforms: Vec<String>,
-    st_versions: Vec<u8>,
-    last_modified: String,
-    last_seen: String,
-    sources: Vec<String>,
-    readme: String,
-    issues: String,
-    donate: Option<String>,
-    buy: Option<String>,
-    authors: Vec<String>,
-    is_missing: bool,
-    missing_error: String,
-    needs_review: bool,
-    removed: bool,
-    trending_rank: Option<u32>,
-    installs_rank: u32,
-    first_seen: String,
-    z_value: Option<f64>,
-    versions: Vec<Version>,
-    platforms_display: Vec<String>,
-    installs: Installs,
+    pub name: String,
+    pub description: String,
+    pub homepage: String,
+    pub previous_names: Vec<String>,
+    pub labels: Vec<String>,
+    pub platforms: Vec<String>,
+    pub st_versions: Vec<u8>,
+    pub last_modified: String,
+    pub last_seen: String,
+    pub sources: Vec<String>,
+    pub readme: String,
+    pub issues: String,
+    pub donate: Option<String>,
+    pub buy: Option<String>,
+    pub authors: Vec<String>,
+    pub is_missing: bool,
+    pub missing_error: String,
+    pub needs_review: bool,
+    pub removed: bool,
+    pub trending_rank: Option<u32>,
+    pub installs_rank: u32,
+    pub first_seen: String,
+    pub z_value: Option<f64>,
+    pub versions: Vec<Version>,
+    pub platforms_display: Vec<String>,
+    pub installs: Installs,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-struct Version {
-    version: String,
-    prerelease_version: Option<String>,
-    platforms: Vec<String>,
-    st_versions: Vec<String>,
+pub struct Version {
+    pub version: String,
+    pub prerelease_version: Option<String>,
+    pub platforms: Vec<String>,
+    pub st_versions: Vec<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-struct Installs {
-    total: u32,
-    windows: u32,
-    osx: u32,
-    linux: u32,
+pub struct Installs {
+    pub total: u32,
+    pub windows: u32,
+    pub osx: u32,
+    pub linux: u32,
 }
 
 pub async fn get_packages_by_label(label: &str) -> Result<LabeledPackageList, reqwest::Error> {
