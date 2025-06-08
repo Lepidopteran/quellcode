@@ -1,6 +1,6 @@
 use gtk::glib::{self, prelude::*, subclass::prelude::*};
 
-use crate::app::scraping::package_control::Package;
+use crate::app::scraping::package_control::Entry;
 
 #[derive(Debug, Clone, Default)]
 #[repr(u8)]
@@ -32,8 +32,8 @@ pub struct AssetData {
     pub installs: i64,
 }
 
-impl From<Package> for AssetData {
-    fn from(package: Package) -> Self {
+impl From<Entry> for AssetData {
+    fn from(package: Entry) -> Self {
         Self {
             name: package.name,
             description: package.description,
