@@ -94,24 +94,37 @@ pub async fn get_package(name: &str) -> Result<Package, reqwest::Error> {
 
 #[cfg(test)]
 mod tests {
+    use log::debug;
+
     use super::*;
+
+    fn init() {
+        let _ = env_logger::builder().is_test(true).try_init();
+    }
 
     #[tokio::test]
     async fn test_get_packages_by_label() {
+        init();
+
         let package_list = get_packages_by_label(LANGUAGE_SYNTAX).await.unwrap();
         assert!(!package_list.packages.is_empty());
     }
 
     #[tokio::test]
     async fn test_get_packages_by_label_color_scheme() {
+        init();
+
         let package_list = get_packages_by_label(COLOR_SCHEME).await.unwrap();
         assert!(!package_list.packages.is_empty());
     }
 
     #[tokio::test]
     async fn test_get_package() {
+        init();
+
         let package = get_package("Emmet").await.unwrap();
-        println!("{:#?}", package);
+        debug!("{:?}", package);
+
         assert!(!package.name.is_empty());
     }
 }
