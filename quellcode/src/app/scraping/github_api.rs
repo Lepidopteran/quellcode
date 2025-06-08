@@ -107,12 +107,12 @@ impl ContentResponse {
 }
 
 pub async fn get_content(
+    client: &reqwest::Client,
     owner: &str,
     repo: &str,
     path: &str,
 ) -> Result<ContentResponse, ContentError> {
     let url = format!("https://api.github.com/repos/{owner}/{repo}/contents/{path}");
-    let client = reqwest::Client::new();
     let response = client
         .get(&url)
         .header(GITHUB_API_VERSION, GITHUB_API_VERSION_VALUE)
@@ -136,7 +136,10 @@ pub async fn get_content(
     Ok(content_response)
 }
 
-pub async fn get_content_from_url(url: &str) -> Result<ContentResponse, ContentError> {
+pub async fn get_content_from_url(
+    client: &reqwest::Client,
+    url: &str,
+) -> Result<ContentResponse, ContentError> {
     let parts: Vec<_> = url.split('/').collect();
     if parts.len() < 5 || !url.contains("github.com") {
         return Err(ContentError::InvalidUrl);
@@ -154,7 +157,14 @@ pub async fn get_content_from_url(url: &str) -> Result<ContentResponse, ContentE
         parts[3], parts[4], path
     );
 
-    get_content(parts[3], parts[4], &path).await
+    get_content(&client, parts[3], parts[4], &path).await
+}
+
+pub async fn get_content_from_url_without_client(
+    url: &str,
+) -> Result<ContentResponse, ContentError> {
+    let client = reqwest::Client::new();
+    get_content_from_url(&client, url).await
 }
 
 #[cfg(test)]
@@ -168,7 +178,8 @@ mod tests {
     #[tokio::test]
     async fn test_get_content_tree() {
         init();
-        let content_tree = get_content("octocat", "hello-world", "README").await;
+        let client = reqwest::Client::new();
+        let content_tree = get_content(&client, "octocat", "hello-world", "README").await;
 
         debug!("content_tree: {:#?}", content_tree);
         assert!(content_tree.is_ok());
@@ -183,7 +194,7 @@ mod tests {
         ]
         .iter()
         {
-            let content = get_content_from_url(url).await;
+            let content = get_content_from_url_without_client(url).await;
             debug!("content_tree: {:#?}", content);
             assert!(content.is_ok());
         }
