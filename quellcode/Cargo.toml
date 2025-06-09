@@ -28,6 +28,7 @@ tinytemplate = "1.2.1"
 reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "json", "blocking"] }
 tokio = { version = "1", features = ["rt-multi-thread", "macros"] }
 time = { version = "0.3.41", features = ["macros", "serde", "parsing", "formatting"] }
+url = { version = "2.5.4", features = ["serde"] }
 
 [build-dependencies]
 glib-build-tools = "0.20.0"

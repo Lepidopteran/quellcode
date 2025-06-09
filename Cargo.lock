@@ -1977,6 +1977,7 @@ dependencies = [
  "tokio",
  "toml",
  "toml_edit",
+ "url",
  "usvg",
 ]
 
@@ -3079,6 +3080,7 @@ dependencies = [
  "form_urlencoded",
  "idna",
  "percent-encoding",
+ "serde",
 ]
 
 [[package]]
