@@ -14,6 +14,7 @@ const GITHUB_API_VERSION_VALUE: &str = "2022-11-28";
 
 mod repo_contents;
 mod git_tree;
+mod git_blob_text;
 
 #[derive(Debug, Error)]
 pub enum GithubApiError {
@@ -25,6 +26,8 @@ pub enum GithubApiError {
     UrlParseError(#[from] url::ParseError),
     #[error("Invalid URL")]
     InvalidUrl,
+    #[error("Invalid Response")]
+    InvalidResponse,
 }
 
 type Result<T, E = GithubApiError> = std::result::Result<T, E>;
@@ -43,6 +46,7 @@ impl GithubApi {
 
 pub use repo_contents::*;
 pub use git_tree::*;
+pub use git_blob_text::*;
 
 #[cfg(test)]
 mod tests {
