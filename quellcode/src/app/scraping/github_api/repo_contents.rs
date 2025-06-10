@@ -1,5 +1,3 @@
-use secrecy::ExposeSecret;
-
 use super::*;
 
 #[derive(Debug, Serialize, Deserialize)]

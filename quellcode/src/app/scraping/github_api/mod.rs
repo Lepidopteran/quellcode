@@ -1,5 +1,6 @@
 use log::{debug, trace};
 use reqwest::header::{ACCEPT, USER_AGENT};
+use secrecy::ExposeSecret;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 use url::Url;
@@ -11,6 +12,7 @@ const GITHUB_API_VERSION: &str = "X-GitHub-Api-Version";
 const GITHUB_API_VERSION_VALUE: &str = "2022-11-28";
 
 mod repo_contents;
+mod git_tree;
 
 #[derive(Debug, Error)]
 pub enum GithubApiError {
@@ -34,11 +36,19 @@ pub struct GithubApi {
 
 impl GithubApi {
     pub fn new(client: reqwest::Client, token: Option<secrecy::SecretString>) -> Self {
-        Self {
-            client,
-            token,
-        }
+        Self { client, token }
     }
 }
 
 pub use repo_contents::*;
+pub use git_tree::*;
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test() {
+        let api = GithubApi::new(reqwest::Client::new(), None);
+    }
+}
