@@ -31,6 +31,7 @@ time = { version = "0.3.41", features = ["macros", "serde", "parsing", "formatti
 url = { version = "2.5.4", features = ["serde"] }
 keyring = { version = "3", features = ["apple-native", "windows-native", "sync-secret-service"] }
 whoami = "1.6.0"
+dotenvy = "0.15.7"
 
 [build-dependencies]
 glib-build-tools = "0.20.0"
