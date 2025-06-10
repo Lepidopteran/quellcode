@@ -87,18 +87,23 @@ impl ContentResponse {
 
 pub async fn get_content(
     client: &reqwest::Client,
+    token: Option<&str>,
     owner: &str,
     repo: &str,
     path: &str,
 ) -> Result<ContentResponse> {
     let url = format!("https://api.github.com/repos/{owner}/{repo}/contents/{path}");
-    let response = client
-        .get(&url)
-        .header(GITHUB_API_VERSION, GITHUB_API_VERSION_VALUE)
-        .header(ACCEPT, ACCEPT_VALUE)
-        .header(USER_AGENT, APP_ID)
-        .send()
-        .await?;
+
+    let response = if let Some(token) = token {
+        client.get(&url).bearer_auth(token)
+    } else {
+        client.get(&url)
+    }
+    .header(USER_AGENT, APP_ID)
+    .header(ACCEPT, ACCEPT_VALUE)
+    .header(GITHUB_API_VERSION, GITHUB_API_VERSION_VALUE)
+    .send()
+    .await?;
 
     trace!("Github API Response: {:#?}", response);
     let bytes = response.bytes().await?;
@@ -117,6 +122,7 @@ pub async fn get_content(
 
 pub async fn get_content_from_url(
     client: &reqwest::Client,
+    token: Option<&str>,
     url: &str,
 ) -> Result<ContentResponse> {
     let parts: Vec<_> = url.split('/').collect();
@@ -136,7 +142,7 @@ pub async fn get_content_from_url(
         parts[3], parts[4], path
     );
 
-    get_content(client, parts[3], parts[4], &path).await
+    get_content(client, token, parts[3], parts[4], &path).await
 }
 
 #[cfg(test)]
@@ -144,14 +150,22 @@ mod tests {
     use super::*;
 
     fn init() {
+        let _ = dotenvy::dotenv();
         let _ = env_logger::builder().is_test(true).try_init();
     }
 
     #[tokio::test]
-    async fn test_get_content_tree() {
+    async fn test_get_content() {
         init();
         let client = reqwest::Client::new();
-        let content_tree = get_content(&client, "octocat", "hello-world", "README").await;
+        let content_tree = get_content(
+            &client,
+            std::env::var("QUELLCODE_GITHUB_TOKEN").ok().as_deref(),
+            "octocat",
+            "hello-world",
+            "README",
+        )
+        .await;
 
         debug!("content_tree: {:#?}", content_tree);
         assert!(content_tree.is_ok());
@@ -167,7 +181,12 @@ mod tests {
         ]
         .iter()
         {
-            let content = get_content_from_url(&client, url).await;
+            let content = get_content_from_url(
+                &client,
+                std::env::var("QUELLCODE_GITHUB_TOKEN").ok().as_deref(),
+                url,
+            )
+            .await;
             debug!("content_tree: {:#?}", content);
             assert!(content.is_ok());
         }
