@@ -1,3 +1,5 @@
+use secrecy::ExposeSecret;
+
 use super::*;
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -82,6 +84,33 @@ impl ContentResponse {
             Self::Dir(_) => false,
             Self::File(_) => true,
         }
+    }
+}
+
+pub trait RepoContents {
+    async fn get_content(&self, owner: &str, repo: &str, path: &str) -> Result<ContentResponse>;
+    async fn get_content_from_url(&self, url: &str) -> Result<ContentResponse>;
+}
+
+impl RepoContents for GithubApi {
+    async fn get_content(&self, owner: &str, repo: &str, path: &str) -> Result<ContentResponse> {
+        get_content(
+            &self.client,
+            self.token.as_ref().map(|t| t.expose_secret()),
+            owner,
+            repo,
+            path,
+        )
+        .await
+    }
+
+    async fn get_content_from_url(&self, url: &str) -> Result<ContentResponse> {
+        get_content_from_url(
+            &self.client,
+            self.token.as_ref().map(|t| t.expose_secret()),
+            url,
+        )
+        .await
     }
 }
 

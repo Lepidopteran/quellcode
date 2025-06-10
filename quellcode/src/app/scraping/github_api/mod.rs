@@ -26,4 +26,19 @@ pub enum GithubApiError {
 
 type Result<T, E = GithubApiError> = std::result::Result<T, E>;
 
+#[derive(Debug)]
+pub struct GithubApi {
+    client: reqwest::Client,
+    token: Option<secrecy::SecretString>,
+}
+
+impl GithubApi {
+    pub fn new(client: reqwest::Client, token: Option<secrecy::SecretString>) -> Self {
+        Self {
+            client,
+            token,
+        }
+    }
+}
+
 pub use repo_contents::*;
