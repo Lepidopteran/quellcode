@@ -7,7 +7,8 @@ use url::Url;
 
 use crate::app::APP_ID;
 
-const ACCEPT_VALUE: &str = "application/vnd.github+json";
+const JSON_MEDIA_TYPE: &str = "application/vnd.github+json";
+const RAW_MEDIA_TYPE: &str = "application/vnd.github.raw+json";
 const GITHUB_API_VERSION: &str = "X-GitHub-Api-Version";
 const GITHUB_API_VERSION_VALUE: &str = "2022-11-28";
 

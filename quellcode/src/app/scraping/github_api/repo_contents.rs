@@ -127,7 +127,7 @@ pub async fn get_content(
         client.get(&url)
     }
     .header(USER_AGENT, APP_ID)
-    .header(ACCEPT, ACCEPT_VALUE)
+    .header(ACCEPT, JSON_MEDIA_TYPE)
     .header(GITHUB_API_VERSION, GITHUB_API_VERSION_VALUE)
     .send()
     .await?;

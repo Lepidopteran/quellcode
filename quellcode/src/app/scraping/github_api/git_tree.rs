@@ -71,7 +71,7 @@ pub async fn get_tree(
         client.get(&url)
     }
     .header(GITHUB_API_VERSION, GITHUB_API_VERSION_VALUE)
-    .header(ACCEPT, ACCEPT_VALUE)
+    .header(ACCEPT, JSON_MEDIA_TYPE)
     .header(USER_AGENT, APP_ID)
     .send()
     .await?;
