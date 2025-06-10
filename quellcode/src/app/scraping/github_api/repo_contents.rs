@@ -1,15 +1,5 @@
 use super::*;
 
-#[derive(Debug, Error)]
-pub enum ContentError {
-    #[error("Response error: {0}")]
-    ResponseError(#[from] reqwest::Error),
-    #[error("Serialization error: {0}")]
-    SerializationError(#[from] serde_json::Error),
-    #[error("Invalid URL")]
-    InvalidUrl,
-}
-
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Entry {
     #[serde(rename = "type")]
@@ -100,7 +90,7 @@ pub async fn get_content(
     owner: &str,
     repo: &str,
     path: &str,
-) -> Result<ContentResponse, ContentError> {
+) -> Result<ContentResponse> {
     let url = format!("https://api.github.com/repos/{owner}/{repo}/contents/{path}");
     let response = client
         .get(&url)
@@ -128,10 +118,10 @@ pub async fn get_content(
 pub async fn get_content_from_url(
     client: &reqwest::Client,
     url: &str,
-) -> Result<ContentResponse, ContentError> {
+) -> Result<ContentResponse> {
     let parts: Vec<_> = url.split('/').collect();
     if parts.len() < 5 || !url.contains("github.com") {
-        return Err(ContentError::InvalidUrl);
+        return Err(GithubApiError::InvalidUrl);
     }
 
     let path = parts
@@ -146,14 +136,7 @@ pub async fn get_content_from_url(
         parts[3], parts[4], path
     );
 
-    get_content(&client, parts[3], parts[4], &path).await
-}
-
-pub async fn get_content_from_url_without_client(
-    url: &str,
-) -> Result<ContentResponse, ContentError> {
-    let client = reqwest::Client::new();
-    get_content_from_url(&client, url).await
+    get_content(client, parts[3], parts[4], &path).await
 }
 
 #[cfg(test)]
@@ -177,13 +160,14 @@ mod tests {
     #[tokio::test]
     async fn test_get_content_from_url() {
         init();
+        let client = reqwest::Client::new();
         for url in [
             "https://github.com/microsoft/vscode",
             "https://github.com/microsoft/vscode/README.md",
         ]
         .iter()
         {
-            let content = get_content_from_url_without_client(url).await;
+            let content = get_content_from_url(&client, url).await;
             debug!("content_tree: {:#?}", content);
             assert!(content.is_ok());
         }
