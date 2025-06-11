@@ -1,5 +1,7 @@
 use super::*;
+use log::{debug, trace};
 use serde::{Deserialize, Serialize};
+use url::Url;
 
 pub const LANGUAGE_SYNTAX: &str = "language syntax";
 pub const COLOR_SCHEME: &str = "color scheme";
@@ -76,20 +78,65 @@ pub struct Installs {
     pub linux: u32,
 }
 
-pub async fn get_packages_by_label(label: &str) -> Result<LabeledPackageList, reqwest::Error> {
+#[derive(thiserror::Error, Debug)]
+pub enum PackageControlError {
+    #[error("Failed to fetch package: {0}")]
+    FetchError(#[from] reqwest::Error),
+    #[error("Failed to parse package: {0}")]
+    ParseError(#[from] serde_json::Error),
+    #[error("Failed to parse url: {0}")]
+    UrlError(#[from] url::ParseError),
+    #[error("Invalid url")]
+    InvalidUrl,
+}
+
+type Result<T> = std::result::Result<T, PackageControlError>;
+
+pub async fn get_packages_by_label(label: &str) -> Result<LabeledPackageList> {
     let url = format!("{BASE_URL}/browse/labels/{}.json", label);
     let client = reqwest::Client::new();
     let response = client.get(&url).send().await?;
 
-    response.json().await
+    trace!("PackageControl Response: {:#?}", response);
+
+    Ok(response.json().await?)
 }
 
-pub async fn get_package(name: &str) -> Result<Package, reqwest::Error> {
+pub async fn get_packages_by_label_from_url(url: &str) -> Result<LabeledPackageList> {
+    let url = Url::parse(url)?;
+    let path = url.path().trim_start_matches("/").to_string();
+    let parts: Vec<_> = path.split('/').collect();
+
+    if parts.len() < 3 || !url.host_str().unwrap().contains("packagecontrol.io") {
+        return Err(PackageControlError::InvalidUrl);
+    }
+
+    debug!("Parts: {:#?}", parts[2]);
+    get_packages_by_label(parts[2].trim_end_matches(".json")).await
+}
+
+pub async fn get_package(name: &str) -> Result<Package> {
     let url = format!("{BASE_URL}/packages/{}.json", name);
     let client = reqwest::Client::new();
     let response = client.get(&url).send().await?;
 
-    response.json().await
+    trace!("PackageControl Response: {:#?}", response);
+
+    Ok(response.json().await?)
+}
+
+pub async fn get_package_from_url(url: &str) -> Result<Package> {
+    let url = Url::parse(url)?;
+    let path = url.path().trim_start_matches('/').to_string();
+    let parts: Vec<_> = path.split('/').collect();
+
+    if parts.len() < 2 || !url.host_str().unwrap().contains("packagecontrol.io") {
+        return Err(PackageControlError::InvalidUrl);
+    }
+
+    debug!("Parts: {:#?}", parts);
+
+    get_package(parts[1].trim_end_matches(".json")).await
 }
 
 #[cfg(test)]
@@ -119,10 +166,33 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_get_packages_by_label_from_url() {
+        init();
+
+        let package_list =
+            get_packages_by_label_from_url("https://packagecontrol.io/browse/labels/color scheme")
+                .await
+                .unwrap();
+        assert!(!package_list.packages.is_empty());
+    }
+
+    #[tokio::test]
     async fn test_get_package() {
         init();
 
         let package = get_package("Emmet").await.unwrap();
+        debug!("{:?}", package);
+
+        assert!(!package.name.is_empty());
+    }
+
+    #[tokio::test]
+    async fn test_get_package_from_url() {
+        init();
+
+        let package = get_package_from_url("https://packagecontrol.io/packages/Emmet")
+            .await
+            .unwrap();
         debug!("{:?}", package);
 
         assert!(!package.name.is_empty());
