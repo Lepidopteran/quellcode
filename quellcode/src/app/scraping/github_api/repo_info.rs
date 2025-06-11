@@ -50,7 +50,7 @@ impl RepoInfo for GithubApi {
             return Err(GithubApiError::InvalidUrl);
         }
 
-        self.get_repo_info(parts[1], parts[2]).await
+        self.get_repo_info(parts[0], parts[1]).await
     }
 }
 
