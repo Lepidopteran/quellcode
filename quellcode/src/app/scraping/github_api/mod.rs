@@ -15,6 +15,7 @@ const GITHUB_API_VERSION_VALUE: &str = "2022-11-28";
 mod repo_contents;
 mod git_tree;
 mod git_blob_text;
+mod repo_info;
 
 #[derive(Debug, Error)]
 pub enum GithubApiError {
@@ -47,6 +48,7 @@ impl GithubApi {
 pub use repo_contents::*;
 pub use git_tree::*;
 pub use git_blob_text::*;
+pub use repo_info::*;
 
 #[cfg(test)]
 mod tests {
