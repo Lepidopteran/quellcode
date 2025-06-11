@@ -12,7 +12,7 @@ pub mod state;
 
 use application::QuellcodeApplication;
 use color_eyre::eyre::Result;
-use log::warn;
+use log::{debug, warn};
 use secrecy::SecretString;
 use std::{path::PathBuf, sync::OnceLock};
 use tokio::runtime::Runtime;
@@ -78,6 +78,11 @@ mod tests {
     #[test]
     fn fetch_github_token() {
         init();
+
+        if std::env::var("CI").is_ok() {
+            debug!("Skipping Github token fetch test because we are in CI");
+            return;
+        }
 
         let token = github_token().unwrap();
 
