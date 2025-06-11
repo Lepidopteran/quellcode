@@ -187,7 +187,7 @@ mod tests {
         let client = reqwest::Client::new();
         let content_tree = get_content(
             &client,
-            std::env::var("QUELLCODE_GITHUB_TOKEN").ok().as_deref(),
+            std::env::var("GITHUB_TOKEN").ok().as_deref(),
             "octocat",
             "hello-world",
             "README",
@@ -210,7 +210,7 @@ mod tests {
         {
             let content = get_content_from_url(
                 &client,
-                std::env::var("QUELLCODE_GITHUB_TOKEN").ok().as_deref(),
+                std::env::var("GITHUB_TOKEN").ok().as_deref(),
                 url,
             )
             .await;

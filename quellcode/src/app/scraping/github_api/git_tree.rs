@@ -140,7 +140,7 @@ mod tests {
         let client = reqwest::Client::new();
         let tree = get_tree(
             &client,
-            std::env::var("QUELLCODE_GITHUB_TOKEN").ok().as_deref(),
+            std::env::var("GITHUB_TOKEN").ok().as_deref(),
             "octocat",
             "hello-world",
             "master",
@@ -156,7 +156,7 @@ mod tests {
         let client = reqwest::Client::new();
         let tree = get_tree_from_url(
             &client,
-            std::env::var("QUELLCODE_GITHUB_TOKEN").ok().as_deref(),
+            std::env::var("GITHUB_TOKEN").ok().as_deref(),
             "https://github.com/octocat/hello-world/tree/master",
             true,
         )
