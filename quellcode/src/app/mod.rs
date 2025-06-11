@@ -11,6 +11,9 @@ mod window;
 pub mod state;
 
 use application::QuellcodeApplication;
+use color_eyre::eyre::Result;
+use log::warn;
+use secrecy::SecretString;
 use std::{path::PathBuf, sync::OnceLock};
 use tokio::runtime::Runtime;
 
@@ -26,6 +29,22 @@ pub fn new() -> QuellcodeApplication {
 pub fn tokio_runtime() -> &'static Runtime {
     static RUNTIME: OnceLock<Runtime> = OnceLock::new();
     RUNTIME.get_or_init(|| Runtime::new().expect("Setting up tokio runtime needs to succeed."))
+}
+
+pub fn github_token() -> Result<Option<SecretString>> {
+    if let Ok(token) = std::env::var("GITHUB_TOKEN") {
+        warn!("Using Github Token from environment variable, if you are a developer you can ignore this warning");
+        return Ok(Some(SecretString::from(token)));
+    }
+
+    match keyring::Entry::new("quellcode", "github_token") {
+        Ok(entry) => {
+            let token = entry.get_password()?;
+
+            Ok(Some(SecretString::from(token)))
+        }
+        Err(err) => Err(err.into()),
+    }
 }
 
 pub fn code_theme_files() -> Vec<(ThemeFormat, PathBuf)> {
@@ -45,4 +64,25 @@ pub fn code_theme_files() -> Vec<(ThemeFormat, PathBuf)> {
             })
         })
         .collect()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn init() {
+        let _ = dotenvy::dotenv();
+        let _ = env_logger::builder().is_test(true).try_init();
+    }
+
+    #[test]
+    fn fetch_github_token() {
+        init();
+
+        let token = github_token().unwrap();
+
+        if token.is_none() {
+            warn!("No Github token found");
+        }
+    }
 }
