@@ -28,6 +28,8 @@ pub struct AssetData {
     pub name: String,
     pub description: String,
     pub authors: Vec<String>,
+    pub source: String,
+    pub url: String,
     pub kind: AssetType,
     pub installs: i64,
 }
@@ -35,9 +37,11 @@ pub struct AssetData {
 impl From<Entry> for AssetData {
     fn from(package: Entry) -> Self {
         Self {
+            url: format!("https://packagecontrol.io/packages/{}", package.name), 
             name: package.name,
             description: package.description,
             authors: package.authors,
+            source: String::from("Package Control"),
             installs: package.unique_installs.unwrap_or(0),
             kind: if package.labels.contains(&"color scheme".to_string()) {
                 AssetType::ColorScheme
@@ -64,6 +68,8 @@ mod imp {
         #[property(name = "description", get, set, member = description, type = String)]
         #[property(name = "authors", get, set, member = authors, type = Vec<String>)]
         #[property(name = "installs", get, set, member = installs, type = i64)]
+        #[property(name = "source", get, set, member = source, type = String)]
+        #[property(name = "url", get, set, member = url, type = String)]
         #[property(name = "kind", get = |a: &Asset| a.data.borrow().kind.clone() as u8, set = |a: &Asset, v: u8| a.data.borrow_mut().kind = AssetType::from(v), type = u8)]
         pub data: RefCell<AssetData>,
     }
