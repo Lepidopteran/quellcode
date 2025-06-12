@@ -39,9 +39,16 @@ pub fn github_token() -> Result<Option<SecretString>> {
 
     match keyring::Entry::new("quellcode", "github_token") {
         Ok(entry) => {
-            let token = entry.get_password()?;
-
-            Ok(Some(SecretString::from(token)))
+            match entry.get_password() {
+                Ok(token) => Ok(Some(SecretString::from(token))),
+                Err(err) => {
+                    if err.to_string() != *"No matching entry found in secure storage" {
+                        Err(err.into())
+                    } else {
+                        Ok(None)
+                    }
+                }
+            }
         }
         Err(err) => Err(err.into()),
     }
@@ -80,7 +87,7 @@ mod tests {
         init();
 
         if std::env::var("CI").is_ok() {
-            debug!("Skipping Github token fetch test because we are in CI");
+            debug!("Skipping Github token fetch in CI");
             return;
         }
 
