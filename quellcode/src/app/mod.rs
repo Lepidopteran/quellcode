@@ -7,6 +7,7 @@ mod scraping;
 mod settings;
 mod ui;
 mod window;
+mod util;
 
 pub mod state;
 

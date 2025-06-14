@@ -12,9 +12,9 @@ const RAW_MEDIA_TYPE: &str = "application/vnd.github.raw+json";
 const GITHUB_API_VERSION: &str = "X-GitHub-Api-Version";
 const GITHUB_API_VERSION_VALUE: &str = "2022-11-28";
 
-mod repo_contents;
-mod git_tree;
 mod git_blob_text;
+mod git_tree;
+mod repo_contents;
 mod repo_info;
 
 #[derive(Debug, Error)]
@@ -45,10 +45,23 @@ impl GithubApi {
     }
 }
 
-pub use repo_contents::*;
-pub use git_tree::*;
 pub use git_blob_text::*;
+pub use git_tree::*;
+pub use repo_contents::*;
 pub use repo_info::*;
+
+pub fn get_owner_and_repo_from_url(url: Url) -> Result<(String, String)> {
+    let segments = url
+        .path_segments()
+        .ok_or(GithubApiError::InvalidUrl)?
+        .collect::<Vec<_>>();
+
+    if segments.len() < 2 {
+        return Err(GithubApiError::InvalidUrl);
+    }
+
+    Ok((segments[0].to_string(), segments[1].to_string()))
+}
 
 #[cfg(test)]
 mod tests {
