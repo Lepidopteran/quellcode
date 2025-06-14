@@ -32,6 +32,7 @@ pub struct AssetData {
     pub url: String,
     pub kind: AssetType,
     pub installs: i64,
+    pub files: Vec<String>,
 }
 
 impl From<Entry> for AssetData {
@@ -50,6 +51,7 @@ impl From<Entry> for AssetData {
             } else {
                 AssetType::Unknown
             },
+            ..Default::default()
         }
     }
 }
@@ -70,6 +72,7 @@ mod imp {
         #[property(name = "installs", get, set, member = installs, type = i64)]
         #[property(name = "source", get, set, member = source, type = String)]
         #[property(name = "url", get, set, member = url, type = String)]
+        #[property(name = "files", get, set, member = files, type = Vec<String>)]
         #[property(name = "kind", get = |a: &Asset| a.data.borrow().kind.clone() as u8, set = |a: &Asset, v: u8| a.data.borrow_mut().kind = AssetType::from(v), type = u8)]
         pub data: RefCell<AssetData>,
     }
@@ -95,6 +98,8 @@ impl Asset {
             .property("description", data.description)
             .property("authors", data.authors)
             .property("installs", data.installs)
+            .property("source", data.source)
+            .property("url", data.url)
             .property("kind", data.kind as u8)
             .build()
     }
