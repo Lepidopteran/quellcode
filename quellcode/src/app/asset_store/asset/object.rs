@@ -1,8 +1,9 @@
 use gtk::glib::{self, prelude::*, subclass::prelude::*};
 
+use super::file::{FileInfo, FileInfoData};
 use crate::app::scraping::package_control::Entry;
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default, serde::Serialize, serde::Deserialize)]
 #[repr(u8)]
 pub enum AssetType {
     #[default]
@@ -23,7 +24,7 @@ impl From<u8> for AssetType {
     }
 }
 
-#[derive(Default)]
+#[derive(Default, Clone, Debug, serde::Serialize, serde::Deserialize)]
 pub struct AssetData {
     pub name: String,
     pub description: String,
@@ -32,13 +33,13 @@ pub struct AssetData {
     pub url: String,
     pub kind: AssetType,
     pub installs: i64,
-    pub files: Vec<String>,
+    pub files: Vec<FileInfoData>,
 }
 
 impl From<Entry> for AssetData {
     fn from(package: Entry) -> Self {
         Self {
-            url: format!("https://packagecontrol.io/packages/{}", package.name), 
+            url: format!("https://packagecontrol.io/packages/{}", package.name),
             name: package.name,
             description: package.description,
             authors: package.authors,
@@ -59,7 +60,7 @@ impl From<Entry> for AssetData {
 mod imp {
 
     use gtk::glib::Properties;
-    use std::cell::{Cell, RefCell};
+    use std::cell::RefCell;
 
     use super::*;
 
@@ -72,8 +73,7 @@ mod imp {
         #[property(name = "installs", get, set, member = installs, type = i64)]
         #[property(name = "source", get, set, member = source, type = String)]
         #[property(name = "url", get, set, member = url, type = String)]
-        #[property(name = "files", get, set, member = files, type = Vec<String>)]
-        #[property(name = "kind", get = |a: &Asset| a.data.borrow().kind.clone() as u8, set = |a: &Asset, v: u8| a.data.borrow_mut().kind = AssetType::from(v), type = u8)]
+        #[property(name = "kind", get = |a: &Asset| a.data.borrow().kind.clone() as u8, set = |a: &Asset, v: u8| a.data.borrow_mut().kind = v.into(), type = u8)]
         pub data: RefCell<AssetData>,
     }
 
@@ -93,15 +93,14 @@ glib::wrapper! {
 
 impl Asset {
     pub fn new(data: AssetData) -> Self {
-        glib::Object::builder()
-            .property("name", data.name)
-            .property("description", data.description)
-            .property("authors", data.authors)
-            .property("installs", data.installs)
-            .property("source", data.source)
-            .property("url", data.url)
-            .property("kind", data.kind as u8)
-            .build()
+        let asset: Self = glib::Object::builder().build();
+        asset.imp().data.replace(data);
+
+        asset
+    }
+
+    pub fn data(&self) -> AssetData {
+        self.imp().data.borrow().clone()
     }
 }
 

@@ -4,11 +4,96 @@ use url::Url;
 
 use crate::app::{
     scraping::{
-        github_api::{GitTree, GithubApi, RepoInfo},
+        github_api::{GitTree, GithubApi, RepoInfo, TreeItem},
         package_control::{get_package, get_package_from_url},
     },
     util::send_async_channel,
 };
+
+use super::asset::{AssetData, AssetType, FileInfoData};
+
+#[derive(Debug, serde::Serialize, serde::Deserialize)]
+pub struct AssetDatabase {
+    pub created_at: time::OffsetDateTime,
+    pub data: Vec<AssetData>,
+}
+
+impl AssetDatabase {
+    pub fn new(data: Vec<AssetData>) -> Self {
+        Self {
+            created_at: time::OffsetDateTime::now_utc(),
+            data,
+        }
+    }
+
+    pub fn from_data(data: Vec<AssetData>) -> Self {
+        Self {
+            created_at: time::OffsetDateTime::now_utc(),
+            data,
+        }
+    }
+
+    pub fn add_asset(&mut self, asset: AssetData) {
+        self.data.push(asset);
+    }
+
+    pub fn get_assets(&self) -> Vec<AssetData> {
+        self.data.clone()
+    }
+
+    pub fn get_asset(&self, name: &str) -> Option<AssetData> {
+        self.data.iter().find(|a| a.name == name).cloned()
+    }
+}
+
+impl Default for AssetDatabase {
+    fn default() -> Self {
+        Self {
+            created_at: time::OffsetDateTime::now_utc(),
+            data: vec![],
+        }
+    }
+}
+
+pub async fn index_assets_to_database<T: IntoIterator<Item = AssetData>>(
+    api: &GithubApi,
+    assets: T,
+    progress: &Sender<(usize, String, String)>,
+) -> Result<AssetDatabase> {
+    let mut database = AssetDatabase::default();
+
+    for (index, asset) in assets.into_iter().enumerate() {
+        send_async_channel(
+            progress,
+            (index, asset.name.clone(), "Starting".to_string()),
+        )
+        .await;
+
+        let (tx, rx) = async_channel::bounded(1);
+
+        match asset.kind {
+            AssetType::LanguageSyntax => {
+                if let Some(files) = get_syntax_files(api, &asset.url, &tx).await? {
+                    let mut asset = asset;
+                    asset.files = files;
+
+                    database.add_asset(asset);
+                }
+            }
+            AssetType::ColorScheme => {
+                if let Some(files) = get_theme_files(api, &asset.url, &tx).await? {
+                    let mut asset = asset;
+                    asset.files = files;
+
+                    database.add_asset(asset);
+                }
+            }
+            _ => {}
+        }
+    }
+
+    Ok(database)
+}
 
 #[derive(Debug)]
 pub enum ThemeType {
@@ -20,7 +105,7 @@ pub async fn get_syntax_files(
     api: &GithubApi,
     query: &str,
     progress: &Sender<String>,
-) -> Result<Option<Vec<String>>> {
+) -> Result<Option<Vec<FileInfoData>>> {
     send_async_channel(progress, "Checking if query is a URL or name".to_string()).await;
     let package = if let Ok(url) = Url::parse(query) {
         send_async_channel(progress, "Query is a URL".to_string()).await;
@@ -35,18 +120,53 @@ pub async fn get_syntax_files(
             .host_str()
             .is_some_and(|host| host.contains("github.com"))
     }) {
-        find_syntax_files_from_github_url(api, url, progress).await
+        find_files_from_github_url(api, url, progress, |item| {
+            item.path.ends_with(".sublime-syntax")
+        })
+        .await
     } else {
         send_async_channel(progress, "Package has no github source".to_string()).await;
         Ok(None)
     }
 }
 
-async fn find_syntax_files_from_github_url(
+pub async fn get_theme_files(
+    api: &GithubApi,
+    query: &str,
+    progress: &Sender<String>,
+) -> Result<Option<Vec<FileInfoData>>> {
+    send_async_channel(progress, "Checking if query is a URL or name".to_string()).await;
+    let package = if let Ok(url) = Url::parse(query) {
+        send_async_channel(progress, "Query is a URL".to_string()).await;
+        get_package_from_url(url.as_str()).await?
+    } else {
+        send_async_channel(progress, "Query is a name".to_string()).await;
+        get_package(query).await?
+    };
+
+    if let Some(url) = package.sources.iter().find(|source| {
+        source
+            .host_str()
+            .is_some_and(|host| host.contains("github.com"))
+    }) {
+        find_files_from_github_url(api, url, progress, |item| {
+            matches!(
+                item.path.rsplit('.').next(),
+                Some(ext) if ext == "tmTheme" || ext == "sublime-color-scheme"
+            )
+        })
+        .await
+    } else {
+        Ok(None)
+    }
+}
+
+async fn find_files_from_github_url(
     api: &GithubApi,
     url: &Url,
     progress: &Sender<String>,
-) -> Result<Option<Vec<String>>> {
+    filter: fn(&TreeItem) -> bool,
+) -> Result<Option<Vec<FileInfoData>>> {
     send_async_channel(progress, "Getting repo info".to_string()).await;
     let repo_info = api.get_repo_info_from_url(url).await?;
 
@@ -66,8 +186,8 @@ async fn find_syntax_files_from_github_url(
     let syntax_files = tree
         .tree
         .iter()
-        .filter(|item| item.is_file() && item.path.ends_with(".sublime-syntax"))
-        .map(|item| item.sha.to_string())
+        .filter(|item| item.is_file() && filter(item))
+        .map(tree_item_to_file_info)
         .collect::<Vec<_>>();
 
     send_async_channel(progress, format!("Found {} files", syntax_files.len())).await;
@@ -79,92 +199,20 @@ async fn find_syntax_files_from_github_url(
     Ok(Some(syntax_files))
 }
 
-pub async fn get_theme_files(
-    api: &GithubApi,
-    query: &str,
-    progress: &Sender<String>,
-) -> Result<Option<Vec<(ThemeType, String)>>> {
-    send_async_channel(progress, "Checking if query is a URL or name".to_string()).await;
-    let package = if let Ok(url) = Url::parse(query) {
-        send_async_channel(progress, "Query is a URL".to_string()).await;
-        get_package_from_url(url.as_str()).await?
-    } else {
-        send_async_channel(progress, "Query is a name".to_string()).await;
-        get_package(query).await?
-    };
+fn tree_item_to_file_info(item: &TreeItem) -> FileInfoData {
+    let end_path = item.path.split('/').next_back().unwrap();
+    let (name, extension) = end_path.split_once('.').unwrap();
 
-    if let Some(url) = package.sources.iter().find(|source| {
-        source
-            .host_str()
-            .is_some_and(|host| host.contains("github.com"))
-    }) {
-        find_theme_files_from_github_url(api, url, progress).await
-    } else {
-        send_async_channel(progress, "Package has no github source".to_string()).await;
-        Ok(None)
+    FileInfoData {
+        name: name.to_string(),
+        extension: extension.to_string(),
+        sha256: item.sha.to_string(),
     }
-}
-
-pub async fn find_theme_files_from_github_url(
-    api: &GithubApi,
-    url: &Url,
-    progress: &Sender<String>,
-) -> Result<Option<Vec<(ThemeType, String)>>> {
-    send_async_channel(progress, "Getting repo info".to_string()).await;
-    let repo_info = api.get_repo_info_from_url(url).await?;
-
-    send_async_channel(progress, "Got repo info".to_string()).await;
-    send_async_channel(progress, "Getting tree".to_string()).await;
-
-    let tree = api
-        .get_tree(
-            &repo_info.owner.login,
-            &repo_info.name,
-            &repo_info.default_branch,
-        )
-        .await?;
-
-    send_async_channel(progress, "Got tree".to_string()).await;
-
-    let theme_files = tree
-        .tree
-        .iter()
-        .filter(|item| item.is_file())
-        .filter_map(|item| {
-            if item.path.ends_with(".tmTheme") {
-                Some((ThemeType::TmTheme, item.sha.to_string()))
-            } else if item.path.ends_with(".sublime-color-scheme") {
-                Some((ThemeType::SublimeColorScheme, item.sha.to_string()))
-            } else {
-                None
-            }
-        })
-        .collect::<Vec<_>>();
-
-    send_async_channel(progress, format!("Found {} files", theme_files.len())).await;
-
-    if theme_files.is_empty() {
-        return Ok(None);
-    }
-
-    Ok(Some(theme_files))
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[tokio::test]
-    async fn test_find_syntax_files_from_github_url() {
-        let api = GithubApi::new(reqwest::Client::new(), None);
-        let url = Url::parse("https://github.com/asbjornenge/Docker.tmbundle").unwrap();
-        let syntax_files =
-            find_syntax_files_from_github_url(&api, &url, &async_channel::unbounded().0)
-                .await
-                .unwrap();
-
-        assert!(syntax_files.is_some());
-    }
 
     #[tokio::test]
     async fn test_get_syntax_files() {
@@ -183,28 +231,9 @@ mod tests {
     #[tokio::test]
     async fn test_get_theme_files() {
         let api = GithubApi::new(reqwest::Client::new(), None);
-        let theme_files = get_theme_files(
-            &api,
-            "1337 Color Scheme",
-            &async_channel::unbounded().0,
-        )
-        .await
-        .unwrap();
-
-        assert!(theme_files.is_some());
-    }
-
-    #[tokio::test]
-    async fn test_get_theme_files_from_url() {
-        let api = GithubApi::new(reqwest::Client::new(), None);
-        let url = Url::parse("https://github.com/MarkMichos/1337-Scheme").unwrap();
-        let theme_files = find_theme_files_from_github_url(
-            &api,
-            &url,
-            &async_channel::unbounded().0,
-        )
-        .await
-        .unwrap();
+        let theme_files = get_theme_files(&api, "1337 Color Scheme", &async_channel::unbounded().0)
+            .await
+            .unwrap();
 
         assert!(theme_files.is_some());
     }
