@@ -61,15 +61,19 @@ pub async fn index_assets_to_database<T: IntoIterator<Item = AssetData>>(
     progress: &Sender<(usize, String, String)>,
 ) -> Result<AssetDatabase> {
     let mut database = AssetDatabase::default();
-
     for (index, asset) in assets.into_iter().enumerate() {
-        send_async_channel(
-            progress,
-            (index, asset.name.clone(), "Starting".to_string()),
-        )
-        .await;
+        let index = index + 1;
+        let asset_name = asset.name.to_string();
+        send_async_channel(progress, (index, asset_name, "Starting".to_string())).await;
 
         let (tx, rx) = async_channel::bounded(1);
+        let asset_name = asset.name.clone();
+        let progress = progress.clone();
+        tokio::spawn(async move {
+            while let Ok(message) = rx.recv().await {
+                send_async_channel(&progress, (index, asset_name.to_string(), message)).await;
+            }
+        });
 
         match asset.kind {
             AssetType::LanguageSyntax => {
