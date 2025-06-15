@@ -103,20 +103,19 @@ pub async fn get_packages_by_label(label: &str) -> Result<LabeledPackageList> {
 }
 
 pub async fn get_packages_by_label_from_url(url: &str) -> Result<LabeledPackageList> {
-    let url = Url::parse(url)?;
-    let path = url.path().trim_start_matches("/").to_string();
-    let parts: Vec<_> = path.split('/').collect();
+    let split_url: Vec<_> = url.split('/').collect();
+    let path = split_url.iter().skip(3).collect::<Vec<_>>();
 
-    if parts.len() < 3 || !url.host_str().unwrap().contains("packagecontrol.io") {
+    if path.len() < 3 || !url.contains("packagecontrol.io") {
         return Err(PackageControlError::InvalidUrl);
     }
 
-    debug!("Parts: {:#?}", parts[2]);
-    get_packages_by_label(parts[2].trim_end_matches(".json")).await
+    debug!("Parts: {:#?}", path[2]);
+    get_packages_by_label(path[2].trim_end_matches(".json")).await
 }
 
 pub async fn get_package(name: &str) -> Result<Package> {
-    let url = format!("{BASE_URL}/packages/{}.json", name);
+    let url = format!("{BASE_URL}/packages/{}.json", name.replace('%', "%25"));
     let client = reqwest::Client::new();
     let response = client.get(&url).send().await?;
 
@@ -126,17 +125,16 @@ pub async fn get_package(name: &str) -> Result<Package> {
 }
 
 pub async fn get_package_from_url(url: &str) -> Result<Package> {
-    let url = Url::parse(url)?;
-    let path = url.path().trim_start_matches('/').to_string();
-    let parts: Vec<_> = path.split('/').collect();
+    let split_url: Vec<_> = url.split('/').collect();
+    let path = split_url.iter().skip(3).collect::<Vec<_>>();
 
-    if parts.len() < 2 || !url.host_str().unwrap().contains("packagecontrol.io") {
+    if path.len() < 2 || !url.contains("packagecontrol.io") {
         return Err(PackageControlError::InvalidUrl);
     }
 
-    debug!("Parts: {:#?}", parts);
+    debug!("Parts: {:#?}", path);
 
-    get_package(parts[1].trim_end_matches(".json")).await
+    get_package(path[1].trim_end_matches(".json")).await
 }
 
 #[cfg(test)]
@@ -195,6 +193,19 @@ mod tests {
             .unwrap();
         debug!("{:?}", package);
 
+        assert!(!package.name.is_empty());
+    }
+
+    #[tokio::test]
+    async fn test_get_package_from_special_character_url() {
+        init();
+        let package = get_package_from_url(
+            "https://packagecontrol.io/packages/10% Too Dull for My Tastes Color Scheme",
+        )
+        .await
+        .unwrap();
+
+        debug!("{:?}", package);
         assert!(!package.name.is_empty());
     }
 }
