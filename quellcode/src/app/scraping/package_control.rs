@@ -94,47 +94,54 @@ type Result<T> = std::result::Result<T, PackageControlError>;
 
 pub async fn get_packages_by_label(label: &str) -> Result<LabeledPackageList> {
     let url = format!("{BASE_URL}/browse/labels/{}.json", label);
-    let client = reqwest::Client::new();
-    let response = client.get(&url).send().await?;
 
-    trace!("PackageControl Response: {:#?}", response);
-
-    Ok(response.json().await?)
+    get_packages_by_label_from_url(&url).await
 }
 
 pub async fn get_packages_by_label_from_url(url: &str) -> Result<LabeledPackageList> {
-    let split_url: Vec<_> = url.split('/').collect();
-    let path = split_url.iter().skip(3).collect::<Vec<_>>();
-
-    if path.len() < 3 || !url.contains("packagecontrol.io") {
+    let _ = Url::parse(url)?;
+    if !url.contains("packagecontrol.io") {
         return Err(PackageControlError::InvalidUrl);
     }
 
-    debug!("Parts: {:#?}", path[2]);
-    get_packages_by_label(path[2].trim_end_matches(".json")).await
-}
+    let mut encoded_url = url.replace('%', "%25");
 
-pub async fn get_package(name: &str) -> Result<Package> {
-    let url = format!("{BASE_URL}/packages/{}.json", name.replace('%', "%25"));
+    if !encoded_url.ends_with(".json") {
+        encoded_url.push_str(".json");
+    }
+
     let client = reqwest::Client::new();
-    let response = client.get(&url).send().await?;
+    let response = client.get(&encoded_url).send().await?;
 
     trace!("PackageControl Response: {:#?}", response);
 
     Ok(response.json().await?)
 }
 
-pub async fn get_package_from_url(url: &str) -> Result<Package> {
-    let split_url: Vec<_> = url.split('/').collect();
-    let path = split_url.iter().skip(3).collect::<Vec<_>>();
+pub async fn get_package(name: &str) -> Result<Package> {
+    let url = format!("{BASE_URL}/packages/{}.json", name);
 
-    if path.len() < 2 || !url.contains("packagecontrol.io") {
+    get_package_from_url(&url).await
+}
+
+pub async fn get_package_from_url(url: &str) -> Result<Package> {
+    let _ = Url::parse(url)?;
+    if !url.contains("packagecontrol.io") {
         return Err(PackageControlError::InvalidUrl);
     }
 
-    debug!("Parts: {:#?}", path);
+    let mut encoded_url = url.replace('%', "%25");
 
-    get_package(path[1].trim_end_matches(".json")).await
+    if !encoded_url.ends_with(".json") {
+        encoded_url.push_str(".json");
+    }
+
+    let client = reqwest::Client::new();
+    let response = client.get(&encoded_url).send().await?;
+
+    trace!("PackageControl Response: {:#?}", response);
+
+    Ok(response.json().await?)
 }
 
 #[cfg(test)]
