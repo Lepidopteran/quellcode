@@ -8,7 +8,6 @@ mod imp {
     use gtk::prelude::WidgetExt;
     use gtk::subclass::widget::WidgetImplExt;
     use gtk::subclass::{
-        grid::GridImpl,
         widget::{
             CompositeTemplateClass, CompositeTemplateInitializingExt, WidgetClassExt, WidgetImpl,
         },
