@@ -107,9 +107,9 @@ pub async fn get_syntax_files(
     progress: &Sender<String>,
 ) -> Result<Option<Vec<FileInfoData>>> {
     send_async_channel(progress, "Checking if query is a URL or name".to_string()).await;
-    let package = if let Ok(url) = Url::parse(query) {
+    let package = if Url::parse(query).is_ok() {
         send_async_channel(progress, "Query is a URL".to_string()).await;
-        get_package_from_url(url.as_str()).await?
+        get_package_from_url(query).await?
     } else {
         send_async_channel(progress, "Query is a name".to_string()).await;
         get_package(query).await?
@@ -136,9 +136,9 @@ pub async fn get_theme_files(
     progress: &Sender<String>,
 ) -> Result<Option<Vec<FileInfoData>>> {
     send_async_channel(progress, "Checking if query is a URL or name".to_string()).await;
-    let package = if let Ok(url) = Url::parse(query) {
+    let package = if Url::parse(query).is_ok() {
         send_async_channel(progress, "Query is a URL".to_string()).await;
-        get_package_from_url(url.as_str()).await?
+        get_package_from_url(query).await?
     } else {
         send_async_channel(progress, "Query is a name".to_string()).await;
         get_package(query).await?
