@@ -57,6 +57,27 @@ impl From<Entry> for AssetData {
     }
 }
 
+impl From<&Entry> for AssetData {
+    fn from(package: &Entry) -> Self {
+        Self {
+            url: format!("https://packagecontrol.io/packages/{}", package.name),
+            name: package.name.clone(),
+            description: package.description.clone(),
+            authors: package.authors.clone(),
+            source: String::from("Package Control"),
+            installs: package.unique_installs.unwrap_or(0),
+            kind: if package.labels.contains(&"color scheme".to_string()) {
+                AssetType::ColorScheme
+            } else if package.labels.contains(&"language syntax".to_string()) {
+                AssetType::LanguageSyntax
+            } else {
+                AssetType::Unknown
+            },
+            ..Default::default()
+        }
+    }
+}
+
 mod imp {
 
     use gtk::glib::Properties;
