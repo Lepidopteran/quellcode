@@ -33,7 +33,7 @@ pub enum GithubApiError {
 
 type Result<T, E = GithubApiError> = std::result::Result<T, E>;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct GithubApi {
     client: reqwest::Client,
     token: Option<secrecy::SecretString>,
