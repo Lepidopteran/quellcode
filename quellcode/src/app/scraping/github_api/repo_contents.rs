@@ -176,18 +176,13 @@ pub async fn get_content_from_url(
 mod tests {
     use super::*;
 
-    fn init() {
-        let _ = dotenvy::dotenv();
-        let _ = env_logger::builder().is_test(true).try_init();
-    }
-
     #[tokio::test]
     async fn test_get_content() {
         init();
         let client = reqwest::Client::new();
         let content_tree = get_content(
             &client,
-            std::env::var("GITHUB_TOKEN").ok().as_deref(),
+            github_token().as_ref().map(|t| t.expose_secret()),
             "octocat",
             "hello-world",
             "README",
@@ -210,7 +205,7 @@ mod tests {
         {
             let content = get_content_from_url(
                 &client,
-                std::env::var("GITHUB_TOKEN").ok().as_deref(),
+                github_token().as_ref().map(|t| t.expose_secret()),
                 url,
             )
             .await;

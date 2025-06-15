@@ -141,11 +141,8 @@ pub async fn get_package_from_url(url: &str) -> Result<Package> {
 mod tests {
     use log::debug;
 
+    use super::test_util::*;
     use super::*;
-
-    fn init() {
-        let _ = env_logger::builder().is_test(true).try_init();
-    }
 
     #[tokio::test]
     async fn test_get_packages_by_label() {

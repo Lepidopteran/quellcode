@@ -41,7 +41,9 @@ mod tests {
 
     #[tokio::test]
     async fn test() {
-        let api = GithubApi::new(reqwest::Client::new(), None);
+        init();
+
+        let api = GithubApi::new(reqwest::Client::new(), github_token());
         let response = api
             .get_file_text(
                 "octocat",

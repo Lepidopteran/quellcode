@@ -67,11 +67,8 @@ mod tests {
     async fn test_get_repo_info() {
         init();
 
-        let api = GithubApi::new(reqwest::Client::new(), None);
-        let response = api
-            .get_repo_info("octocat", "Hello-World")
-            .await
-            .unwrap();
+        let api = GithubApi::new(reqwest::Client::new(), github_token());
+        let response = api.get_repo_info("octocat", "Hello-World").await.unwrap();
 
         debug!("Github Repo Info: {:#?}", response);
         assert_eq!(response.name, "Hello-World");
@@ -81,7 +78,7 @@ mod tests {
     async fn test_get_repo_info_from_url() {
         init();
 
-        let api = GithubApi::new(reqwest::Client::new(), None);
+        let api = GithubApi::new(reqwest::Client::new(), github_token());
         let response = api
             .get_repo_info_from_url(&Url::parse("https://github.com/octocat/Hello-World").unwrap())
             .await

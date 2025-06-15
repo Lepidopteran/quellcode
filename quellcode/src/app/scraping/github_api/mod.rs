@@ -7,6 +7,9 @@ use url::Url;
 
 use crate::app::APP_ID;
 
+#[cfg(test)]
+use super::test_util::*;
+
 const JSON_MEDIA_TYPE: &str = "application/vnd.github+json";
 const RAW_MEDIA_TYPE: &str = "application/vnd.github.raw+json";
 const GITHUB_API_VERSION: &str = "X-GitHub-Api-Version";
@@ -61,14 +64,4 @@ pub fn get_owner_and_repo_from_url(url: Url) -> Result<(String, String)> {
     }
 
     Ok((segments[0].to_string(), segments[1].to_string()))
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test() {
-        let api = GithubApi::new(reqwest::Client::new(), None);
-    }
 }

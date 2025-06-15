@@ -128,11 +128,6 @@ pub async fn get_tree_from_url(
 mod tests {
     use super::*;
 
-    fn init() {
-        let _ = dotenvy::dotenv();
-        let _ = env_logger::builder().is_test(true).try_init();
-    }
-
     #[tokio::test]
     async fn test_get_tree() {
         init();
@@ -140,7 +135,7 @@ mod tests {
         let client = reqwest::Client::new();
         let tree = get_tree(
             &client,
-            std::env::var("GITHUB_TOKEN").ok().as_deref(),
+            github_token().as_ref().map(|t| t.expose_secret()),
             "octocat",
             "hello-world",
             "master",
@@ -156,7 +151,7 @@ mod tests {
         let client = reqwest::Client::new();
         let tree = get_tree_from_url(
             &client,
-            std::env::var("GITHUB_TOKEN").ok().as_deref(),
+            github_token().as_ref().map(|t| t.expose_secret()),
             "https://github.com/octocat/hello-world/tree/master",
             true,
         )
