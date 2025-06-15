@@ -68,28 +68,59 @@ pub async fn index_assets_to_database<T: IntoIterator<Item = AssetData>>(
 
         let (tx, rx) = async_channel::bounded(1);
         let asset_name = asset.name.clone();
-        let progress = progress.clone();
+        let async_progress = progress.clone();
         tokio::spawn(async move {
             while let Ok(message) = rx.recv().await {
-                send_async_channel(&progress, (index, asset_name.to_string(), message)).await;
+                send_async_channel(&async_progress, (index, asset_name.to_string(), message)).await;
             }
         });
 
+        let asset_name = asset.name.clone();
         match asset.kind {
             AssetType::LanguageSyntax => {
-                if let Some(files) = get_syntax_files(api, &asset.url, &tx).await? {
-                    let mut asset = asset;
-                    asset.files = files;
+                match get_syntax_files(api, &asset.url, &tx).await {
+                    Ok(Some(files)) => {
+                        let mut asset = asset;
+                        asset.files = files;
 
-                    database.add_asset(asset);
+                        database.add_asset(asset);
+                    }
+                    Ok(None) => {
+                        send_async_channel(
+                            progress,
+                            (index, asset_name, "No syntax files found".to_string()),
+                        )
+                        .await;
+                        continue;
+                    }
+                    Err(e) => {
+                        send_async_channel(progress, (index, asset_name, format!("Error: {e}")))
+                            .await;
+                        continue;
+                    }
                 }
             }
             AssetType::ColorScheme => {
-                if let Some(files) = get_theme_files(api, &asset.url, &tx).await? {
-                    let mut asset = asset;
-                    asset.files = files;
+                match get_theme_files(api, &asset.url, &tx).await {
+                    Ok(Some(files)) => {
+                        let mut asset = asset;
+                        asset.files = files;
 
-                    database.add_asset(asset);
+                        database.add_asset(asset);
+                    }
+                    Ok(None) => {
+                        send_async_channel(
+                            progress,
+                            (index, asset_name, "No color scheme files found".to_string()),
+                        )
+                        .await;
+                        continue;
+                    }
+                    Err(e) => {
+                        send_async_channel(progress, (index, asset_name, format!("Error: {e}")))
+                            .await;
+                        continue;
+                    }
                 }
             }
             _ => {}
