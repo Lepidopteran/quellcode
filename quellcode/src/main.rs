@@ -4,6 +4,7 @@ use gtk::prelude::*;
 use gtk::{gio, glib};
 
 fn main() -> glib::ExitCode {
+    dotenvy::dotenv().ok();
     env_logger::init();
     color_eyre::install().ok();
     gtk::init().expect("Failed to initialize GTK");
