@@ -3,6 +3,9 @@ use gtk::glib::{self, prelude::*, subclass::prelude::*};
 use super::file::{FileInfo, FileInfoData};
 use crate::app::scraping::package_control::Entry;
 
+#[cfg(test)]
+use super::init;
+
 #[derive(Debug, Clone, Default, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 #[repr(u8)]
 pub enum AssetType {
@@ -137,6 +140,8 @@ mod tests {
 
     #[test]
     fn test_asset_type_from_u8() {
+        init();
+
         assert_eq!(AssetType::from(1), AssetType::ColorScheme);
         assert_eq!(AssetType::from(2), AssetType::LanguageSyntax);
         assert_eq!(AssetType::from(3), AssetType::VSCodeTheme);
@@ -145,6 +150,8 @@ mod tests {
 
     #[test]
     fn test_asset_type_to_u8() {
+        init();
+
         assert_eq!(AssetType::Unknown as u8, 0);
         assert_eq!(AssetType::ColorScheme as u8, 1);
         assert_eq!(AssetType::LanguageSyntax as u8, 2);
