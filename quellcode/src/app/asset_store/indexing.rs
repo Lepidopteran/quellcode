@@ -187,12 +187,6 @@ pub async fn index_assets_to_database<T: IntoIterator<Item = AssetData>>(
     Ok(database)
 }
 
-#[derive(Debug)]
-pub enum ThemeType {
-    TmTheme,
-    SublimeColorScheme,
-}
-
 pub async fn get_syntax_files(
     api: &GithubApi,
     query: &str,
