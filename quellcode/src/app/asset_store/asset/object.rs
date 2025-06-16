@@ -3,7 +3,7 @@ use gtk::glib::{self, prelude::*, subclass::prelude::*};
 use super::file::{FileInfo, FileInfoData};
 use crate::app::scraping::package_control::Entry;
 
-#[derive(Debug, Clone, Default, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 #[repr(u8)]
 pub enum AssetType {
     #[default]
@@ -128,5 +128,26 @@ impl Asset {
 impl From<AssetData> for Asset {
     fn from(data: AssetData) -> Self {
         Asset::new(data)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_asset_type_from_u8() {
+        assert_eq!(AssetType::from(1), AssetType::ColorScheme);
+        assert_eq!(AssetType::from(2), AssetType::LanguageSyntax);
+        assert_eq!(AssetType::from(3), AssetType::VSCodeTheme);
+        assert_eq!(AssetType::from(4), AssetType::Unknown);
+    }
+
+    #[test]
+    fn test_asset_type_to_u8() {
+        assert_eq!(AssetType::Unknown as u8, 0);
+        assert_eq!(AssetType::ColorScheme as u8, 1);
+        assert_eq!(AssetType::LanguageSyntax as u8, 2);
+        assert_eq!(AssetType::VSCodeTheme as u8, 3);
     }
 }
