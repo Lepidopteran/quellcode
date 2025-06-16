@@ -166,6 +166,7 @@ pub mod imp {
             dir::data_dir(),
             dir::config_dir(),
             dir::cache_dir(),
+            dir::store_cache_dir(),
             dir::code_theme_dir(),
             dir::code_syntax_dir(),
         ] {

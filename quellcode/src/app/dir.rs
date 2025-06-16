@@ -24,3 +24,7 @@ pub fn code_theme_dir() -> PathBuf {
 pub fn code_syntax_dir() -> PathBuf {
     data_dir().join("syntaxes")
 }
+
+pub fn store_cache_dir() -> PathBuf {
+    cache_dir().join("asset_store")
+}
