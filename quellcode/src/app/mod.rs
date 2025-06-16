@@ -78,9 +78,10 @@ pub fn code_theme_files() -> Vec<(ThemeFormat, PathBuf)> {
 mod tests {
     use super::*;
 
-    fn init() {
-        let _ = dotenvy::dotenv();
+    pub fn init() {
+        dotenvy::dotenv().ok();
         let _ = env_logger::builder().is_test(true).try_init();
+        let _ = color_eyre::install();
     }
 
     #[test]
