@@ -12,7 +12,7 @@ use crate::app::{
     util::send_async_channel,
 };
 
-use super::asset::{AssetData, AssetType, FileInfoData};
+use super::{AssetData, AssetType, FileInfoData, ProgressMessage, ProgressMessageKind};
 
 #[derive(Debug, serde::Serialize, serde::Deserialize)]
 pub struct AssetDatabase {
@@ -53,37 +53,6 @@ impl Default for AssetDatabase {
     }
 }
 
-pub enum ProgressMessageKind {
-    Starting,
-    Misc,
-    Error,
-    Warning,
-    Success,
-}
-
-pub struct ProgressMessage {
-    pub index: usize,
-    pub package_name: String,
-    pub message: String,
-    pub kind: ProgressMessageKind,
-}
-
-impl ProgressMessage {
-    pub fn new(
-        index: usize,
-        package_name: String,
-        message: String,
-        kind: ProgressMessageKind,
-    ) -> Self {
-        Self {
-            index,
-            package_name,
-            message,
-            kind,
-        }
-    }
-}
-
 pub async fn index_assets_to_database<T: IntoIterator<Item = AssetData>>(
     api: &GithubApi,
     assets: T,
@@ -98,7 +67,7 @@ pub async fn index_assets_to_database<T: IntoIterator<Item = AssetData>>(
         let api = api.clone();
         let progress = progress.clone();
         let semaphore = semaphore.clone();
-        let index = index + 1;
+        let index = (index + 1) as u32;
 
         let handle = tokio::task::spawn(async move {
             let _permit = semaphore.acquire_owned().await.unwrap();
