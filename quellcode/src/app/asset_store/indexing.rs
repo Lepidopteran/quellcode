@@ -1,5 +1,7 @@
 use async_channel::Sender;
 use color_eyre::eyre::Result;
+use std::sync::Arc;
+use tokio::sync::Semaphore;
 use url::Url;
 
 use crate::app::{
@@ -14,20 +16,15 @@ use super::asset::{AssetData, AssetType, FileInfoData};
 
 #[derive(Debug, serde::Serialize, serde::Deserialize)]
 pub struct AssetDatabase {
+    pub name: String,
     pub created_at: time::OffsetDateTime,
     pub data: Vec<AssetData>,
 }
 
 impl AssetDatabase {
-    pub fn new(data: Vec<AssetData>) -> Self {
+    pub fn new(name: String, data: Vec<AssetData>) -> Self {
         Self {
-            created_at: time::OffsetDateTime::now_utc(),
-            data,
-        }
-    }
-
-    pub fn from_data(data: Vec<AssetData>) -> Self {
-        Self {
+            name,
             created_at: time::OffsetDateTime::now_utc(),
             data,
         }
@@ -49,8 +46,40 @@ impl AssetDatabase {
 impl Default for AssetDatabase {
     fn default() -> Self {
         Self {
+            name: String::new(),
             created_at: time::OffsetDateTime::now_utc(),
             data: vec![],
+        }
+    }
+}
+
+pub enum ProgressMessageKind {
+    Starting,
+    Misc,
+    Error,
+    Warning,
+    Success,
+}
+
+pub struct ProgressMessage {
+    pub index: usize,
+    pub package_name: String,
+    pub message: String,
+    pub kind: ProgressMessageKind,
+}
+
+impl ProgressMessage {
+    pub fn new(
+        index: usize,
+        package_name: String,
+        message: String,
+        kind: ProgressMessageKind,
+    ) -> Self {
+        Self {
+            index,
+            package_name,
+            message,
+            kind,
         }
     }
 }
@@ -58,72 +87,131 @@ impl Default for AssetDatabase {
 pub async fn index_assets_to_database<T: IntoIterator<Item = AssetData>>(
     api: &GithubApi,
     assets: T,
-    progress: &Sender<(usize, String, String)>,
+    progress: &Sender<ProgressMessage>,
 ) -> Result<AssetDatabase> {
     let mut database = AssetDatabase::default();
-    for (index, asset) in assets.into_iter().enumerate() {
-        let index = index + 1;
-        let asset_name = asset.name.to_string();
-        send_async_channel(progress, (index, asset_name, "Starting".to_string())).await;
 
-        let (tx, rx) = async_channel::bounded(1);
-        let asset_name = asset.name.clone();
-        let async_progress = progress.clone();
-        tokio::spawn(async move {
-            while let Ok(message) = rx.recv().await {
-                send_async_channel(&async_progress, (index, asset_name.to_string(), message)).await;
+    let semaphore = Arc::new(Semaphore::new(5));
+    let mut handles = Vec::new();
+
+    for (index, asset) in assets.into_iter().enumerate() {
+        let api = api.clone();
+        let progress = progress.clone();
+        let semaphore = semaphore.clone();
+        let index = index + 1;
+
+        let handle = tokio::task::spawn(async move {
+            let _permit = semaphore.acquire_owned().await.unwrap();
+
+            let asset_name = asset.name.clone();
+            send_async_channel(
+                &progress,
+                ProgressMessage::new(
+                    index,
+                    asset_name.clone(),
+                    String::new(),
+                    ProgressMessageKind::Starting,
+                ),
+            )
+            .await;
+
+            let (tx, rx) = async_channel::bounded(1);
+            let asset_name_clone = asset.name.clone();
+            let async_progress = progress.clone();
+
+            tokio::task::spawn(async move {
+                while let Ok(message) = rx.recv().await {
+                    send_async_channel(
+                        &async_progress,
+                        ProgressMessage::new(
+                            index,
+                            asset_name_clone.clone(),
+                            message,
+                            ProgressMessageKind::Misc,
+                        ),
+                    )
+                    .await;
+                }
+            });
+
+            let mut result_asset = None;
+
+            match asset.kind {
+                AssetType::LanguageSyntax => match get_syntax_files(&api, &asset.url, &tx).await {
+                    Ok(Some(files)) => {
+                        let mut asset = asset;
+                        asset.files = files;
+                        result_asset = Some(asset);
+                    }
+                    Ok(None) => {
+                        send_async_channel(
+                            &progress,
+                            ProgressMessage::new(
+                                index,
+                                asset_name,
+                                "No syntax files found... skipping".to_string(),
+                                ProgressMessageKind::Warning,
+                            ),
+                        )
+                        .await;
+                    }
+                    Err(e) => {
+                        send_async_channel(
+                            &progress,
+                            ProgressMessage::new(
+                                index,
+                                asset_name,
+                                format!("Error: {e}"),
+                                ProgressMessageKind::Error,
+                            ),
+                        )
+                        .await;
+                    }
+                },
+                AssetType::ColorScheme => match get_theme_files(&api, &asset.url, &tx).await {
+                    Ok(Some(files)) => {
+                        let mut asset = asset;
+                        asset.files = files;
+                        result_asset = Some(asset);
+                    }
+                    Ok(None) => {
+                        send_async_channel(
+                            &progress,
+                            ProgressMessage::new(
+                                index,
+                                asset_name,
+                                "No color scheme files found... skipping".to_string(),
+                                ProgressMessageKind::Warning,
+                            ),
+                        )
+                        .await;
+                    }
+                    Err(e) => {
+                        send_async_channel(
+                            &progress,
+                            ProgressMessage::new(
+                                index,
+                                asset_name,
+                                format!("Error: {e}"),
+                                ProgressMessageKind::Error,
+                            ),
+                        )
+                        .await;
+                    }
+                },
+                _ => {}
             }
+
+            result_asset
         });
 
-        let asset_name = asset.name.clone();
-        match asset.kind {
-            AssetType::LanguageSyntax => {
-                match get_syntax_files(api, &asset.url, &tx).await {
-                    Ok(Some(files)) => {
-                        let mut asset = asset;
-                        asset.files = files;
+        handles.push(handle);
+    }
 
-                        database.add_asset(asset);
-                    }
-                    Ok(None) => {
-                        send_async_channel(
-                            progress,
-                            (index, asset_name, "No syntax files found".to_string()),
-                        )
-                        .await;
-                        continue;
-                    }
-                    Err(e) => {
-                        send_async_channel(progress, (index, asset_name, format!("Error: {e}")))
-                            .await;
-                        continue;
-                    }
-                }
-            }
-            AssetType::ColorScheme => {
-                match get_theme_files(api, &asset.url, &tx).await {
-                    Ok(Some(files)) => {
-                        let mut asset = asset;
-                        asset.files = files;
-
-                        database.add_asset(asset);
-                    }
-                    Ok(None) => {
-                        send_async_channel(
-                            progress,
-                            (index, asset_name, "No color scheme files found".to_string()),
-                        )
-                        .await;
-                        continue;
-                    }
-                    Err(e) => {
-                        send_async_channel(progress, (index, asset_name, format!("Error: {e}")))
-                            .await;
-                        continue;
-                    }
-                }
-            }
-            _ => {}
+    // Wait for all tasks to complete and collect results
+    for handle in handles {
+        if let Ok(Some(asset)) = handle.await {
+            database.add_asset(asset);
         }
     }
 
@@ -160,7 +248,6 @@ pub async fn get_syntax_files(
         })
         .await
     } else {
-        send_async_channel(progress, "Package has no github source".to_string()).await;
         Ok(None)
     }
 }
