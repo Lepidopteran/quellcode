@@ -18,7 +18,6 @@ use super::{
     generator::{
         svg::SvgGenerator, Generator as GeneratorTrait, GeneratorInfo, Info as GeneratorDetails,
     },
-    state::{load_state, CodeState, State},
     state::{load_state, save_state, CodeState, State},
     ThemeFormat, Window,
 };
