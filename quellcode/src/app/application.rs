@@ -117,14 +117,14 @@ pub mod imp {
 
             self.syntax_set.replace(syntax_set);
 
-            let config = match load_state() {
-                Ok(config) => config,
+            let state = match load_state() {
+                Ok(state) => state,
                 Err(err) => {
                     let theme = theme_set
                         .themes
                         .first_key_value()
                         .expect("Failed to get theme");
-                    let config = State {
+                    let state = State {
                         code: CodeState {
                             theme: Some(theme.0.clone()),
                             syntax: Some(self.syntax_set.borrow().syntaxes()[0].name.clone()),
@@ -133,21 +133,31 @@ pub mod imp {
                         ..Default::default()
                     };
                     if let Some(io_err) = err.downcast_ref::<io::Error>() {
-                        error!(
-                            "Failed to read config, using default config instead, Error:\n{}",
-                            io_err
-                        );
+                        if io_err.kind() == io::ErrorKind::NotFound {
+                            if let Err(err) = save_state(&state) {
+                                error!(
+                                    "Failed to save state file, using default state instead, Error:\n{}",
+                                    err
+                                );
+                            }
+                        } else {
+                            error!(
+                                "Failed to read state, using default state instead, Error:\n{}",
+                                io_err
+                            );
+                        }
                     } else {
                         error!(
-                            "Failed to load config, using default config instead, Error:\n{}",
+                            "Failed to load state, using default state instead, Error:\n{}",
                             err
                         );
                     }
 
-                    config
+                    state
                 }
             };
 
+            self.state.replace(state);
             debug!("Loaded config");
 
             let generators = &mut self.generator_registry.borrow_mut();
@@ -156,8 +166,6 @@ pub mod imp {
                 SvgGenerator::information(),
                 Box::new(|| Box::new(SvgGenerator::new())),
             ));
-
-            self.state.replace(config);
         }
     }
 
