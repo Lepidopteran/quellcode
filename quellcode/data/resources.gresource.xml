@@ -1,10 +1,14 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <gresources>
-	<gresource prefix="/org/quellcode/quellcode/">
-		<file compressed="true" preprocess="xml-stripblanks" alias="window.ui">ui/window.ui</file>
-		<file compressed="true" preprocess="xml-stripblanks" alias="font_family_chooser.ui">ui/font_family_chooser.ui</file>
-		<file compressed="true" preprocess="xml-stripblanks" alias="split_button.ui">ui/split_button.ui</file>
-		<file compressed="true" preprocess="xml-stripblanks" alias="settings.ui">ui/settings/window.ui</file>
-		<file compressed="true" preprocess="xml-stripblanks" alias="asset_details.ui">ui/settings/asset_store/asset_details.ui</file>
+  <gresource prefix="/org/quellcode/quellcode/">
+    <file alias="window.ui" compressed="true" preprocess="xml-stripblanks">ui/window.ui</file>
+    <file alias="font_family_chooser.ui" compressed="true" preprocess="xml-stripblanks">ui/font_family_chooser.ui</file>
+    <file alias="split_button.ui" compressed="true" preprocess="xml-stripblanks">ui/split_button.ui</file>
+    <file alias="settings.ui" compressed="true" preprocess="xml-stripblanks">ui/settings/window.ui</file>
+    <file alias="asset_details.ui" compressed="true" preprocess="xml-stripblanks">ui/settings/asset_store/asset_details.ui</file>
+  </gresource>
+  <gresource prefix="/icons/scalable/actions">
+    <file preprocess="xml-stripblanks">icons/syntax-symbolic.svg</file>
+    <file preprocess="xml-stripblanks">icons/theme-symbolic.svg</file>
   </gresource>
 </gresources>
