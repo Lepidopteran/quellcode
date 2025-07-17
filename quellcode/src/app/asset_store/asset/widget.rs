@@ -7,10 +7,8 @@ mod imp {
     use gtk::glib::{subclass::InitializingObject, Properties};
     use gtk::prelude::WidgetExt;
     use gtk::subclass::widget::WidgetImplExt;
-    use gtk::subclass::{
-        widget::{
-            CompositeTemplateClass, CompositeTemplateInitializingExt, WidgetClassExt, WidgetImpl,
-        },
+    use gtk::subclass::widget::{
+        CompositeTemplateClass, CompositeTemplateInitializingExt, WidgetClassExt, WidgetImpl,
     };
     use gtk::{Allocation, CompositeTemplate, TemplateChild};
 
@@ -45,7 +43,12 @@ mod imp {
         }
     }
 
-    impl ObjectImpl for AssetWidget {}
+    impl ObjectImpl for AssetWidget {
+        fn dispose(&self) {
+            self.container.unparent();
+        }
+    }
+
     impl WidgetImpl for AssetWidget {
         fn measure(&self, orientation: gtk::Orientation, for_size: i32) -> (i32, i32, i32, i32) {
             self.container.measure(orientation, for_size)
