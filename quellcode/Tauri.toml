@@ -9,7 +9,7 @@ beforeBuildCommand = "bun run build"
 frontendDist = "dist"
 
 [app]
-withGlobalTauri = true
+withGlobalTauri = false
 
 [[app.windows]]
 title = "Quellcode"

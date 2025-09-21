@@ -2,11 +2,11 @@ use color_eyre::eyre::Result;
 use log::warn;
 use secrecy::SecretString;
 
+pub mod asset_store;
 pub mod generating;
 pub mod generator;
-pub mod asset_store;
-pub mod scraping;
 pub mod property;
+pub mod scraping;
 pub mod util;
 
 pub enum ThemeFormat {
@@ -35,11 +35,32 @@ impl ThemeFormat {
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_log::Builder::new().build())
         .plugin(tauri_plugin_opener::init())
-        .invoke_handler(tauri::generate_handler![])
+        .invoke_handler(tauri::generate_handler![font_families])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
+}
+
+#[tauri::command]
+fn font_families() -> Vec<String> {
+    let mut db = usvg::fontdb::Database::new();
+    db.load_system_fonts();
+
+    let mut families = Vec::new();
+
+    for face in db.faces() {
+        if let Some((family, _)) = face.families.first() {
+            if families.contains(family) {
+                continue;
+            }
+
+            families.push(family.to_string());
+        }
+    }
+
+    families
 }
 
 pub fn github_token() -> Result<Option<SecretString>> {
@@ -84,8 +105,8 @@ pub fn github_token() -> Result<Option<SecretString>> {
 
 #[cfg(test)]
 mod tests {
-    use log::{debug, warn};
     use super::*;
+    use log::{debug, warn};
 
     #[test_log::test]
     fn fetch_github_token() {

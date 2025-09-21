@@ -1,5 +1,5 @@
-mod object;
 mod file;
+mod object;
 
-pub use object::*;
 pub use file::*;
+pub use object::*;

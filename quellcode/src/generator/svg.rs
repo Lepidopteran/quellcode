@@ -1,6 +1,6 @@
 use super::{
-    Generator, GeneratorError, GeneratorInfo, Info, Properties, Property,
-    PropertyError, PropertyType, PropertyValue,
+    Generator, GeneratorError, GeneratorInfo, Info, Properties, Property, PropertyError,
+    PropertyType, PropertyValue,
 };
 
 use crate::generating::svg::{generate_svg, SvgOptions};

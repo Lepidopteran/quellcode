@@ -131,7 +131,6 @@ mod tests {
     #[tokio::test]
     #[test_log::test]
     async fn test_get_tree() {
-
         let client = reqwest::Client::new();
         let tree = get_tree(
             &client,

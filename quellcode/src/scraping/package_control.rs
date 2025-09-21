@@ -153,7 +153,6 @@ mod tests {
     #[tokio::test]
     #[test_log::test]
     async fn test_get_packages_by_label() {
-
         let package_list = get_packages_by_label(LANGUAGE_SYNTAX).await.unwrap();
         assert!(!package_list.packages.is_empty());
     }
