@@ -2,6 +2,7 @@
 	import { invoke } from "@tauri-apps/api/core";
 	import svelteLogo from "./assets/svelte.svg";
 	import viteLogo from "/vite.svg";
+	import VirtualList from "svelte-tiny-virtual-list";
 </script>
 
 <main>
@@ -19,10 +20,18 @@
 
 	{#await invoke<string[]>("font_families")}
 		Fetching Fonts
-		{:then families}
-		{#each families as family}
-			<p style:font-family={family}>{family}</p>
-		{/each}
+	{:then families}
+		<VirtualList
+			itemCount={families.length}
+			height={400}
+			width="100%"
+			itemSize={24}
+		>
+			{#snippet item({ style, index })}
+				{@const family = families[index as number]}
+				<p {style} style:font-family={family}>{family}</p>
+			{/snippet}
+		</VirtualList>
 	{/await}
 
 	<p>

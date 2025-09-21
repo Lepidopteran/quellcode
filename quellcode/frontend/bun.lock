@@ -5,6 +5,7 @@
       "name": "quellcode-frontend",
       "dependencies": {
         "@tauri-apps/api": "^2.8.0",
+        "svelte-tiny-virtual-list": "^3.0.1",
       },
       "devDependencies": {
         "@sveltejs/vite-plugin-svelte": "^6.2.0",
