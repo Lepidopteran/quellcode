@@ -1,0 +1,32 @@
+productName = "quellcode"
+version = "0.1.0"
+identifier = "org.quellcode.quellcode"
+
+[build]
+beforeDevCommand = "bun run dev"
+devUrl = "http://localhost:1420"
+beforeBuildCommand = "bun run build"
+frontendDist = "dist"
+
+[app]
+withGlobalTauri = true
+
+[[app.windows]]
+title = "Quellcode"
+width = 800
+height = 600
+
+[app.security]
+csp = "" 
+
+[bundle]
+active = true
+targets = "all"
+icon = [
+    "data/icons/32x32.png",
+    "data/icons/128x128.png",
+    "data/icons/128x128@2x.png",
+    "data/icons/icon.icns",
+    "data/icons/icon.ico"
+]
+

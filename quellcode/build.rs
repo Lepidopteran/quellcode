@@ -4,4 +4,6 @@ fn main() {
         "data/resources.gresource.xml",
         "quellcode.gresource",
     );
+
+    tauri_build::build()
 }
