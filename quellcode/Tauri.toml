@@ -3,10 +3,16 @@ version = "0.1.0"
 identifier = "org.quellcode.quellcode"
 
 [build]
-beforeDevCommand = "bun run dev"
 devUrl = "http://localhost:1420"
-beforeBuildCommand = "bun run build"
 frontendDist = "dist"
+
+[build.beforeDevCommand]
+cwd = "frontend"
+script = "bun run dev"
+
+[build.beforeBuildCommand]
+cwd = "frontend"
+script = "bun run build"
 
 [app]
 withGlobalTauri = false
@@ -15,6 +21,8 @@ withGlobalTauri = false
 title = "Quellcode"
 width = 800
 height = 600
+min-width = 800
+min-height = 600
 
 [app.security]
 csp = "" 
@@ -23,10 +31,10 @@ csp = ""
 active = true
 targets = "all"
 icon = [
-    "data/icons/32x32.png",
-    "data/icons/128x128.png",
-    "data/icons/128x128@2x.png",
-    "data/icons/icon.icns",
-    "data/icons/icon.ico"
+	"data/icons/32x32.png",
+	"data/icons/128x128.png",
+	"data/icons/128x128@2x.png",
+	"data/icons/icon.icns",
+	"data/icons/icon.ico"
 ]
 
