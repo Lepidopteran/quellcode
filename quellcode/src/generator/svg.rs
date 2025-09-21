@@ -1,8 +1,9 @@
 use super::{
-    Generator, GeneratorError, GeneratorInfo, Info, Properties, Property, PropertyError,
-    PropertyType, PropertyValue,
+    Generator, GeneratorError, GeneratorInfo, Info, Properties, Property,
+    PropertyError, PropertyType, PropertyValue,
 };
-use quellcode::generating::svg::{generate_svg, SvgOptions};
+
+use crate::generating::svg::{generate_svg, SvgOptions};
 
 #[derive(Clone, Debug)]
 pub struct SvgGenerator {

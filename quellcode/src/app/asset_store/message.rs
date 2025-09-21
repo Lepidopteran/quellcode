@@ -97,7 +97,6 @@ impl From<ProgressMessage> for ProgressMessageObject {
     }
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -1,6 +1,4 @@
-pub mod app;
-
-fn main()  {
+fn main() {
     dotenvy::dotenv().ok();
     color_eyre::install().ok();
 

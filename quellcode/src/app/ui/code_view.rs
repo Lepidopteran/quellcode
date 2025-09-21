@@ -108,7 +108,9 @@ pub mod imp {
     }
 
     fn set_font_size(view: &CodeView, value: f64) {
-        view.obj().global_tag().set_size((value as f32 * 0.75 * pango::SCALE as f32) as i32);
+        view.obj()
+            .global_tag()
+            .set_size((value as f32 * 0.75 * pango::SCALE as f32) as i32);
         view.font_size.set(value);
     }
 

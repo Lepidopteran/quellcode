@@ -7,7 +7,6 @@ edition = "2021"
 async-channel = "2.3.1"
 sublime-color-scheme = { path = "../sublime-color-scheme" }
 syntect-vscode = { path = "../vscode-theme" }
-gtk = { version = "0.9.5", package = "gtk4", features = ["v4_14"] }
 image = { version = "0.25.5", features = ["serde"] }
 resvg = "0.44.0"
 serde = { version = "1", features = ["derive"] }
@@ -36,6 +35,7 @@ secrecy = "0.10.3"
 
 tauri = { version = "2", features = ["config-toml"] }
 tauri-plugin-opener = "2"
+tauri-plugin-log = {version = "2", features = ["colored"] }
 
 # [lib]
 # name = "quellcode_lib"
@@ -43,4 +43,6 @@ tauri-plugin-opener = "2"
 
 [build-dependencies]
 tauri-build = { version = "2", features = ["config-toml"] }
-glib-build-tools = "0.20.0"
+
+[dev-dependencies]
+test-log = "0.2.18"

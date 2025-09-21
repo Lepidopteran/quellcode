@@ -57,7 +57,7 @@ impl ObjectImpl for SettingsWindow {
         });
 
         let model = gio::ListStore::new::<Asset>();
-        
+
         let model_clone = model.clone();
         glib::spawn_future_local(async move {
             while let Ok(package_list) = rx.recv().await {

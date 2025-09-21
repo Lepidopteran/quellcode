@@ -1,5 +1,5 @@
-use std::path::PathBuf;
 use directories::ProjectDirs;
+use std::path::PathBuf;
 
 pub fn project_dirs() -> ProjectDirs {
     ProjectDirs::from("org", "quellcode", "Quellcode").unwrap()

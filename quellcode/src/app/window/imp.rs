@@ -18,8 +18,8 @@ use gtk::{
 };
 
 use crate::app::{
-    state::{save_state, CodeState, State as AppState, WindowState},
     property::PropertyType,
+    state::{save_state, CodeState, State as AppState, WindowState},
     ui::code_view::CodeView,
 };
 
@@ -304,10 +304,8 @@ impl Window {
         };
     }
 
-    #[template_callback] 
-    fn generator_changed(&self) {
-
-    }
+    #[template_callback]
+    fn generator_changed(&self) {}
 
     #[template_callback]
     fn theme_changed(&self) {
@@ -599,7 +597,7 @@ impl ObjectImpl for Window {
                     width: Some(window.width()),
                     height: Some(window.height()),
                     maximized: Some(window.is_maximized()),
-                }
+                },
             };
 
             if let Err(err) = save_state(&state) {

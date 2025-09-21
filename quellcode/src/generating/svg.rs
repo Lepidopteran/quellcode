@@ -116,7 +116,8 @@ pub fn generate_svg(
         document = document.add(text_element);
     }
 
-    let height = text.lines().count() * (text_size + options.line_height as usize) + options.padding as usize;
+    let height = text.lines().count() * (text_size + options.line_height as usize)
+        + options.padding as usize;
     let width = text.lines().map(|line| line.len()).max().unwrap_or(0) * text_size;
 
     document = document.set("viewBox", format!("0 0 {} {}", width, height));

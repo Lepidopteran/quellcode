@@ -6,8 +6,8 @@ mod property;
 mod scraping;
 mod settings;
 mod ui;
-mod window;
 mod util;
+mod window;
 
 pub mod state;
 
@@ -39,18 +39,16 @@ pub fn github_token() -> Result<Option<SecretString>> {
     }
 
     match keyring::Entry::new("quellcode", "github_token") {
-        Ok(entry) => {
-            match entry.get_password() {
-                Ok(token) => Ok(Some(SecretString::from(token))),
-                Err(err) => {
-                    if err.to_string() != *"No matching entry found in secure storage" {
-                        Err(err.into())
-                    } else {
-                        Ok(None)
-                    }
+        Ok(entry) => match entry.get_password() {
+            Ok(token) => Ok(Some(SecretString::from(token))),
+            Err(err) => {
+                if err.to_string() != *"No matching entry found in secure storage" {
+                    Err(err.into())
+                } else {
+                    Ok(None)
                 }
             }
-        }
+        },
         Err(err) => Err(err.into()),
     }
 }

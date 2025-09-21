@@ -8,7 +8,7 @@ use super::dir::data_dir;
 #[derive(Debug, Default, Deserialize, Serialize, Clone)]
 pub struct State {
     pub code: CodeState,
-    pub window: WindowState
+    pub window: WindowState,
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
