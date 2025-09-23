@@ -1,22 +1,16 @@
 <script lang="ts">
 	import { invoke } from "@tauri-apps/api/core";
-	import VirtualList from "svelte-tiny-virtual-list";
+	import Listbox from "./components/Listbox.svelte";
 </script>
 
-<main>
+<main class="h-svh">
 	{#await invoke<string[]>("font_families")}
 		Fetching Fonts
 	{:then families}
-		<VirtualList
-			itemCount={families.length}
-			height={400}
-			width="100%"
-			itemSize={24}
-		>
-			{#snippet item({ style, index })}
-				{@const family = families[index as number]}
-				<span {style} style:text-align="left" style:font-family={family}>{family}</span>
+		<Listbox data={families} getKey={(_, i) => i}>
+			{#snippet item(item, _)}
+					{item}
 			{/snippet}
-		</VirtualList>
+		</Listbox>
 	{/await}
 </main>

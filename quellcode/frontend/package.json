@@ -20,9 +20,12 @@
     "vite": "^7.1.6"
   },
   "dependencies": {
+    "@floating-ui/core": "^1.7.3",
+    "@floating-ui/dom": "^1.7.4",
     "@tailwindcss/vite": "^4.1.13",
     "@tauri-apps/api": "^2.8.0",
-    "svelte-tiny-virtual-list": "^3.0.1",
-    "tailwindcss": "^4.1.13"
+    "tailwindcss": "^4.1.13",
+    "ts-pattern": "^5.8.0",
+    "virtua": "^0.43.3"
   }
 }
