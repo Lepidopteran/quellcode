@@ -22,6 +22,8 @@
   "dependencies": {
     "@floating-ui/core": "^1.7.3",
     "@floating-ui/dom": "^1.7.4",
+    "@iconify-json/mingcute": "^1.2.5",
+    "@iconify/utils": "^3.0.2",
     "@tailwindcss/vite": "^4.1.13",
     "@tauri-apps/api": "^2.8.0",
     "tailwindcss": "^4.1.13",
