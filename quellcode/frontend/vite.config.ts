@@ -1,6 +1,7 @@
 import { defineConfig } from 'vite'
 import { svelte } from '@sveltejs/vite-plugin-svelte'
 import process from "node:process"
+import { resolve } from "node:path";
 import tailwindcss from '@tailwindcss/vite';
 
 const host = process.env.TAURI_DEV_HOST;
@@ -8,6 +9,12 @@ const host = process.env.TAURI_DEV_HOST;
 export default defineConfig({
   // prevent vite from obscuring rust errors
   clearScreen: false,
+	resolve: {
+		alias: {
+			"@components": resolve(__dirname, "src/components"),
+			"@lib": resolve(__dirname, "src/lib"),
+		},
+	},
   server: {
     // make sure this port matches the devUrl port in tauri.conf.json file
     port: 1420,
