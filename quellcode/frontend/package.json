@@ -26,6 +26,7 @@
     "@iconify/utils": "^3.0.2",
     "@tailwindcss/vite": "^4.1.13",
     "@tauri-apps/api": "^2.8.0",
+    "runed": "^0.34.0",
     "tailwindcss": "^4.1.13",
     "ts-pattern": "^5.8.0",
     "virtua": "^0.43.3"
