@@ -57,12 +57,12 @@
 	function handleSelect(
 		item: T,
 		index: number,
-		_source: "keyboard" | "click" | "search",
+		source: "keyboard" | "click" | "search",
 		activate = false,
 	) {
 		const input = textInputRef as HTMLInputElement;
 
-		if (activate) {
+		if (source === "click" || activate) {
 			input.value = getDisplayText(item);
 			dropdownExpanded = false;
 
@@ -192,7 +192,7 @@
 
 <div
 	class={[
-		"items-center border inline-flex border-black/50 rounded-theme focus-within:border-primary-500/50 overflow-hidden",
+		"items-center border inline-flex border-black/50 bg-base-200 rounded-theme focus-within:border-primary-500/50 overflow-hidden",
 		className,
 	]}
 	{...rest}
