@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { invoke } from "@tauri-apps/api/core";
-	import Combobox from "@components/input/Combobox.svelte";
 	import FontSelector from "@components/input/FontSelector.svelte";
 
 	let fontFamily: string | null = $state(null);
@@ -25,7 +24,9 @@
 		<details class="w-full bg-base-200/50 px-2 rounded-theme">
 			<summary class="font-bold select-none py-2">Code Settings</summary>
 			<div>
-				<FontSelector class="w-full" onChange={(f) => (fontFamily = f)} defaultFamily="JetBrains Mono" />
+				<FontSelector
+					class="w-full"
+				/>
 			</div>
 		</details>
 	</aside>

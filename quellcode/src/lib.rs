@@ -1,6 +1,8 @@
 use color_eyre::eyre::Result;
 use log::warn;
 use secrecy::SecretString;
+use serde::Serialize;
+use ts_rs::TS;
 
 pub mod asset_store;
 pub mod generating;
@@ -43,22 +45,35 @@ pub fn run() {
         .expect("error while running tauri application");
 }
 
+#[derive(Debug, TS, Serialize, Clone)]
+#[ts(export)]
+pub struct FontFamily {
+    pub name: String,
+    pub monospace: bool,
+}
+
 #[tauri::command]
-fn font_families() -> Vec<String> {
+fn font_families() -> Vec<FontFamily> {
     let mut db = usvg::fontdb::Database::new();
     db.load_system_fonts();
 
-    let mut families = Vec::new();
+    let mut families: Vec<FontFamily> = Vec::new();
 
     for face in db.faces() {
         if let Some((family, _)) = face.families.first() {
-            if families.contains(family) {
+            if families.iter().any(|f| f.name.as_str() == family) {
                 continue;
             }
 
-            families.push(family.to_string());
+            families.push(FontFamily {
+                name: family.to_string(),
+                monospace: face.monospaced,
+            });
         }
     }
+
+    log::debug!("Found {} font families", families.len());
+    log::debug!("{:?}", families);
 
     families
 }

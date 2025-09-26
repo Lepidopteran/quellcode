@@ -18,6 +18,7 @@
 		"paths": {
 			"@components/*": ["src/components/*"],
 			"@lib/*": ["src/lib/*"],
+			"@bindings/*": ["src/lib/bindings/*"],
 		}
   },
   "include": ["src/**/*.ts", "src/**/*.js", "src/**/*.svelte"]

@@ -201,7 +201,7 @@
 		type="text"
 		role="combobox"
 		bind:this={textInputRef}
-		value={activeIndex !== -1 ? getDisplayText(data[activeIndex]) : ""}
+		value={activeIndex !== -1 && data.length > 0 ? getDisplayText(data[activeIndex]) : ""}
 		aria-controls={listboxRef?.id}
 		aria-expanded={dropdownExpanded}
 		aria-label={label}
