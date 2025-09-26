@@ -1,5 +1,5 @@
 <script lang="ts" generics="T">
-	import { onMount, type Component, type Snippet } from "svelte";
+	import { onMount, untrack, type Component, type Snippet } from "svelte";
 	import Listbox from "./Listbox.svelte";
 	import type { ClassValue, HTMLAttributes } from "svelte/elements";
 	import Button from "@components/input/Button.svelte";
@@ -51,8 +51,8 @@
 	let floatingRef: HTMLDivElement | null = $state(null);
 	let textInputRef: HTMLInputElement | null = $state(null);
 	let buttonRef: ReturnType<typeof Button> | null = $state(null);
-	let disableSearchFilter = $state(false);
-	let query = $state("");
+	let displayText = $state("");
+	let query = $state<string | null>(null);
 
 	function handleSelect(
 		item: T,
@@ -60,10 +60,8 @@
 		source: "keyboard" | "click" | "search",
 		activate = false,
 	) {
-		const input = textInputRef as HTMLInputElement;
-
 		if (source === "click" || activate) {
-			input.value = getDisplayText(item);
+			displayText = getDisplayText(item);
 			dropdownExpanded = false;
 
 			onActivate?.(item, index);
@@ -80,10 +78,6 @@
 		match(key)
 			.returnType<void>()
 			.with("Escape", () => {
-				if (!dropdownExpanded && textInputRef) {
-					textInputRef.value = "";
-				}
-
 				dropdownExpanded = false;
 			})
 			.with("ArrowDown", () => {
@@ -119,8 +113,9 @@
 				dropdownExpanded = false;
 			})
 			.otherwise(() => {
-				query = textInputRef?.value ?? "";
-				listboxRef?.update();
+				if (!dropdownExpanded) {
+					dropdownExpanded = true;
+				}
 			});
 	}
 
@@ -144,8 +139,8 @@
 		dropdownExpanded = !dropdownExpanded;
 	}
 
-	export function search(query: string) {
-		disableSearchFilter = query === "";
+	export function search(searchQuery: string) {
+		query = searchQuery;
 		listboxRef?.update();
 	}
 
@@ -188,6 +183,24 @@
 			cleanup();
 		};
 	});
+
+	$effect(() => {
+		if (data.length > 0 && data[activeIndex] !== undefined) {
+			displayText = getDisplayText(data[activeIndex]);
+		}
+	});
+
+	$effect(() => {
+		if (!dropdownExpanded) {
+			query = null;
+		} else {
+			const index = untrack(() => activeIndex);
+			textInputRef?.focus();
+			if (listboxRef?.isIndexInView(index)) {
+				listboxRef?.scrollToIndex(index, false);
+			}
+		}
+	});
 </script>
 
 <div
@@ -201,20 +214,26 @@
 		type="text"
 		role="combobox"
 		bind:this={textInputRef}
-		value={activeIndex !== -1 && data.length > 0 ? getDisplayText(data[activeIndex]) : ""}
+		value={dropdownExpanded && query !== null ? query : displayText}
 		aria-controls={listboxRef?.id}
 		aria-expanded={dropdownExpanded}
 		aria-label={label}
 		aria-autocomplete="list"
-		onblur={() => {
-			if (dropdownExpanded && buttonRef?.id !== document.activeElement?.id) {
-				dropdownExpanded = false;
-			}
-		}}
 		onfocus={() => {
 			if (!dropdownExpanded) {
 				dropdownExpanded = true;
 			}
+		}}
+		oninput={(event) => {
+			const { value } = event.currentTarget;
+			query = value;
+
+			if (query.length === 0) {
+				displayText = "";
+				activeIndex = -1;
+			}
+
+			listboxRef?.update();
 		}}
 		{onkeydown}
 		class="input truncate focus:outline-none px-2 py-1 inset-shadow-sm inset-shadow-black/50 flex-1"
@@ -266,11 +285,11 @@
 		bind:activeIndex
 		filters={[
 			(item, index) => {
-				if (disableSearchFilter || !textInputRef?.value) {
+				if (!query) {
 					return true;
 				}
 
-				return searchFilter(query, item, index);
+				return searchFilter(query ?? "", item, index);
 			},
 			...filters,
 		]}

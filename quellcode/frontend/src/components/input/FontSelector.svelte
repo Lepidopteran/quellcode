@@ -18,13 +18,11 @@
 	onMount(() => {
 		(async () => {
 			families = await invoke<FontFamily[]>("font_families");
-			console.log(families);
 			if (!defaultFamily) {
 				activeIndex = 0;
 			} else {
 				activeIndex =
-					families.findIndex((family) => family.name === defaultFamily) ??
-					0;
+					families.findIndex((family) => family.name === defaultFamily) ?? 0;
 			}
 
 			loading = false;
@@ -54,8 +52,6 @@
 
 	let activeIndex = $state(0);
 	let { defaultFamily, class: classValue, onChange }: Props = $props();
-
-	$inspect(families[activeIndex], families);
 </script>
 
 <Combobox
@@ -65,16 +61,19 @@
 	bind:activeIndex
 	data={families}
 	style={`font-family: "${families[activeIndex]?.name || ""}", sans-serif`}
-	onActivate={(item) => onChange?.({
-		name: `"${item.name}"`,
-		monospace: item.monospace
-	})}
+	onActivate={(item) =>
+		onChange?.({
+			name: `"${item.name}"`,
+			monospace: item.monospace,
+		})}
 	class={classValue}
 	virtualize
 >
 	{#snippet item(item, _)}
 		<div class="flex items-center justify-between px-2">
-			<div class="truncate" style:font-family={`"${item.name}", sans-serif`}>{item.name}</div>
+			<div class="truncate h-6 align-middle" style:font-family={`"${item.name}", sans-serif`}>
+				{item.name}
+			</div>
 		</div>
 	{/snippet}
 </Combobox>
