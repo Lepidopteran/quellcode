@@ -26,6 +26,8 @@
 			<div>
 				<FontSelector
 					class="w-full"
+					onChange={(f) => (fontFamily = `"${f.name}"` || null)}
+					defaultFamily="JetBrains Mono"
 				/>
 			</div>
 		</details>

@@ -7,7 +7,7 @@
 
 	interface Props {
 		defaultFamily?: string;
-		onChange?: (family: FontFamily | undefined) => void;
+		onChange?: (family: FontFamily) => void;
 		class?: ClassValue;
 	}
 
@@ -64,14 +64,14 @@
 	getDisplayText={(item) => item.name}
 	bind:activeIndex
 	data={families}
-	style={`font-family: ${families[activeIndex]}`}
+	style={`font-family: "${families[activeIndex]?.name || ""}", sans-serif`}
 	onActivate={(item) => onChange?.(item)}
 	class={classValue}
 	virtualize
 >
 	{#snippet item(item, _)}
 		<div class="flex items-center justify-between px-2">
-			<div class="truncate" style:font-family={item?.name.replaceAll("'", "\'")}>{item?.name || "N/A"}</div>
+			<div class="truncate" style:font-family={`"${item.name}", sans-serif`}>{item.name}</div>
 		</div>
 	{/snippet}
 </Combobox>
