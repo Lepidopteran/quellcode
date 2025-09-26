@@ -22,6 +22,8 @@
 		onActivate?: (item: T, index?: number) => void;
 		onSelect?: (item: T, index?: number) => void;
 		filters?: Array<(item: T, index: number) => boolean>;
+		header?: Snippet;
+		footer?: Snippet;
 		virtualize?: boolean;
 		value?: T;
 	}
@@ -196,9 +198,7 @@
 		} else {
 			const index = untrack(() => activeIndex);
 			textInputRef?.focus();
-			if (listboxRef?.isIndexInView(index)) {
-				listboxRef?.scrollToIndex(index, false);
-			}
+			listboxRef?.scrollToIndex(index, false);
 		}
 	});
 </script>
