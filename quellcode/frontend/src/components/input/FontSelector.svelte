@@ -65,7 +65,10 @@
 	bind:activeIndex
 	data={families}
 	style={`font-family: "${families[activeIndex]?.name || ""}", sans-serif`}
-	onActivate={(item) => onChange?.(item)}
+	onActivate={(item) => onChange?.({
+		name: `"${item.name}"`,
+		monospace: item.monospace
+	})}
 	class={classValue}
 	virtualize
 >
