@@ -5,6 +5,7 @@ use serde::Serialize;
 use ts_rs::TS;
 
 pub mod asset_store;
+pub mod dir;
 pub mod generating;
 pub mod generator;
 pub mod property;
