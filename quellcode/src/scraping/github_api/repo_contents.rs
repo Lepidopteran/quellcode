@@ -54,12 +54,12 @@ impl Content {
 #[derive(Debug)]
 pub enum ContentResponse {
     Dir(Vec<Content>),
-    File(Content),
+    File(Box<Content>),
 }
 
 impl From<Content> for ContentResponse {
     fn from(content: Content) -> Self {
-        ContentResponse::File(content)
+        ContentResponse::File(Box::new(content))
     }
 }
 
@@ -85,13 +85,8 @@ impl ContentResponse {
     }
 }
 
-pub trait RepoContents {
-    async fn get_content(&self, owner: &str, repo: &str, path: &str) -> Result<ContentResponse>;
-    async fn get_content_from_url(&self, url: &str) -> Result<ContentResponse>;
-}
-
-impl RepoContents for GithubApi {
-    async fn get_content(&self, owner: &str, repo: &str, path: &str) -> Result<ContentResponse> {
+impl GithubApi {
+    pub async fn get_content(&self, owner: &str, repo: &str, path: &str) -> Result<ContentResponse> {
         get_content(
             &self.client,
             self.token.as_ref().map(|t| t.expose_secret()),
@@ -102,7 +97,7 @@ impl RepoContents for GithubApi {
         .await
     }
 
-    async fn get_content_from_url(&self, url: &str) -> Result<ContentResponse> {
+    pub async fn get_content_from_url(&self, url: &str) -> Result<ContentResponse> {
         get_content_from_url(
             &self.client,
             self.token.as_ref().map(|t| t.expose_secret()),

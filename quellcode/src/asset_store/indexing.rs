@@ -6,7 +6,7 @@ use url::Url;
 
 use crate::{
     scraping::{
-        github_api::{GitTree, GithubApi, RepoInfo, TreeItem},
+        github_api::{GithubApi, TreeItem},
         package_control::{get_package, get_package_from_url},
     },
     util::send_async_channel,

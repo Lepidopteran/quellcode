@@ -29,13 +29,8 @@ impl TreeItem {
     }
 }
 
-pub trait GitTree {
-    async fn get_tree(&self, owner: &str, repo: &str, branch: &str) -> Result<Tree>;
-    async fn get_tree_from_url(&self, url: &str, guess_branch_if_missing: bool) -> Result<Tree>;
-}
-
-impl GitTree for GithubApi {
-    async fn get_tree(&self, owner: &str, repo: &str, branch: &str) -> Result<Tree> {
+impl GithubApi {
+    pub async fn get_tree(&self, owner: &str, repo: &str, branch: &str) -> Result<Tree> {
         get_tree(
             &self.client,
             self.token.as_ref().map(|t| t.expose_secret()),
@@ -46,7 +41,7 @@ impl GitTree for GithubApi {
         .await
     }
 
-    async fn get_tree_from_url(&self, url: &str, guess_branch_if_missing: bool) -> Result<Tree> {
+    pub async fn get_tree_from_url(&self, url: &str, guess_branch_if_missing: bool) -> Result<Tree> {
         get_tree_from_url(
             &self.client,
             self.token.as_ref().map(|t| t.expose_secret()),

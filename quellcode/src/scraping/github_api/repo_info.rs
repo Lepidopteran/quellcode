@@ -17,13 +17,8 @@ pub struct Owner {
     pub avatar_url: Url,
 }
 
-pub trait RepoInfo {
-    async fn get_repo_info(&self, owner: &str, repo: &str) -> Result<Repo, GithubApiError>;
-    async fn get_repo_info_from_url(&self, url: &Url) -> Result<Repo, GithubApiError>;
-}
-
-impl RepoInfo for GithubApi {
-    async fn get_repo_info(&self, owner: &str, repo: &str) -> Result<Repo, GithubApiError> {
+impl GithubApi {
+    pub async fn get_repo_info(&self, owner: &str, repo: &str) -> Result<Repo, GithubApiError> {
         let url = format!("https://api.github.com/repos/{owner}/{repo}");
 
         let response = if let Some(token) = self.token.as_ref().map(|s| s.expose_secret()) {
@@ -42,7 +37,7 @@ impl RepoInfo for GithubApi {
         Ok(response.json().await?)
     }
 
-    async fn get_repo_info_from_url(&self, url: &Url) -> Result<Repo, GithubApiError> {
+    pub async fn get_repo_info_from_url(&self, url: &Url) -> Result<Repo, GithubApiError> {
         let path = url.path().trim_start_matches('/').to_string();
         let parts: Vec<_> = path.split('/').collect();
 

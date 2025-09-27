@@ -1,12 +1,8 @@
 use super::*;
 use reqwest::header::CONTENT_TYPE;
 
-pub trait GitBlobText {
-    async fn get_file_text(&self, owner: &str, repo: &str, blob_sha: &str) -> Result<String>;
-}
-
-impl GitBlobText for GithubApi {
-    async fn get_file_text(&self, owner: &str, repo: &str, blob_sha: &str) -> Result<String> {
+impl GithubApi {
+    pub async fn get_file_text(&self, owner: &str, repo: &str, blob_sha: &str) -> Result<String> {
         let url = format!("https://api.github.com/repos/{owner}/{repo}/git/blobs/{blob_sha}");
 
         let response = if let Some(token) = self.token.as_ref().map(|s| s.expose_secret()) {
