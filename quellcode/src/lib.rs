@@ -1,6 +1,9 @@
 use std::{collections::HashMap, path::PathBuf, sync::Mutex};
 
-use color_eyre::eyre::{eyre, Result};
+use color_eyre::{
+    eyre::{Result},
+    owo_colors::OwoColorize,
+};
 use log::warn;
 use secrecy::SecretString;
 use serde::Serialize;
@@ -11,6 +14,11 @@ use syntect::{
     util::LinesWithEndings,
 };
 use tauri::{Manager, State};
+use tauri_plugin_log::fern::colors::{self, ColoredLevelConfig};
+use time::{
+    format_description::well_known::{Rfc3339},
+    OffsetDateTime,
+};
 use ts_rs::TS;
 
 pub mod asset_store;
@@ -60,7 +68,24 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_store::Builder::new().build())
         .plugin(tauri_plugin_fs::init())
-        .plugin(tauri_plugin_log::Builder::new().build())
+        .plugin(
+            tauri_plugin_log::Builder::new()
+                .level(log::LevelFilter::Warn)
+                .level_for("quellcode_lib", log::LevelFilter::Debug)
+                .format(|out, message, record| {
+                    let mut colors = ColoredLevelConfig::new();
+                    colors.debug = colors::Color::Blue;
+                    colors.info = colors::Color::Green;
+
+                    out.finish(format_args!(
+                        "{} {:>5} {} {message}",
+                        OffsetDateTime::now_utc().format(&Rfc3339).unwrap().dimmed(),
+                        colors.color(record.level()),
+                        format_args!("{}:", record.target()).dimmed(),
+                    ))
+                })
+                .build(),
+        )
         .plugin(tauri_plugin_opener::init())
         .invoke_handler(tauri::generate_handler![
             get_css_for_theme,
@@ -198,7 +223,7 @@ fn font_families() -> Vec<FontFamily> {
         }
     }
 
-    log::debug!("Found {} font families", families.len());
+    log::info!("Found {} font families", families.len());
 
     families
 }
