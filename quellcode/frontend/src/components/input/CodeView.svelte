@@ -4,7 +4,7 @@
 	import type { ClassValue, HTMLAttributes } from "svelte/elements";
 
 	interface Props extends HTMLAttributes<HTMLElement> {
-		syntax: string;
+		syntax?: string | null;
 		fontFamily?: string;
 		textSize?: number;
 		editable?: boolean;
@@ -17,14 +17,21 @@
 	watch(
 		[() => syntax, () => code],
 		([syntax, code], [prevSyntax, prevCode]) => {
-			console.log(syntax, prevSyntax);
-			if ((prevSyntax !== syntax || prevCode !== code) && code.length > 0) {
+			if (
+				(prevSyntax !== syntax || prevCode !== code) &&
+				code.length > 0 &&
+				syntax
+			) {
 				(async () => {
 					htmlCode = await invoke<string>("generate_html", {
 						syntax,
 						code,
 					});
 				})();
+			} else if (!syntax && code.length > 0) {
+				htmlCode = code;
+			} else {
+				htmlCode = "";
 			}
 		},
 	);
