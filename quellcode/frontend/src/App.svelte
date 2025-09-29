@@ -1,66 +1,101 @@
 <script lang="ts">
 	import { invoke } from "@tauri-apps/api/core";
 	import FontSelector from "@components/input/FontSelector.svelte";
-	import { onMount} from "svelte";
+	import { onMount } from "svelte";
 	import Combobox from "@components/input/Combobox.svelte";
 	import CodeView from "@components/input/CodeView.svelte";
-	import { watch } from "runed";
+	import { LazyStore } from "@tauri-apps/plugin-store";
+
+	const styleSheet = new CSSStyleSheet();
+	const store = new LazyStore("state.json");
+
+	let editorTheme: string | null = $state(null);
+	let editorSyntax: string | null = $state(null);
+	let editorFontSize: number = $state(14);
+	let editorFontFamily: string = $state("Monospace");
+	let loaded = $state(false);
 
 	let syntectThemes: string[] = $state([]);
 	let syntectLanguages: string[] = $state([]);
 
 	onMount(async () => {
-		syntectThemes = await invoke("themes");
-		syntectLanguages = await invoke("syntaxes");
-	});
+		document.adoptedStyleSheets = [styleSheet];
+		syntectThemes = await invoke<string[]>("themes");
+		syntectLanguages = await invoke<string[]>("syntaxes");
 
-	let activeLanguage: string | null = $state(null);
-	let fontFamily: string | null = $state(null);
-	let cssStyleSheet = new CSSStyleSheet();
+		syntectThemes.sort();
+		syntectLanguages.sort();
 
-	async function handleThemeChange(theme: string) {
-		const css = await invoke<string>("get_css_for_theme", {
-			theme,
-		});
+		const prevEditorTheme = await store.get<string>("editorTheme");
+		const prevEditorSyntax = await store.get<string>("editorLanguage");
+		const prevEditorFontSize = await store.get<number>("editorFontSize");
+		const prevEditorFontFamily = await store.get<string>("editorFontFamily");
 
-		cssStyleSheet.replaceSync(css);
-	}
-
-	onMount(() => {
-		document.adoptedStyleSheets.push(cssStyleSheet);
-	});
-
-	watch(() => syntectThemes, (themes, prev) => {
-		if (themes.length > 0 && themes.some((theme, index) => theme !== prev?.[index])) {
-			handleThemeChange(syntectThemes[0]);
+		if (prevEditorTheme) {
+			editorTheme = prevEditorTheme;
 		}
+
+		if (prevEditorSyntax) {
+			editorSyntax = prevEditorSyntax;
+		}
+
+		if (prevEditorFontFamily) {
+			editorFontFamily = prevEditorFontFamily;
+		}
+
+		if (prevEditorFontSize) {
+			editorFontSize = prevEditorFontSize;
+		}
+
+		console.info(
+			"Loaded previous state",
+			prevEditorTheme,
+			prevEditorSyntax,
+			prevEditorFontFamily,
+			prevEditorFontSize,
+		);
+
+		loaded = true;
 	});
 
-	watch(
-		[() => syntectLanguages],
-		(syntaxes, prev) => {
-			if (
-				syntaxes.length > 0 &&
-				syntaxes.some((syntax, index) => syntax !== prev?.[index])
-			) {
-				activeLanguage = syntaxes[0].at(0) || null;
-			}
-		},
-	);
+	$effect(() => {
+		if (!loaded) {
+			return;
+		}
+
+		store.set("editorTheme", editorTheme);
+		store.set("editorLanguage", editorSyntax);
+		store.set("editorFontFamily", editorFontFamily);
+		store.set("editorFontSize", editorFontSize);
+	});
+
+	$effect(() => {
+		if (!loaded) {
+			return;
+		}
+
+		const theme = editorTheme || syntectThemes[0];
+		(async () => {
+			const css = await invoke<string>("get_css_for_theme", {
+				theme,
+			});
+			styleSheet.replace(css);
+		})();
+	});
 </script>
 
 <div class="overflow-hidden w-screen grid grid-cols-[1fr_300px]">
 	<main class="p-2 h-screen bg-base-200">
 		<div class="grid gap-2 grid-rows-2 h-full">
 			<CodeView
-				syntax={activeLanguage || "Rust"}
-				fontFamily={fontFamily || undefined}
+				syntax={editorSyntax}
+				fontFamily={editorFontFamily || undefined}
 				class=""
 				editable
 			></CodeView>
 			<pre
 				class="font-mono syntect-code border border-black/50 shadow-md size-full overflow-auto rounded-theme"
-				style:font-family={fontFamily}></pre>
+				style:font-family={editorFontFamily}></pre>
 		</div>
 	</main>
 	<aside class="p-2 overflow-y-auto h-full bg-base-100">
@@ -71,21 +106,22 @@
 					Code Font
 					<FontSelector
 						class="w-full"
-						onChange={(f) => (fontFamily = f.name || null)}
-						defaultFamily="JetBrains Mono"
+						onChange={(f) => (editorFontFamily = f.name)}
+						defaultFamily={editorFontFamily}
 					/>
 				</label>
 				<label>
 					Theme
 					<Combobox
 						data={syntectThemes}
-						activeIndex={0}
+						activeIndex={(editorTheme && syntectThemes.indexOf(editorTheme)) ||
+							0}
 						getDisplayText={(item) => item}
 						searchFilter={(query, item) =>
 							item.toLowerCase().includes(query.toLowerCase())}
 						label="Theme"
 						class="w-full"
-						onActivate={(item) => handleThemeChange(item)}
+						onActivate={(item) => (editorTheme = item)}
 					>
 						{#snippet item(item, _)}
 							<div class="flex items-center gap-2">
@@ -99,8 +135,10 @@
 					<Combobox
 						data={syntectLanguages}
 						getDisplayText={(item) => item}
-						activeIndex={0}
-						onActivate={(item) => (activeLanguage = item)}
+						activeIndex={(editorSyntax &&
+							syntectLanguages.indexOf(editorSyntax)) ||
+							0}
+						onActivate={(item) => (editorSyntax = item)}
 						searchFilter={(query, item) =>
 							item.toLowerCase().includes(query.toLowerCase())}
 						label="Language"

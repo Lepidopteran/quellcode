@@ -27,6 +27,16 @@ min-height = 600
 [app.security]
 csp = "" 
 
+[[app.security.capabilities]]
+		identifier = "default"
+		windows = [ "*" ]
+		permissions = [
+			"core:default",
+			"fs:default",
+			"store:default",
+			"log:default",
+		]
+
 [bundle]
 active = true
 targets = "all"

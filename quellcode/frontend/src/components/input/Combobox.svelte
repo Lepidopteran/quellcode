@@ -18,7 +18,7 @@
 		label?: string;
 		class?: ClassValue;
 		/** The max height of the listbox */
-		maxHeight?: number | string;
+		maxHeight?: number;
 		onActivate?: (item: T, index?: number) => void;
 		onSelect?: (item: T, index?: number) => void;
 		filters?: Array<(item: T, index: number) => boolean>;
@@ -44,6 +44,8 @@
 		onActivate,
 		onSelect,
 		item,
+		header,
+		footer,
 		virtualize,
 		label = "",
 		...rest
@@ -111,9 +113,7 @@
 					handleSelect(data[activeIndex], activeIndex, "keyboard", true);
 				}
 			})
-			.with("Tab", () => {
-				dropdownExpanded = false;
-			})
+			.with("Tab", () => {})
 			.otherwise(() => {
 				if (!dropdownExpanded) {
 					dropdownExpanded = true;
@@ -224,6 +224,15 @@
 				dropdownExpanded = true;
 			}
 		}}
+		onblur={() => {
+			if (
+				buttonRef?.id !== document.activeElement?.id ||
+				!floatingRef?.contains(document.activeElement) ||
+				dropdownExpanded
+			) {
+				dropdownExpanded = false;
+			}
+		}}
 		oninput={(event) => {
 			const { value } = event.currentTarget;
 			query = value;
@@ -271,18 +280,18 @@
 </div>
 <div
 	bind:this={floatingRef}
-	style:max-height={typeof maxHeight === "string"
-		? maxHeight
-		: `${maxHeight}px`}
+	style:-webkit-backdrop-filter="blur(10px)"
 	class={[
-		"absolute z-10 w-full backdrop-blur-3xl shadow overflow-y-auto border border-black/50 mt-1 rounded-theme transition-[height,_opacity] duration-[150ms,_200ms]",
-		dropdownExpanded ? "opacity-100 h-full" : "opacity-0 h-0",
+		"absolute z-10 w-full backdrop-blur-[10px] shadow overflow-hidden border border-black/50 mt-1 rounded-theme transition-[height,_opacity] duration-[150ms,_200ms]",
+		dropdownExpanded ? "opacity-100" : "opacity-0 h-0",
 	]}
 >
+	{@render header?.()}
 	<Listbox
 		onSelect={handleSelect}
 		bind:this={listboxRef}
 		bind:activeIndex
+		{maxHeight}
 		filters={[
 			(item, index) => {
 				if (!query) {
@@ -299,4 +308,5 @@
 		{data}
 		{item}
 	></Listbox>
+	{@render footer?.()}
 </div>

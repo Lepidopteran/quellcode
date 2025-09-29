@@ -14,7 +14,8 @@
 		data: T[];
 		activeIndex?: number;
 		class?: ClassValue;
-		height?: number | string;
+		height?: number;
+		maxHeight?: number;
 		width?: number | string;
 		item: Snippet<[item: T, index: number]>;
 		onSelect?: (
@@ -54,7 +55,8 @@
 		data,
 		class: className,
 		activeIndex = $bindable(-1),
-		height = "100%",
+		maxHeight = 300,
+		height,
 		width = "100%",
 		overscan = 5,
 		virtualize,
@@ -87,7 +89,8 @@
 	export function scrollToIndex(index: number, smooth = true) {
 		if (vListRef) {
 			const outOfBounds =
-				vListRef.findEndIndex() + overscan < index || vListRef.findStartIndex() - overscan > index;
+				vListRef.findEndIndex() + overscan < index ||
+				vListRef.findStartIndex() - overscan > index;
 
 			vListRef.scrollToIndex(index, {
 				align: "nearest",
@@ -146,11 +149,7 @@
 		updateFilteredData();
 
 		if (filteredData.length > 0) {
-			setActiveIndex(
-				filteredData[0].originalIndex,
-				false,
-				"search",
-			);
+			setActiveIndex(filteredData[0].originalIndex, false, "search");
 		}
 	}
 
@@ -188,8 +187,9 @@
 	tabindex="0"
 	{style}
 	{onkeydown}
-	class={["outline-primary-600", className]}
-	style:height={typeof height === "string" ? height : `${height}px`}
+	class={["outline-primary-600 overflow-y-auto", className]}
+	style:height={height ? `${height}px` : undefined}
+	style:max-height={maxHeight ? `${maxHeight}px` : undefined}
 	style:width={typeof width === "string" ? width : `${width}px`}
 	aria-activedescendant={activeIndex === -1
 		? undefined
@@ -200,6 +200,7 @@
 		<VList
 			bind:this={vListRef}
 			data={filteredData}
+			style={`height: ${height || maxHeight ? `${height || maxHeight}px` : "auto"}`}
 			{overscan}
 			getKey={(_, index) => index}
 		>
