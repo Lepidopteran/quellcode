@@ -1,9 +1,6 @@
 use std::{collections::HashMap, path::PathBuf, sync::Mutex};
 
-use color_eyre::{
-    eyre::{Result},
-    owo_colors::OwoColorize,
-};
+use color_eyre::{eyre::Result, owo_colors::OwoColorize};
 use log::warn;
 use secrecy::SecretString;
 use serde::Serialize;
@@ -15,10 +12,7 @@ use syntect::{
 };
 use tauri::{Manager, State};
 use tauri_plugin_log::fern::colors::{self, ColoredLevelConfig};
-use time::{
-    format_description::well_known::{Rfc3339},
-    OffsetDateTime,
-};
+use time::{format_description::well_known::Rfc3339, OffsetDateTime};
 use ts_rs::TS;
 
 pub mod asset_store;
@@ -72,6 +66,7 @@ pub fn run() {
             tauri_plugin_log::Builder::new()
                 .level(log::LevelFilter::Warn)
                 .level_for("quellcode_lib", log::LevelFilter::Debug)
+                .level_for("quellcode", log::LevelFilter::Debug)
                 .format(|out, message, record| {
                     let mut colors = ColoredLevelConfig::new();
                     colors.debug = colors::Color::Blue;
@@ -96,66 +91,79 @@ pub fn run() {
             themes
         ])
         .setup(|app| {
-            let mut theme_set = ThemeSet::load_defaults();
             let syntax_set = SyntaxSet::load_defaults_nonewlines();
-            let theme_files = code_theme_files(app.app_handle());
 
-            for (path, format) in theme_files.iter() {
-                match format {
-                    ThemeFormat::VsCode => {
-                        let vscode_theme = syntect_vscode::parse_vscode_theme_file(path);
-
-                        if let Ok(vscode_theme) = vscode_theme {
-                            let theme_name = vscode_theme
-                                .name
-                                .clone()
-                                .unwrap_or(path.file_stem().unwrap().to_string_lossy().to_string());
-
-                            let theme =
-                                Theme::try_from(vscode_theme).expect("Failed to parse theme");
-
-                            theme_set.themes.insert(theme_name, theme);
-                        }
-                    }
-                    ThemeFormat::Sublime => {
-                        let color_scheme = sublime_color_scheme::parse_color_scheme_file(path);
-
-                        if let Ok(color_scheme) = color_scheme {
-                            let theme_name = color_scheme
-                                .name
-                                .clone()
-                                .unwrap_or(path.file_stem().unwrap().to_string_lossy().to_string());
-
-                            let theme =
-                                Theme::try_from(color_scheme).expect("Failed to parse theme");
-
-                            theme_set.themes.insert(theme_name, theme);
-                        }
-                    }
-                    ThemeFormat::TmTheme => {
-                        let theme = ThemeSet::get_theme(path);
-                        if let Ok(theme) = theme {
-                            let theme_name = theme
-                                .clone()
-                                .name
-                                .unwrap_or(path.file_stem().unwrap().to_string_lossy().to_string());
-
-                            theme_set.themes.insert(theme_name, theme);
-                        }
-                    }
+            for path in [
+                dir::code_theme_dir(app.app_handle()),
+                dir::code_syntax_dir(app.app_handle()),
+                dir::config_dir(app.app_handle()),
+            ] {
+                if !path.exists() {
+                    std::fs::create_dir_all(&path).expect("Failed to ensure directory exists");
                 }
             }
 
+            let theme_files = code_theme_files(app.app_handle());
             app.manage(Mutex::new(AppState {
-                theme_files,
-                syntect_themes: theme_set,
+                syntect_themes: load_themes(&theme_files),
                 syntect_syntaxes: syntax_set,
+                theme_files,
             }));
 
             Ok(())
         })
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
+}
+
+fn load_themes(theme_files: &HashMap<PathBuf, ThemeFormat>) -> ThemeSet {
+    let mut theme_set = ThemeSet::load_defaults();
+
+    for (path, format) in theme_files.iter() {
+        match format {
+            ThemeFormat::VsCode => {
+                let vscode_theme = syntect_vscode::parse_vscode_theme_file(path);
+
+                if let Ok(vscode_theme) = vscode_theme {
+                    let theme_name = vscode_theme
+                        .name
+                        .clone()
+                        .unwrap_or(path.file_stem().unwrap().to_string_lossy().to_string());
+
+                    let theme = Theme::try_from(vscode_theme).expect("Failed to parse theme");
+
+                    theme_set.themes.insert(theme_name, theme);
+                }
+            }
+            ThemeFormat::Sublime => {
+                let color_scheme = sublime_color_scheme::parse_color_scheme_file(path);
+
+                if let Ok(color_scheme) = color_scheme {
+                    let theme_name = color_scheme
+                        .name
+                        .clone()
+                        .unwrap_or(path.file_stem().unwrap().to_string_lossy().to_string());
+
+                    let theme = Theme::try_from(color_scheme).expect("Failed to parse theme");
+
+                    theme_set.themes.insert(theme_name, theme);
+                }
+            }
+            ThemeFormat::TmTheme => {
+                let theme = ThemeSet::get_theme(path);
+                if let Ok(theme) = theme {
+                    let theme_name = theme
+                        .clone()
+                        .name
+                        .unwrap_or(path.file_stem().unwrap().to_string_lossy().to_string());
+
+                    theme_set.themes.insert(theme_name, theme);
+                }
+            }
+        }
+    }
+
+    theme_set
 }
 
 #[tauri::command]
