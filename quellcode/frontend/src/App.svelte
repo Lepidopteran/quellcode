@@ -12,6 +12,9 @@
 	import type { GeneratorOptions } from "@lib/bindings/GeneratorOptions";
 	import type { PropertyValue } from "@lib/bindings/PropertyValue";
 	import Range from "@components/input/Range.svelte";
+	import { save } from "@tauri-apps/plugin-dialog";
+	import { writeText } from "@tauri-apps/plugin-clipboard-manager";
+	import { writeTextFile } from "@tauri-apps/plugin-fs";
 
 	const styleSheet = new CSSStyleSheet();
 	const store = new LazyStore("state.json");
@@ -29,6 +32,8 @@
 
 	let debouncedEditorCode = new Debounced(() => editorCode, 1000);
 	let debouncededitorFontSize = new Debounced(() => editorFontSize, 1000);
+
+	let fontSelectorRef: ReturnType<typeof FontSelector> | null = $state(null);
 
 	let loaded = $state(false);
 
@@ -71,6 +76,10 @@
 
 		if (prevEditorFontFamily) {
 			editorFontFamily = prevEditorFontFamily;
+
+			if (fontSelectorRef) {
+				fontSelectorRef.setFamily(editorFontFamily.replace(/^["']|["']$/g, ""));
+			}
 		}
 
 		if (prevEditorFontSize) {
@@ -175,6 +184,7 @@
 					<label>
 						Code Font
 						<FontSelector
+							bind:this={fontSelectorRef}
 							class="w-full"
 							onChange={(f) => (editorFontFamily = f.name)}
 							defaultFamily={editorFontFamily}
@@ -231,11 +241,7 @@
 						</div>
 						<div class="flex items-center">
 							<span class="mr-2 text-base-text/50">a</span>
-							<Range
-								bind:value={editorFontSize}
-								min={8}
-								max={96}
-							/>
+							<Range bind:value={editorFontSize} min={8} max={96} />
 							<span class="ml-2 text-base-text/50" style="">A</span>
 						</div>
 					</label>
@@ -292,7 +298,39 @@
 				</details>
 			{/if}
 		</div>
-		<Button disabled={outputCode.length === 0}  variant="primary" class="mt-auto p-2 rounded-theme">
+		<Button
+			disabled={outputCode.length === 0}
+			onclick={async () => {
+				if (activeGeneratorInfo?.saveable) {
+					const filters = [];
+
+					if (
+						activeGeneratorInfo?.extensions &&
+						activeGeneratorInfo?.extensions?.length > 0
+					) {
+						filters.push({
+							name:
+								activeGeneratorInfo.extensions[0]
+									.replace(".", "")
+									.toUpperCase() || "Code",
+							extensions: activeGeneratorInfo.extensions,
+						});
+					}
+
+					const path = await save({
+						filters: [...filters, { name: "All Files", extensions: ["*"] }],
+					});
+
+					if (path) {
+						await writeTextFile(path, outputCode);
+					}
+				} else {
+					await writeText(outputCode);
+				}
+			}}
+			variant="primary"
+			class="mt-auto p-2 rounded-theme"
+		>
 			{#if activeGeneratorInfo?.saveable}
 				<span>Save</span>
 			{:else}
