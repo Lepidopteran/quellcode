@@ -1,4 +1,4 @@
-use log::{trace};
+use log::trace;
 use serde::{Deserialize, Serialize};
 use url::Url;
 

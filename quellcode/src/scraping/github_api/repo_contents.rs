@@ -86,7 +86,12 @@ impl ContentResponse {
 }
 
 impl GithubApi {
-    pub async fn get_content(&self, owner: &str, repo: &str, path: &str) -> Result<ContentResponse> {
+    pub async fn get_content(
+        &self,
+        owner: &str,
+        repo: &str,
+        path: &str,
+    ) -> Result<ContentResponse> {
         get_content(
             &self.client,
             self.token.as_ref().map(|t| t.expose_secret()),

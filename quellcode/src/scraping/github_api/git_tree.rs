@@ -41,7 +41,11 @@ impl GithubApi {
         .await
     }
 
-    pub async fn get_tree_from_url(&self, url: &str, guess_branch_if_missing: bool) -> Result<Tree> {
+    pub async fn get_tree_from_url(
+        &self,
+        url: &str,
+        guess_branch_if_missing: bool,
+    ) -> Result<Tree> {
         get_tree_from_url(
             &self.client,
             self.token.as_ref().map(|t| t.expose_secret()),
