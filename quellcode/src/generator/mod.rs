@@ -1,10 +1,12 @@
-use std::fmt::Debug;
-use thiserror::Error;
+use color_eyre::eyre::Result;
+use serde::{Deserialize, Serialize};
+use std::{collections::BTreeMap, fmt::Debug};
 
 use syntect::{
     highlighting::Theme,
     parsing::{SyntaxReference, SyntaxSet},
 };
+use ts_rs::TS;
 
 use super::property::*;
 
@@ -14,30 +16,29 @@ pub use svg::SvgGenerator;
 type Properties = Vec<Property>;
 type Extensions = Vec<&'static str>;
 
-#[derive(Debug, Error)]
-pub enum GeneratorError {
-    #[error("Property error: {0}")]
-    PropertyError(#[from] PropertyError),
-    #[error("Highlight error: {0}")]
-    HighlightError(#[from] syntect::Error),
-    #[error("Other error: {0}")]
-    Other(String),
-}
-
-#[derive(Debug, Default, Clone)]
-pub struct Info {
-    name: String,
-    description: String,
+#[derive(Debug, Default, Clone, Serialize, TS)]
+#[ts(export)]
+pub struct GeneratorInfo {
+    /// The name of the generator
+    name: &'static str,
+    /// The description of a generator
+    description: &'static str,
+    /// The output language syntax of the generated code if any
+    syntax: Option<&'static str>,
+    /// The extensions supported by the generator if any
     extensions: Option<Extensions>,
+    /// Defines extra properties defined by the generator if any
+    properties: Option<Properties>,
+    /// Whether the generator result should/can be saved
     saveable: bool,
 }
 
-impl Info {
+impl GeneratorInfo {
     pub fn name(&self) -> &str {
-        &self.name
+        self.name
     }
     pub fn description(&self) -> &str {
-        &self.description
+        self.description
     }
     pub fn extensions(&self) -> Option<Extensions> {
         self.extensions.clone()
@@ -47,24 +48,26 @@ impl Info {
     }
 }
 
-pub trait Generator: Send + Sync + Debug {
-    fn properties(&self) -> &Properties;
-    fn get_property(&self, name: &str) -> Result<PropertyValue, GeneratorError>;
-    fn set_property(&mut self, name: &str, value: PropertyValue) -> Result<(), GeneratorError>;
-    fn font_family(&self) -> &str;
-    fn set_font_family(&mut self, family: &str);
-    fn font_size(&self) -> f32;
-    fn set_font_size(&mut self, size: f32);
+#[derive(Debug, Default, Clone, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct GeneratorOptions {
+    pub font_size: f32,
+    pub font_family: String,
+    pub extra: BTreeMap<String, PropertyValue>,
+}
 
+pub trait Generator: Send + Sync + Debug {
     fn generate_code(
         &self,
         _text: &str,
         _theme: &Theme,
         _syntax: &SyntaxReference,
         _syntax_set: &SyntaxSet,
-    ) -> Result<String, GeneratorError>;
+        _options: &GeneratorOptions,
+    ) -> Result<String>;
 }
 
-pub trait GeneratorInfo {
-    fn information() -> Info;
+pub trait GeneratorExt {
+    fn information() -> GeneratorInfo;
 }

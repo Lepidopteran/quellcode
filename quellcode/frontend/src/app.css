@@ -52,7 +52,7 @@
 		--font-sans: "Inter", sans-serif;
 		--font-mono: "JetBrains Mono", monospace;
 		--cell-padding: 0.5rem;
-		--roundness: 0.5rem;
+		--roundness: 1rem;
 		--success: #4ade80;
 		--warning: #facc15;
 		--error: #ef4444;

@@ -1,15 +1,17 @@
 <script lang="ts">
 	import { invoke } from "@tauri-apps/api/core";
 	import { watch } from "runed";
+	import type { Snippet } from "svelte";
 	import type { ClassValue, HTMLAttributes } from "svelte/elements";
 
 	interface Props extends HTMLAttributes<HTMLElement> {
 		syntax?: string | null;
 		fontFamily?: string;
-		textSize?: number;
+		fontSize?: number;
 		editable?: boolean;
 		class?: ClassValue;
 		code?: string;
+		renderOutputAsHtml?: boolean;
 	}
 
 	let htmlCode = $state("");
@@ -43,7 +45,7 @@
 		syntax,
 		editable,
 		fontFamily = "monospace",
-		textSize = 16,
+		fontSize: textSize = 16,
 		code = $bindable(""),
 		class: classValue,
 		...rest
@@ -55,12 +57,14 @@
 	style:font-size={`${textSize}px`}
 	style:font-family={fontFamily}
 	class={[
-		"code-view syntect-code border border-black/50 p-2 focus-within:border-primary-500/50 rounded-theme overflow-auto",
+		"code-view syntect-code border border-black/50 p-2 focus-within:border-primary-500/50 rounded-theme overflow-auto relative",
 		classValue,
 	]}
 	{...rest}
 >
-	<pre class="pointer-none"><code class="syntect-code">{@html htmlCode}</code>
+	<pre class="pointer-none"><code class="syntect-code"
+			>{#if syntax}{@html htmlCode}{:else}{code}{/if}
+	</code>
 	</pre>
 
 	<textarea

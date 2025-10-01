@@ -27,6 +27,7 @@
     "@iconify/utils": "^3.0.2",
     "@tailwindcss/vite": "^4.1.13",
     "@tauri-apps/api": "^2.8.0",
+    "@tauri-apps/plugin-dialog": "^2.4.0",
     "@tauri-apps/plugin-log": "^2.7.0",
     "@tauri-apps/plugin-store": "^2.4.0",
     "runed": "^0.34.0",

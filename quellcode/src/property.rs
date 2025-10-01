@@ -1,5 +1,7 @@
+use serde::{Deserialize, Serialize};
 use std::fmt::Display;
 use thiserror::Error;
+use ts_rs::TS;
 
 #[derive(Debug, Error)]
 pub enum PropertyError {
@@ -9,7 +11,8 @@ pub enum PropertyError {
     InvalidValueType,
 }
 
-#[derive(Debug, PartialEq, Eq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone, Serialize, TS)]
+#[serde(rename_all = "camelCase")]
 pub enum PropertyType {
     String,
     Int,
@@ -17,7 +20,8 @@ pub enum PropertyType {
     Bool,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[serde(untagged)]
 pub enum PropertyValue {
     String(String),
     Int(i32),
@@ -25,7 +29,8 @@ pub enum PropertyValue {
     Bool(bool),
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, TS)]
+#[ts(export)]
 pub struct Property {
     pub name: &'static str,
     pub kind: PropertyType,
@@ -46,6 +51,8 @@ impl Property {
     /// # Examples
     ///
     /// ```
+    /// use quellcode_lib::property::{Property, PropertyType, PropertyValue};
+    ///
     /// let property = Property {
     ///     name: "example_property_name",
     ///     kind: PropertyType::String,

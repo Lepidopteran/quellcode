@@ -1,7 +1,7 @@
 use std::{collections::HashMap, path::PathBuf, sync::Mutex};
 
 use color_eyre::{eyre::Result, owo_colors::OwoColorize};
-use log::warn;
+use log::{info, warn};
 use secrecy::SecretString;
 use serde::Serialize;
 use syntect::{
@@ -15,9 +15,10 @@ use tauri_plugin_log::fern::colors::{self, ColoredLevelConfig};
 use time::{format_description::well_known::Rfc3339, OffsetDateTime};
 use ts_rs::TS;
 
+use crate::generator::{Generator, GeneratorExt, GeneratorInfo, GeneratorOptions, SvgGenerator};
+
 pub mod asset_store;
 pub mod dir;
-pub mod generating;
 pub mod generator;
 pub mod property;
 pub mod scraping;
@@ -55,11 +56,13 @@ pub struct AppState {
     pub theme_files: HashMap<PathBuf, ThemeFormat>,
     pub syntect_themes: ThemeSet,
     pub syntect_syntaxes: SyntaxSet,
+    pub generators: Vec<(GeneratorInfo, Box<dyn Generator>)>,
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_store::Builder::new().build())
         .plugin(tauri_plugin_fs::init())
         .plugin(
@@ -84,9 +87,11 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .invoke_handler(tauri::generate_handler![
             get_css_for_theme,
+            generate_code,
             generate_html,
             font_families,
             theme_files,
+            generators,
             syntaxes,
             themes
         ])
@@ -103,11 +108,15 @@ pub fn run() {
                 }
             }
 
+            let generators: Vec<(GeneratorInfo, Box<dyn Generator>)> =
+                vec![(SvgGenerator::information(), Box::new(SvgGenerator::new()))];
+
             let theme_files = code_theme_files(app.app_handle());
             app.manage(Mutex::new(AppState {
                 syntect_themes: load_themes(&theme_files),
                 syntect_syntaxes: syntax_set,
                 theme_files,
+                generators,
             }));
 
             Ok(())
@@ -164,6 +173,92 @@ fn load_themes(theme_files: &HashMap<PathBuf, ThemeFormat>) -> ThemeSet {
     }
 
     theme_set
+}
+
+#[tauri::command]
+fn generators(state: State<Mutex<AppState>>) -> Vec<GeneratorInfo> {
+    let mut generators = state
+        .lock()
+        .expect("Failed to lock state")
+        .generators
+        .iter()
+        .map(|(info, _)| info.clone())
+        .collect::<Vec<_>>();
+
+    generators.sort_by(|a, b| a.name().cmp(b.name()));
+    generators
+}
+
+#[tauri::command]
+fn generate_code(
+    state: State<Mutex<AppState>>,
+    code: String,
+    generator_name: String,
+    syntax: String,
+    theme: String,
+    options: GeneratorOptions,
+) -> Result<String, String> {
+    let state = &state.lock().expect("Failed to lock state");
+    let syntax_set = state.syntect_syntaxes.clone();
+    let syntax = syntax_set
+        .find_syntax_by_name(&syntax)
+        .ok_or(format!("Could not find syntax \"{}\"", syntax))?;
+
+    let theme_set = &state.syntect_themes;
+    let theme = theme_set.themes.get(&theme).ok_or("Failed to get theme")?;
+
+    let generators = &state.generators;
+    let generator = generators
+        .iter()
+        .find_map(|(info, gen)| {
+            if info.name() == generator_name {
+                Some(gen)
+            } else {
+                None
+            }
+        })
+        .ok_or("Failed to get generator".to_string())?;
+
+    info!("Generating code with generator {}", generator_name);
+    generator
+        .generate_code(&code, theme, syntax, &syntax_set, &options)
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn generate_html(
+    state: State<Mutex<AppState>>,
+    code: String,
+    syntax: String,
+) -> Result<String, String> {
+    let syntax_set = &state.lock().expect("Failed to lock state").syntect_syntaxes;
+
+    let syntax = syntax_set
+        .find_syntax_by_name(&syntax)
+        .ok_or(format!("Could not find syntax \"{}\"", syntax))?;
+
+    let mut generator = ClassedHTMLGenerator::new_with_class_style(
+        syntax,
+        syntax_set,
+        syntect::html::ClassStyle::SpacedPrefixed {
+            prefix: SYNTECT_PREFIX,
+        },
+    );
+
+    for line in LinesWithEndings::from(code.as_str()) {
+        let _ = generator.parse_html_for_line_which_includes_newline(line);
+    }
+
+    Ok(generator.finalize())
+}
+
+#[tauri::command]
+fn theme_files(state: State<'_, Mutex<AppState>>) -> HashMap<PathBuf, ThemeFormat> {
+    state
+        .lock()
+        .expect("Failed to lock state")
+        .theme_files
+        .clone()
 }
 
 #[tauri::command]
@@ -255,38 +350,6 @@ pub fn github_token() -> Result<Option<SecretString>> {
         },
         Err(err) => Err(err.into()),
     }
-}
-
-#[tauri::command]
-fn generate_html(state: State<Mutex<AppState>>, code: String, syntax: String) -> String {
-    let syntax_set = &state.lock().expect("Failed to lock state").syntect_syntaxes;
-
-    let syntax = syntax_set
-        .find_syntax_by_name(&syntax)
-        .expect("Failed to get syntax");
-
-    let mut generator = ClassedHTMLGenerator::new_with_class_style(
-        syntax,
-        syntax_set,
-        syntect::html::ClassStyle::SpacedPrefixed {
-            prefix: SYNTECT_PREFIX,
-        },
-    );
-
-    for line in LinesWithEndings::from(code.as_str()) {
-        let _ = generator.parse_html_for_line_which_includes_newline(line);
-    }
-
-    generator.finalize()
-}
-
-#[tauri::command]
-fn theme_files(state: State<'_, Mutex<AppState>>) -> HashMap<PathBuf, ThemeFormat> {
-    state
-        .lock()
-        .expect("Failed to lock state")
-        .theme_files
-        .clone()
 }
 
 pub fn code_theme_files(app_handle: &tauri::AppHandle) -> HashMap<PathBuf, ThemeFormat> {
