@@ -57,7 +57,7 @@
 	style:font-size={`${textSize}px`}
 	style:font-family={fontFamily}
 	class={[
-		"code-view syntect-code border border-black/50 p-2 focus-within:border-primary-500/50 rounded-theme overflow-auto relative",
+		"code-view syntect-code p-2 focus-within:border-primary-500/50 border border-base-text/5 has-disabled:border-black/10 rounded-theme overflow-auto relative",
 		classValue,
 	]}
 	{...rest}
@@ -82,9 +82,11 @@
 		.code-view {
 			display: grid;
 			grid-template: "code-view";
-			place-content: stretch;
-			place-items: stretch;
 			overflow: auto;
+			box-shadow:
+				inset 0 0 0 1px rgb(from var(--color-black) r g b / 0.25),
+				inset 0 var(--spacing) calc(var(--spacing) * 2) 0
+					rgb(from var(--color-black) r g b / 0.5);
 
 			& > * {
 				grid-area: code-view;
