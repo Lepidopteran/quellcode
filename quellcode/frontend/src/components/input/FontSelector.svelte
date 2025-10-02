@@ -71,7 +71,7 @@
 
 <Combobox
 	bind:this={comboBoxRef}
-	searchFilter={(query, item) => item.name.includes(query)}
+	searchFilter={(query, item) => item.name.toLowerCase().includes(query.toLowerCase())}
 	getDisplayText={(item) => item.name}
 	bind:activeIndex
 	data={families}
