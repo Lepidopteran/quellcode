@@ -266,7 +266,7 @@
 				return;
 			}
 		}}
-		class="shadow py-1"
+		class="shadow p-1"
 	>
 		<Icon
 			name="down-small-fill"

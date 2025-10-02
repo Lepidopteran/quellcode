@@ -63,6 +63,8 @@
 			justify-content: center;
 			align-items: center;
 			gap: 0.5rem;
+			padding: 0.25rem 0.5rem;
+			border-radius: var(--radius-theme-sm);
 
 			&:disabled {
 				cursor: not-allowed;
