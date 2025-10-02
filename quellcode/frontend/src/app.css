@@ -149,9 +149,14 @@
 	body {
 		color-scheme: var(--scheme);
 		height: 100svh;
+		width: 100svw;
 		overflow: hidden;
 		font-family: var(--font-sans);
 		background-color: var(--base-200);
 		color: var(--base-950);
+	}
+
+	#app {
+		height: 100%;
 	}
 }

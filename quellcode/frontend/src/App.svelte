@@ -12,9 +12,10 @@
 	import type { GeneratorOptions } from "@lib/bindings/GeneratorOptions";
 	import type { PropertyValue } from "@lib/bindings/PropertyValue";
 	import Range from "@components/input/Range.svelte";
-	import { save } from "@tauri-apps/plugin-dialog";
+	import { open, save } from "@tauri-apps/plugin-dialog";
 	import { writeText } from "@tauri-apps/plugin-clipboard-manager";
-	import { writeTextFile } from "@tauri-apps/plugin-fs";
+	import { readTextFile, writeTextFile } from "@tauri-apps/plugin-fs";
+	import Icon from "@components/Icon.svelte";
 
 	const styleSheet = new CSSStyleSheet();
 	const store = new LazyStore("state.json");
@@ -146,9 +147,25 @@
 	});
 </script>
 
-<div class="overflow-hidden w-screen grid grid-cols-[1fr_300px]">
-	<main class="p-2 h-screen bg-base-200">
-		<div class="grid gap-2 grid-rows-2 h-full">
+<div
+	class="overflow-hidden h-full w-full grid grid-cols-[1fr_300px] grid-rows-[auto_1fr]"
+>
+	<header
+		class="p-2 bg-base-100 col-span-2 flex items-center justify-between shadow-md"
+	>
+		<Button
+			variant="primary"
+			onclick={async () => {
+				const file = await open({ title: "Open File" });
+
+				if (file) {
+					editorCode = await readTextFile(file);
+				}
+			}}>Open</Button
+		>
+	</header>
+	<main class="p-2 bg-base-200 h-full overflow-hidden shadow-md col-span-1">
+		<div class="grid-rows-2 grid grid-cols-1 gap-2 overflow-hidden h-full">
 			<CodeView
 				syntax={editorSyntax}
 				fontFamily={editorFontFamily || undefined}
@@ -181,15 +198,6 @@
 			>
 				<summary class="font-bold select-none py-2">Editor Settings</summary>
 				<div class="pb-2 space-y-2">
-					<label>
-						Code Font
-						<FontSelector
-							bind:this={fontSelectorRef}
-							class="w-full"
-							onChange={(f) => (editorFontFamily = f.name)}
-							defaultFamily={editorFontFamily}
-						/>
-					</label>
 					<label>
 						Theme
 						<Combobox
@@ -231,6 +239,23 @@
 								</div>
 							{/snippet}
 						</Combobox>
+					</label>
+				</div>
+			</details>
+			<details
+				class="w-full bg-base-200/50 px-2 rounded-theme shadow-md inset-shadow-sm inset-shadow-white/5"
+				open
+			>
+				<summary class="font-bold select-none py-2">Font Settings</summary>
+				<div class="pb-2 space-y-2">
+					<label>
+						Code Font
+						<FontSelector
+							bind:this={fontSelectorRef}
+							class="w-full"
+							onChange={(f) => (editorFontFamily = f.name)}
+							defaultFamily={editorFontFamily}
+						/>
 					</label>
 					<label>
 						<div class="flex justify-between items-center">
