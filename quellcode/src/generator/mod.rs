@@ -13,7 +13,7 @@ use super::property::*;
 pub mod svg;
 pub use svg::SvgGenerator;
 
-type Properties = Vec<Property>;
+type Properties = Vec<PropertyInfo>;
 type Extensions = Vec<&'static str>;
 
 #[derive(Debug, Default, Clone, Serialize, TS)]

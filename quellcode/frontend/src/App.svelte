@@ -201,8 +201,8 @@
 			></CodeView>
 		</div>
 	</main>
-	<aside class="flex flex-col p-2 overflow-y-auto h-full bg-base-100">
-		<div class="flex-1 space-y-2">
+	<aside class="grid grid-cols-1 grid-rows-[1fr_auto] p-2 h-full bg-base-100">
+		<div class="space-y-2 h-full overflow-y-auto">
 			<label class="block">
 				Generator
 				<select
@@ -307,7 +307,7 @@
 					>
 					<div class="pb-2">
 						{#each activeGeneratorInfo.properties as property}
-							{@const name = property.name.replace("_", " ")}
+							{@const name = property.displayName || property.name.replace("_", " ")}
 							<label class="block">
 								{#if property.kind === "string"}
 									<span class="capitalize">{name}</span>
@@ -315,27 +315,29 @@
 										type="text"
 										class="w-full"
 										bind:value={
-											() => (property.default as string) || "",
+											() => property.default || "",
 											(value) => (activeGeneratorOptions[property.name] = value)
 										}
 									/>
 								{/if}
-								{#if property.kind === "int"}
+								{#if property.kind === "integer"}
 									<span class="capitalize">{name}</span>
 									<input
 										type="number"
 										class="w-full"
+										max={property.max}
+										min={property.min}
 										bind:value={
-											() => (property.default as number) || 0,
+											() => property.default || 0,
 											(value) => (activeGeneratorOptions[property.name] = value)
 										}
 									/>
 								{/if}
-								{#if property.kind === "bool"}
+								{#if property.kind === "boolean"}
 									<input
 										type="checkbox"
 										bind:checked={
-											() => (property.default as boolean) || false,
+											() => property.default || false,
 											(value) => (activeGeneratorOptions[property.name] = value)
 										}
 									/>

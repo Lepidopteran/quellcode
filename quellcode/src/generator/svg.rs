@@ -1,6 +1,6 @@
 use crate::generator::GeneratorOptions;
 
-use super::{Generator, GeneratorExt, GeneratorInfo, Property, PropertyType, PropertyValue};
+use super::{Generator, GeneratorExt, GeneratorInfo, PropertyInfo};
 
 use color_eyre::eyre::Result;
 use svg::{
@@ -144,19 +144,21 @@ impl GeneratorExt for SvgGenerator {
             description: "Generates code into svg format",
             extensions: Some(vec!["svg"]),
             properties: Some(vec![
-                Property {
-                    name: "include_background",
-                    description: "Include a background for the code",
-                    kind: PropertyType::Bool,
-                    default: Some(PropertyValue::Bool(true)),
-                    ..Default::default()
+                PropertyInfo::Boolean {
+                    name: "include_background".to_string(),
+                    description: "Include a background for the code".to_string(),
+                    default: Some(true),
+                    depends_on: None,
+                    display_name: None,
+                    disables: None,
                 },
-                Property {
-                    name: "bake_font",
-                    description: "Whether to convert the font to points",
-                    kind: PropertyType::Bool,
-                    default: Some(PropertyValue::Bool(true)),
-                    ..Default::default()
+                PropertyInfo::Boolean {
+                    name: "bake_font".to_string(),
+                    description: "Whether to convert the font to points".to_string(),
+                    default: Some(true),
+                    depends_on: None,
+                    display_name: None,
+                    disables: None,
                 },
             ]),
             syntax: Some("XML"),

@@ -11,15 +11,6 @@ pub enum PropertyError {
     InvalidValueType,
 }
 
-#[derive(Debug, PartialEq, Eq, Clone, Serialize, TS)]
-#[serde(rename_all = "camelCase")]
-pub enum PropertyType {
-    String,
-    Int,
-    Float,
-    Bool,
-}
-
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
 #[serde(untagged)]
 pub enum PropertyValue {
@@ -30,78 +21,68 @@ pub enum PropertyValue {
 }
 
 #[derive(Debug, Clone, Serialize, TS)]
+#[serde(rename_all = "camelCase")]
 #[ts(export)]
-pub struct Property {
-    pub name: &'static str,
-    pub kind: PropertyType,
-    pub value: PropertyValue,
-    pub description: &'static str,
-    pub default: Option<PropertyValue>,
-    pub min: Option<PropertyValue>,
-    pub max: Option<PropertyValue>,
+pub enum StringPropertySubtype {
+    Path,
+    Template,
 }
 
-impl Property {
-    /// Converts the property's name from snake_case to a prettified title case string.
-    ///
-    /// # Returns
-    ///
-    /// A `String` that represents the property's name converted to title case, with underscores replaced by spaces and each word capitalized.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use quellcode_lib::property::{Property, PropertyType, PropertyValue};
-    ///
-    /// let property = Property {
-    ///     name: "example_property_name",
-    ///     kind: PropertyType::String,
-    ///     value: PropertyValue::String("".to_string()),
-    ///     description: "",
-    ///     default: None,
-    ///     min: None,
-    ///     max: None,
-    /// };
-    ///
-    /// assert_eq!(property.pretty_name(), "Example Property Name");
-    /// ```
-    pub fn pretty_name(&self) -> String {
-        self.name
-            .replace("_", " ")
-            .split_whitespace()
-            .map(|word| {
-                let mut c = word.chars();
-                match c.next() {
-                    Some(first) => first.to_uppercase().chain(c).collect::<String>(),
-                    None => String::new(),
-                }
-            })
-            .collect::<Vec<String>>()
-            .join(" ")
-    }
+#[derive(Debug, Clone, Serialize, TS)]
+#[serde(rename_all = "camelCase", rename_all_fields = "camelCase", tag = "kind")]
+#[ts(export)]
+pub enum PropertyInfo {
+    String {
+        name: String,
+        description: String,
+        default: Option<String>,
+        sub_type: Option<StringPropertySubtype>,
+        display_name: Option<String>,
+        depends_on: Option<String>,
+        disables: Option<String>,
+    },
+
+    Integer {
+        name: String,
+        description: String,
+        default: Option<i32>,
+        min: Option<i32>,
+        max: Option<i32>,
+        step: Option<i32>,
+        depends_on: Option<String>,
+        display_name: Option<String>,
+        disables: Option<String>,
+    },
+
+    Float {
+        name: String,
+        description: String,
+        default: Option<f64>,
+        min: Option<f64>,
+        max: Option<f64>,
+        step: Option<f64>,
+        depends_on: Option<String>,
+        display_name: Option<String>,
+        disables: Option<String>,
+    },
+
+    Boolean {
+        name: String,
+        description: String,
+        default: Option<bool>,
+        depends_on: Option<String>,
+        display_name: Option<String>,
+        disables: Option<String>,
+    },
 }
 
-impl Default for Property {
-    fn default() -> Self {
-        Property {
-            name: "",
-            kind: PropertyType::String,
-            value: PropertyValue::String("".to_string()),
-            description: "",
-            default: None,
-            min: None,
-            max: None,
-        }
-    }
-}
-
-impl PropertyValue {
-    pub fn type_of(&self) -> PropertyType {
+impl PropertyInfo {
+    pub fn name(&self) -> &str {
         match self {
-            PropertyValue::String(_) => PropertyType::String,
-            PropertyValue::Int(_) => PropertyType::Int,
-            PropertyValue::Float(_) => PropertyType::Float,
-            PropertyValue::Bool(_) => PropertyType::Bool,
+            PropertyInfo::String { name, .. } => name,
+            PropertyInfo::Integer { name, .. } => name,
+            PropertyInfo::Float { name, .. } => name,
+            PropertyInfo::Boolean { name, .. } => name,
         }
     }
 }
