@@ -1,0 +1,312 @@
+<script lang="ts" generics="T">
+	import { onMount, untrack, type Component, type Snippet } from "svelte";
+	import Listbox from "./Listbox.svelte";
+	import type { ClassValue, HTMLAttributes } from "svelte/elements";
+	import Button from "@components/input/Button.svelte";
+	import Icon from "@components/Icon.svelte";
+	import { match } from "ts-pattern";
+	import { autoUpdate, computePosition, shift } from "@floating-ui/dom";
+	import { flip } from "@floating-ui/dom";
+	import { size } from "@floating-ui/dom";
+
+	interface Props extends HTMLAttributes<HTMLDivElement> {
+		data: T[];
+		item: Snippet<[item: T, index: number]>;
+		getDisplayText: (item: T) => string;
+		searchFilter: (query: string, item: T, index: number) => boolean;
+		activeIndex?: number;
+		label?: string;
+		class?: ClassValue;
+		/** The max height of the listbox */
+		maxHeight?: number;
+		onActivate?: (item: T, index?: number) => void;
+		onSelect?: (item: T, index?: number) => void;
+		filters?: Array<(item: T, index: number) => boolean>;
+		header?: Snippet;
+		footer?: Snippet;
+		virtualize?: boolean;
+		value?: T;
+	}
+
+	let dropdownExpanded = $state(false);
+
+	const uuid = $props.id();
+	export const id = `combobox-${uuid}`;
+
+	let {
+		data,
+		class: className,
+		maxHeight = 300,
+		activeIndex = $bindable(-1),
+		searchFilter,
+		filters = [],
+		getDisplayText,
+		onActivate,
+		onSelect,
+		item,
+		header,
+		footer,
+		virtualize,
+		label = "",
+		...rest
+	}: Props = $props();
+
+	let listboxRef: ReturnType<typeof Listbox> | null = $state(null);
+	let floatingRef: HTMLDivElement | null = $state(null);
+	let textInputRef: HTMLInputElement | null = $state(null);
+	let buttonRef: ReturnType<typeof Button> | null = $state(null);
+	let displayText = $state("");
+	let query = $state<string | null>(null);
+
+	function handleSelect(
+		item: T,
+		index: number,
+		source: "keyboard" | "click" | "search",
+		activate = false,
+	) {
+		if (source === "click" || activate) {
+			displayText = getDisplayText(item);
+			dropdownExpanded = false;
+
+			onActivate?.(item, index);
+
+			return;
+		}
+
+		onSelect?.(item, index);
+	}
+
+	function onkeydown(event: KeyboardEvent) {
+		const { key, altKey } = event;
+
+		match(key)
+			.returnType<void>()
+			.with("Escape", () => {
+				dropdownExpanded = false;
+			})
+			.with("ArrowDown", () => {
+				event.preventDefault();
+				if (altKey) {
+					dropdownExpanded = true;
+					return;
+				}
+
+				if (dropdownExpanded) {
+					listboxRef?.next();
+				}
+			})
+			.with("ArrowUp", () => {
+				event.preventDefault();
+				if (altKey) {
+					dropdownExpanded = false;
+					return;
+				}
+
+				if (dropdownExpanded) {
+					listboxRef?.previous();
+				}
+			})
+			.with("Enter", () => {
+				dropdownExpanded = false;
+
+				if (activeIndex !== -1) {
+					handleSelect(data[activeIndex], activeIndex, "keyboard", true);
+				}
+			})
+			.with("Tab", () => {})
+			.otherwise(() => {
+				if (!dropdownExpanded) {
+					dropdownExpanded = true;
+				}
+			});
+	}
+
+	export function focus() {
+		textInputRef?.focus();
+	}
+
+	export function blur() {
+		textInputRef?.blur();
+	}
+
+	export function open() {
+		dropdownExpanded = true;
+	}
+
+	export function close() {
+		dropdownExpanded = false;
+	}
+
+	export function toggle() {
+		dropdownExpanded = !dropdownExpanded;
+	}
+
+	export function search(searchQuery: string) {
+		query = searchQuery;
+		listboxRef?.update();
+	}
+
+	export function scrollToIndex(index: number, smooth = true) {
+		listboxRef?.scrollToIndex(index, smooth);
+	}
+
+	export function update() {
+		listboxRef?.update();
+	}
+
+	$effect(() => {
+		if (!textInputRef || !floatingRef) {
+			return;
+		}
+
+		const cleanup = autoUpdate(textInputRef, floatingRef, () => {
+			computePosition(textInputRef!, floatingRef!, {
+				placement: "bottom-start",
+				middleware: [
+					flip(),
+					shift(),
+					size({
+						apply({ rects }) {
+							Object.assign(floatingRef!.style, {
+								width: `${rects.reference.width}px`,
+							});
+						},
+					}),
+				],
+			}).then(({ x, y }) => {
+				Object.assign(floatingRef!.style, {
+					left: `${x}px`,
+					top: `${y}px`,
+				});
+			});
+		});
+
+		return () => {
+			cleanup();
+		};
+	});
+
+	$effect(() => {
+		if (data.length > 0 && data[activeIndex] !== undefined) {
+			displayText = getDisplayText(data[activeIndex]);
+		}
+	});
+
+	$effect(() => {
+		if (!dropdownExpanded) {
+			query = null;
+		} else {
+			const index = untrack(() => activeIndex);
+			textInputRef?.focus();
+			listboxRef?.scrollToIndex(index, false);
+		}
+	});
+</script>
+
+<div
+	class={[
+		"items-center border inline-flex border-black/50 bg-base-200 rounded-theme focus-within:border-primary-500/50 overflow-hidden",
+		className,
+	]}
+	{...rest}
+>
+	<input
+		type="text"
+		role="combobox"
+		bind:this={textInputRef}
+		value={dropdownExpanded && query !== null ? query : displayText}
+		aria-controls={listboxRef?.id}
+		aria-expanded={dropdownExpanded}
+		aria-label={label}
+		aria-autocomplete="list"
+		onfocus={() => {
+			if (!dropdownExpanded) {
+				dropdownExpanded = true;
+			}
+		}}
+		onblur={() => {
+			if (
+				buttonRef?.id !== document.activeElement?.id ||
+				!floatingRef?.contains(document.activeElement) ||
+				dropdownExpanded
+			) {
+				dropdownExpanded = false;
+			}
+		}}
+		oninput={(event) => {
+			const { value } = event.currentTarget;
+			query = value;
+
+			if (query.length === 0) {
+				displayText = "";
+				activeIndex = -1;
+			}
+
+			listboxRef?.update();
+		}}
+		{onkeydown}
+		class="input truncate focus:outline-none px-2 py-1 inset-shadow-sm inset-shadow-black/50 flex-1"
+	/>
+	<Button
+		bind:this={buttonRef}
+		aria-controls={listboxRef?.id}
+		aria-label={label}
+		tabindex={-1}
+		variant="ghost"
+		aria-expanded={dropdownExpanded}
+		onclick={() => {
+			if (dropdownExpanded) {
+				textInputRef?.focus();
+				dropdownExpanded = false;
+
+				return;
+			} else {
+				dropdownExpanded = true;
+
+				return;
+			}
+		}}
+		class="shadow p-1"
+	>
+		<Icon
+			name="down-small-fill"
+			size="1.5em"
+			class={[
+				"transition-transform duration-100",
+				dropdownExpanded ? "rotate-180" : "",
+			]}
+		></Icon>
+	</Button>
+</div>
+<div
+	bind:this={floatingRef}
+	style:-webkit-backdrop-filter="blur(10px)"
+	class={[
+		"absolute z-10 w-full backdrop-blur-[10px] shadow overflow-hidden border border-black/50 mt-1 rounded-theme transition-[height,_opacity] duration-[150ms,_200ms]",
+		dropdownExpanded ? "opacity-100" : "opacity-0 h-0",
+	]}
+>
+	{@render header?.()}
+	<Listbox
+		onSelect={handleSelect}
+		bind:this={listboxRef}
+		bind:activeIndex
+		{maxHeight}
+		filters={[
+			(item, index) => {
+				if (!query) {
+					return true;
+				}
+
+				return searchFilter(query ?? "", item, index);
+			},
+			...filters,
+		]}
+		tabindex={-1}
+		{virtualize}
+		width="100%"
+		{data}
+		{item}
+	></Listbox>
+	{@render footer?.()}
+</div>

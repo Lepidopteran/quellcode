@@ -16,8 +16,15 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
-    - name: Install GTK
-      run: sudo apt -y install libgtk-4-dev build-essential libdbus-1-dev pkg-config
+    - uses: dtolnay/rust-toolchain@stable
+    - name: Git LFS Pull
+      run: |
+        git lfs install
+        git lfs pull
+    - name: Update Dependencies
+      run: sudo apt update
+    - name: Install Dependencies
+      run:  sudo apt install -y libwebkit2gtk-4.1-dev build-essential curl wget file libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev    
     - name: Build
       run: cargo build --verbose
     - name: Run tests

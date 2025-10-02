@@ -1,0 +1,54 @@
+productName = "quellcode"
+version = "0.1.0"
+identifier = "org.quellcode.quellcode"
+
+[build]
+devUrl = "http://localhost:1420"
+frontendDist = "dist"
+
+[build.beforeDevCommand]
+cwd = "frontend"
+script = "bun run dev"
+
+[build.beforeBuildCommand]
+cwd = "frontend"
+script = "bun run build"
+
+[app]
+withGlobalTauri = false
+
+[[app.windows]]
+title = "Quellcode"
+width = 800
+height = 600
+min-width = 800
+min-height = 600
+
+[app.security]
+csp = "" 
+
+[[app.security.capabilities]]
+		identifier = "default"
+		windows = [ "*" ]
+		permissions = [
+			"core:default",
+			"fs:default",
+			"fs:allow-write-text-file",
+			"fs:allow-read-text-file",
+			"store:default",
+			"log:default",
+			"clipboard-manager:allow-write-text",
+			"dialog:default"
+		]
+
+[bundle]
+active = true
+targets = "all"
+icon = [
+	"data/icons/32x32.png",
+	"data/icons/128x128.png",
+	"data/icons/128x128@2x.png",
+	"data/icons/icon.icns",
+	"data/icons/icon.ico"
+]
+
