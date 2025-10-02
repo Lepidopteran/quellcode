@@ -1,7 +1,7 @@
 <script lang="ts">
 	import type { Snippet } from "svelte";
 	import type { Action } from "svelte/action";
-	import type { HTMLButtonAttributes } from "svelte/elements";
+	import type { ClassValue, HTMLButtonAttributes } from "svelte/elements";
 
 	interface Props extends HTMLButtonAttributes {
 		tabindex?: number;
@@ -9,6 +9,7 @@
 		active?: boolean;
 		variant?: "primary" | "base" | "secondary" | "ghost" | "none";
 		children?: Snippet;
+		class?: ClassValue;
 	}
 
 	let {
@@ -16,6 +17,7 @@
 		toggleable = false,
 		active = false,
 		variant = "base",
+		class: className,
 		children,
 		...rest
 	}: Props = $props();
@@ -44,12 +46,17 @@
 
 <button
 	{...rest}
-	class={`btn inline-flex inset-shadow-xs inset-shadow-highlight/25 cursor-pointer ${variant === "base" ? "" : `btn-${variant}`} ${active ? "btn-active" : ""} ${rest.class || ""}`}
+	class={[
+		"btn inline-flex inset-shadow-xs inset-shadow-highlight/25 cursor-pointer",
+		variant === "base" ? "" : `btn-${variant}`,
+		active ? "btn-active" : "",
+		className,
+	]}
 	role={toggleable ? "switch" : "button"}
 	aria-checked={toggleable ? active : undefined}
 	data-active={active || undefined}
 	use:toggleButton
-	{id}	
+	{id}
 	{type}
 >
 	{@render children?.()}
