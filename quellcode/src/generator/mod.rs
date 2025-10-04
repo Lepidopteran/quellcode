@@ -13,6 +13,9 @@ use super::property::*;
 pub mod svg;
 pub use svg::SvgGenerator;
 
+pub mod resolve;
+pub use resolve::FusionGenerator;
+
 type Properties = Vec<PropertyInfo>;
 type Extensions = Vec<&'static str>;
 

@@ -15,7 +15,7 @@ use tauri_plugin_log::fern::colors::{self, ColoredLevelConfig};
 use time::{format_description::well_known::Rfc3339, OffsetDateTime};
 use ts_rs::TS;
 
-use crate::generator::{Generator, GeneratorExt, GeneratorInfo, GeneratorOptions, SvgGenerator};
+use crate::generator::{FusionGenerator, Generator, GeneratorExt, GeneratorInfo, GeneratorOptions, SvgGenerator};
 
 pub mod asset_store;
 pub mod dir;
@@ -110,7 +110,10 @@ pub fn run() {
             }
 
             let generators: Vec<(GeneratorInfo, Box<dyn Generator>)> =
-                vec![(SvgGenerator::information(), Box::new(SvgGenerator::new()))];
+                vec![
+                    (FusionGenerator::information(), Box::new(FusionGenerator::new())),
+                    (SvgGenerator::information(), Box::new(SvgGenerator::new())),
+                ];
 
             let theme_files = code_theme_files(app.app_handle());
             app.manage(Mutex::new(AppState {

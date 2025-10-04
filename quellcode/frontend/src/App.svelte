@@ -80,6 +80,8 @@
 		if (prevEditorFontFamily) {
 			editorFontFamily = prevEditorFontFamily;
 
+			console.log(editorFontFamily.replace(/^["']|["']$/g, ""));
+
 			if (fontSelectorRef) {
 				fontSelectorRef.setFamily(editorFontFamily.replace(/^["']|["']$/g, ""));
 			}
@@ -118,7 +120,7 @@
 		}
 
 		const options: GeneratorOptions = {
-			fontFamily: editorFontFamily,
+			fontFamily: editorFontFamily.replace(/^["']|["']$/g, ""),
 			fontSize: debouncededitorFontSize.current,
 			extra: activeGeneratorOptions,
 		};
@@ -153,13 +155,12 @@
 	<div class="flex flex-col gap-2">
 		<div class="flex flex-col gap-1">
 			<h2 class="text-lg font-bold">Generator</h2>
-			<div class="flex flex-col gap-1">
-			</div>
+			<div class="flex flex-col gap-1"></div>
 		</div>
 		<div class="flex flex-col gap-1">
 			<h2 class="text-lg font-bold">Editor</h2>
 		</div>
-	</div>	
+	</div>
 </Modal>
 
 <div
@@ -205,12 +206,7 @@
 		<div class="space-y-2 h-full overflow-y-auto">
 			<label class="block">
 				Generator
-				<select
-					aria-readonly="true"
-					tabindex="-1"
-					class="w-full block"
-					disabled
-				>
+				<select class="w-full block" bind:value={activeGenerator}>
 					{#each generators as generator}
 						<option>{generator.name}</option>
 					{/each}
@@ -307,7 +303,8 @@
 					>
 					<div class="pb-2">
 						{#each activeGeneratorInfo.properties as property}
-							{@const name = property.displayName || property.name.replace("_", " ")}
+							{@const name =
+								property.displayName || property.name.replace("_", " ")}
 							<label class="block">
 								{#if property.kind === "string"}
 									<span class="capitalize">{name}</span>
@@ -315,7 +312,10 @@
 										type="text"
 										class="w-full"
 										bind:value={
-											() => property.default || "",
+											() =>
+												activeGeneratorOptions[property.name] ||
+												property.default ||
+												"",
 											(value) => (activeGeneratorOptions[property.name] = value)
 										}
 									/>
@@ -328,7 +328,10 @@
 										max={property.max}
 										min={property.min}
 										bind:value={
-											() => property.default || 0,
+											() =>
+												activeGeneratorOptions[property.name] ||
+												property.default ||
+												0,
 											(value) => (activeGeneratorOptions[property.name] = value)
 										}
 									/>
@@ -337,7 +340,10 @@
 									<input
 										type="checkbox"
 										bind:checked={
-											() => property.default || false,
+											() =>
+												(activeGeneratorOptions[property.name] as boolean) ||
+												property.default ||
+												false,
 											(value) => (activeGeneratorOptions[property.name] = value)
 										}
 									/>
