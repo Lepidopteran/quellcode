@@ -24,7 +24,7 @@
 
 	const uid = $props.id();
 
-	export const id = `button-${uid}`;
+	export const id = rest.id || `button-${uid}`;
 	const toggleButton: Action = (node) => {
 		const toggle = () => {
 			active = !active;
@@ -47,7 +47,7 @@
 <button
 	{...rest}
 	class={[
-		"btn inline-flex inset-shadow-xs inset-shadow-highlight/25 cursor-pointer",
+		"btn inset-shadow-xs inset-shadow-highlight/25 cursor-pointer",
 		variant === "base" ? "" : `btn-${variant}`,
 		active ? "btn-active" : "",
 		className,
