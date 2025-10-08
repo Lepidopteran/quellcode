@@ -17,6 +17,7 @@
 	import { readTextFile, writeTextFile } from "@tauri-apps/plugin-fs";
 	import Icon from "@components/Icon.svelte";
 	import Modal from "@components/Modal.svelte";
+	import Settings from "@components/settings/Settings.svelte";
 
 	const styleSheet = new CSSStyleSheet();
 	const store = new LazyStore("state.json");
@@ -151,16 +152,8 @@
 	});
 </script>
 
-<Modal title="Settings" bind:open={settingsDialogOpen}>
-	<div class="flex flex-col gap-2">
-		<div class="flex flex-col gap-1">
-			<h2 class="text-lg font-bold">Generator</h2>
-			<div class="flex flex-col gap-1"></div>
-		</div>
-		<div class="flex flex-col gap-1">
-			<h2 class="text-lg font-bold">Editor</h2>
-		</div>
-	</div>
+<Modal title="Settings" class="p-0" bind:open={settingsDialogOpen}>
+	<Settings app={{ themes: syntectThemes, sytaxes: syntectLanguages }} />
 </Modal>
 
 <div
