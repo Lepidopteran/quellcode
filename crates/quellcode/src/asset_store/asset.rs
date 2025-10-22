@@ -1,5 +1,21 @@
-use super::file::FileInfo;
 use crate::scraping::package_control::Entry;
+
+#[derive(Default, Clone, Debug, serde::Serialize, serde::Deserialize)]
+pub struct FileInfo {
+    pub name: String,
+    pub extension: String,
+    pub sha256: String,
+}
+
+impl FileInfo {
+    pub fn new(name: String, extension: String, sha256: String) -> Self {
+        Self {
+            name,
+            extension,
+            sha256,
+        }
+    }
+}
 
 #[derive(Debug, Copy, Clone, Default, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub enum AssetType {
