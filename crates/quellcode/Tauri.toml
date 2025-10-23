@@ -1,6 +1,6 @@
 productName = "quellcode"
 version = "0.1.0"
-identifier = "org.quellcode.quellcode"
+identifier = "org.quellcode.Quellcode"
 
 [build]
 devUrl = "http://localhost:1420"
