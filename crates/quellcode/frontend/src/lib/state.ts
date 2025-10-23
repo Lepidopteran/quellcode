@@ -1,4 +1,4 @@
 export interface AppState {
 	themes: Array<string>;
-	sytaxes: Array<string>;
+	syntaxes: Array<string>;
 }

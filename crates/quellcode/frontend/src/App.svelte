@@ -153,7 +153,7 @@
 </script>
 
 <Modal title="Settings" class="p-0" bind:open={settingsDialogOpen}>
-	<Settings app={{ themes: syntectThemes, sytaxes: syntectLanguages }} />
+	<Settings app={{ themes: syntectThemes, syntaxes: syntectLanguages }} />
 </Modal>
 
 <div
