@@ -24,7 +24,6 @@
 	:global {
 		.join {
 			display: flex;
-			justify-content: center;
 
 			&:not(.join-vertical) > :last-child {
 				border-top-left-radius: 0;
