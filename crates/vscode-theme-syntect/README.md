@@ -1,6 +1,8 @@
 # VSCode Theme Syntect
 
-[![Crates.io Version](https://img.shields.io/crates/v/sublime-color-scheme?style=plastic)](https://crates.io/crates/syntect-vscode)
+[![Crates.io Version](https://img.shields.io/crates/v/vscode-theme-syntect?style=plastic)](https://crates.io/crates/vscode-theme-syntect)
+[![docs.rs](https://img.shields.io/docsrs/vscode-theme-syntect?style=plastic)](https://docs.rs/vscode-theme-syntect)
+
 
 This is a simple library to parse a vscode theme to a [`syntect::highlighting::Theme`](https://docs.rs/syntect/latest/syntect/highlighting/struct.Theme.html).
 
@@ -12,7 +14,7 @@ Add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-syntect-vscode = "0.1.0"
+syntect-vscode = "0.1.1"
 ```
 
 ## Usage

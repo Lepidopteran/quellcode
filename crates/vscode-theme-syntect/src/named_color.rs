@@ -1,4 +1,5 @@
 //! A collection of named colors that convert to [syntect::highlighting::Color]
+#![allow(dead_code)]
 
 /// <div style="display: inline-block; width: 3em; height: 1em; background: aliceblue; box-shadow: inset 0px 0px 4px black; border-radius: 16px;"></div>
 pub const ALICEBLUE: syntect::highlighting::Color = syntect::highlighting::Color {
