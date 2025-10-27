@@ -1,5 +1,5 @@
 [package]
-name = "syntect-vscode"
+name = "syntect-vscode-theme"
 version = "0.1.0"
 edition = "2021"
 description = "Parse VSCode themes to Syntect Themes"
