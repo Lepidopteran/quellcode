@@ -6,7 +6,7 @@ edition = "2021"
 [dependencies]
 async-channel = "2.3.1"
 sublime-color-scheme = { path = "../sublime-color-scheme" }
-syntect-vscode = { path = "../vscode-theme" }
+syntect-vscode = { package = "vscode-theme-syntect", path = "../vscode-theme-syntect" }
 image = { version = "0.25.5", features = ["serde"] }
 resvg = "0.44.0"
 serde = { version = "1", features = ["derive"] }

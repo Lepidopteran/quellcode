@@ -1,4 +1,4 @@
 [workspace]
 	resolver = "3"
-	members = ["crates/sublime-color-scheme", "crates/vscode-theme", "crates/quellcode"]
+	members = ["crates/sublime-color-scheme", "crates/vscode-theme-syntect", "crates/quellcode"]
 
