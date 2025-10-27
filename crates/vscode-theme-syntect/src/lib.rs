@@ -1,5 +1,3 @@
-//! Parse Visual Studio Code themes and convert them into syntect a [Theme]
-
 use log::debug;
 use serde::Deserialize;
 use std::{collections::HashMap, path::Path, str::FromStr};
@@ -51,6 +49,7 @@ impl FromStr for VscodeTheme {
     type Err = ParseError;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         // NOTE: Need to remove comments and remove leading commas since JSON doesn't support them.
+        // TODO: Possibly do this manually to get rid of jsonc_parser.
         let value: serde_json::Value = jsonc_parser::parse_to_ast(
             s,
             &jsonc_parser::CollectOptions {
