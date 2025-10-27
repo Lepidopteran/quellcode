@@ -1,3 +1,5 @@
+//! Errors for parsing Visual Studio Code themes
+
 use syntect::{highlighting::ParseThemeError, parsing::ParseScopeError};
 use thiserror::Error;
 

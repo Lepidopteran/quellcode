@@ -1,3 +1,22 @@
+//! Parse a Visual Studio Code theme into a Syntect [Theme].
+//!
+//! # Usage
+//!
+//! ```rust
+//! use syntect::highlighting::Theme;
+//! use vscode_theme_syntect::VscodeTheme;
+//! use std::str::FromStr;
+//!
+//! let theme = VscodeTheme::from_str(include_str!("../assets/palenight.json")).expect("Failed to parse theme");
+//!
+//! assert!(Theme::try_from(theme).is_ok());
+//! ```
+//!
+//! Alternatively, you can parse themes using the included utility functions:
+//!
+//! - [`parse_vscode_theme_file`](parse_vscode_theme_file)
+//! - [`parse_vscode_theme`](parse_vscode_theme)
+
 use log::debug;
 use serde::Deserialize;
 use std::{collections::HashMap, path::Path, str::FromStr};
@@ -6,7 +25,7 @@ use syntect::highlighting::{
 };
 
 pub mod error;
-pub mod named_color;
+mod named_color;
 
 use crate::error::ParseError;
 
@@ -171,6 +190,17 @@ impl TryFrom<VscodeTheme> for Theme {
 /// Parse a Visual Studio Code theme from a string.
 ///
 /// Equivalent to calling [VscodeTheme::from_str]
+///
+/// # Example usage
+/// ```rust
+///
+/// use syntect::highlighting::Theme;
+/// use vscode_theme_syntect::parse_vscode_theme;
+///
+/// let theme = parse_vscode_theme(include_str!("../assets/palenight.json")).expect("Failed to parse theme");
+///
+/// assert!(Theme::try_from(theme).is_ok());
+/// ```
 pub fn parse_vscode_theme(scheme: &str) -> Result<VscodeTheme, ParseError> {
     VscodeTheme::from_str(scheme)
 }
@@ -178,6 +208,19 @@ pub fn parse_vscode_theme(scheme: &str) -> Result<VscodeTheme, ParseError> {
 /// Parse a Visual Studio Code theme from a file.
 ///
 /// Equivalent to calling [parse_vscode_theme]
+///
+/// # Usage
+///
+/// ```rust
+///
+/// use std::path::Path;
+/// use syntect::highlighting::Theme;
+/// use vscode_theme_syntect::parse_vscode_theme_file;
+/// let vscode_theme = parse_vscode_theme_file(Path::new("assets/palenight.json")).unwrap();
+///
+/// assert!(Theme::try_from(vscode_theme).is_ok());
+///
+/// ```
 pub fn parse_vscode_theme_file(path: &Path) -> Result<VscodeTheme, ParseError> {
     let scheme = std::fs::read_to_string(path)?;
     parse_vscode_theme(&scheme)
