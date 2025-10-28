@@ -2,9 +2,9 @@
 	import Button from "@components/input/Button.svelte";
 	import TextInput from "@components/input/TextInput.svelte";
 	import Join from "@components/Join.svelte";
-	import type { AppState } from "@lib/state";
+	import type { SettingsPageState } from "@lib/state";
 
-	let { app }: { app: AppState } = $props();
+	let { app }: SettingsPageState = $props();
 </script>
 
 <div>

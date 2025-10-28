@@ -5,6 +5,7 @@
 	import { slide } from "svelte/transition";
 	import type { AppState } from "@lib/state";
 	import About from "./About.svelte";
+	import { SvelteSet } from "svelte/reactivity";
 
 	interface Props {
 		app: AppState;
@@ -12,10 +13,15 @@
 
 	interface Item {
 		name: string;
-		content: Component<{ app: AppState }>;
+		content: Component<{ app: AppState; visited: boolean; visible: boolean }>;
 	}
 
 	let activeTab = $state(0);
+	let visitedItems = new SvelteSet<number>();
+
+	$effect(() => {
+		visitedItems.add(activeTab);
+	});
 
 	const tabs: Item[] = [
 		{ name: "General", content: General },
@@ -25,6 +31,8 @@
 	const uuid = $props.id();
 
 	let { app }: Props = $props();
+
+	$inspect(visitedItems);
 </script>
 
 <div class="grid grid-cols-[auto_1fr] h-full overflow-hidden">
@@ -65,7 +73,11 @@
 				hidden={activeTab !== index}
 				tabindex={activeTab === index ? 0 : -1}
 			>
-				<tab.content {app} />
+				<tab.content
+					{app}
+					visited={visitedItems.has(index)}
+					visible={activeTab === index}
+				/>
 			</div>
 		{/each}
 	</div>

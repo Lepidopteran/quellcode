@@ -1,6 +1,6 @@
 
 <script lang="ts">
-	import type { AppState } from "@lib/state";
+	import type { SettingsPageState } from "@lib/state";
 
-	let props: { app: AppState } = $props();
+	let props: SettingsPageState = $props();
 </script>
