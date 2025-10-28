@@ -5,17 +5,23 @@ use log::{info, warn};
 use secrecy::SecretString;
 use serde::Serialize;
 use syntect::{
-    highlighting::{Theme, ThemeSet},
+    highlighting::{Theme as SnytectTheme, ThemeSet},
     html::{css_for_theme_with_class_style, ClassedHTMLGenerator},
     parsing::SyntaxSet,
     util::LinesWithEndings,
 };
 use tauri::{Manager, State};
+use tauri_plugin_fs::FsExt;
 use tauri_plugin_log::fern::colors::{self, ColoredLevelConfig};
 use time::{format_description::well_known::Rfc3339, OffsetDateTime};
 use ts_rs::TS;
 
-use crate::generator::{FusionGenerator, Generator, GeneratorExt, GeneratorInfo, GeneratorOptions, SvgGenerator};
+use crate::{
+    dir::config_dir,
+    generator::{
+        FusionGenerator, Generator, GeneratorExt, GeneratorInfo, GeneratorOptions, SvgGenerator,
+    },
+};
 
 pub mod asset_store;
 pub mod dir;
@@ -98,6 +104,8 @@ pub fn run() {
         ])
         .setup(|app| {
             let syntax_set = SyntaxSet::load_defaults_nonewlines();
+            let scope = app.fs_scope();
+            let _ = scope.allow_directory(config_dir(app.app_handle()), true);
 
             for path in [
                 dir::code_theme_dir(app.app_handle()),
@@ -109,11 +117,13 @@ pub fn run() {
                 }
             }
 
-            let generators: Vec<(GeneratorInfo, Box<dyn Generator>)> =
-                vec![
-                    (FusionGenerator::information(), Box::new(FusionGenerator::new())),
-                    (SvgGenerator::information(), Box::new(SvgGenerator::new())),
-                ];
+            let generators: Vec<(GeneratorInfo, Box<dyn Generator>)> = vec![
+                (
+                    FusionGenerator::information(),
+                    Box::new(FusionGenerator::new()),
+                ),
+                (SvgGenerator::information(), Box::new(SvgGenerator::new())),
+            ];
 
             let theme_files = code_theme_files(app.app_handle());
             app.manage(Mutex::new(AppState {
@@ -143,7 +153,7 @@ fn load_themes(theme_files: &HashMap<PathBuf, ThemeFormat>) -> ThemeSet {
                         .clone()
                         .unwrap_or(path.file_stem().unwrap().to_string_lossy().to_string());
 
-                    let theme = Theme::try_from(vscode_theme).expect("Failed to parse theme");
+                    let theme = SnytectTheme::try_from(vscode_theme).expect("Failed to parse theme");
 
                     theme_set.themes.insert(theme_name, theme);
                 }
@@ -157,7 +167,7 @@ fn load_themes(theme_files: &HashMap<PathBuf, ThemeFormat>) -> ThemeSet {
                         .clone()
                         .unwrap_or(path.file_stem().unwrap().to_string_lossy().to_string());
 
-                    let theme = Theme::try_from(color_scheme).expect("Failed to parse theme");
+                    let theme = SnytectTheme::try_from(color_scheme).expect("Failed to parse theme");
 
                     theme_set.themes.insert(theme_name, theme);
                 }
