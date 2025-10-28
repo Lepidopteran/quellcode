@@ -5,7 +5,6 @@
 	import { slide } from "svelte/transition";
 	import type { AppState } from "@lib/state";
 	import About from "./About.svelte";
-	import Assets from "./Assets.svelte";
 
 	interface Props {
 		app: AppState;
@@ -20,7 +19,6 @@
 
 	const tabs: Item[] = [
 		{ name: "General", content: General },
-		{ name: "Assets", content: Assets },
 		{ name: "About", content: About },
 	];
 
