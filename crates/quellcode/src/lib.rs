@@ -29,6 +29,7 @@ pub mod generator;
 pub mod property;
 pub mod scraping;
 pub mod util;
+mod settings;
 
 pub const SYNTECT_PREFIX: &str = "syntect-";
 
