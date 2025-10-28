@@ -2,10 +2,10 @@
 	import Button from "@components/input/Button.svelte";
 	import type { Component } from "svelte";
 	import General from "./General.svelte";
-	import Themes from "./Themes.svelte";
-	import Syntax from "./Syntax.svelte";
 	import { slide } from "svelte/transition";
 	import type { AppState } from "@lib/state";
+	import About from "./About.svelte";
+	import Assets from "./Assets.svelte";
 
 	interface Props {
 		app: AppState;
@@ -20,8 +20,8 @@
 
 	const tabs: Item[] = [
 		{ name: "General", content: General },
-		{ name: "Themes", content: Themes },
-		{ name: "Syntax", content: Syntax },
+		{ name: "Assets", content: Assets },
+		{ name: "About", content: About },
 	];
 
 	const uuid = $props.id();
