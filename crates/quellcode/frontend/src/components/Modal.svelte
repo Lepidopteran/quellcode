@@ -64,7 +64,7 @@
 
 <dialog
 	{...rest}
-	class={["m-auto bg-base-200 w-full max-w-2xl h-full max-h-96 rounded-theme shadow-lg inset-shadow-xs overflow-hidden inset-shadow-highlight/25 backdrop:backdrop-brightness-50"]}
+	class={["m-auto bg-base-200 w-full max-w-2/3 h-full max-h-2/3 rounded-theme shadow-lg inset-shadow-xs overflow-hidden inset-shadow-highlight/25 backdrop:backdrop-brightness-50"]}
 	bind:this={dialog}
 	use:closeAction
 >
