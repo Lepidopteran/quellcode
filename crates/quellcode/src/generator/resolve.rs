@@ -158,14 +158,13 @@ impl Generator for FusionGenerator {
         let mut document_offset = 0;
         let mut highlight = HighlightLines::new(syntax, theme);
 
-        let total_lines = text.lines().count();
-        for (index, line) in text.lines().enumerate() {
+        let _ = context.event_tx.send(GeneratorEvent::progress(1, Some("Generating color ranges")));
+        for line in text.lines() {
             if context.cancel.load(Ordering::Relaxed) {
                 let _ = context.event_tx.send(GeneratorEvent::Cancelled);
                 return Ok(String::new());
             }
 
-            let _ = context.event_tx.send(GeneratorEvent::progress(total_lines, index));
 
             let ranges = highlight.highlight_line(line, syntax_set)?;
 
@@ -258,6 +257,7 @@ impl GeneratorExt for FusionGenerator {
             ]),
             syntax: Some("Lua"),
             saveable: false,
+            ..Default::default()
         }
     }
 }

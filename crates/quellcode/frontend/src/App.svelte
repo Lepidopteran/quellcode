@@ -20,6 +20,7 @@
 	import Settings from "@components/settings/Settings.svelte";
 	import type { GeneratorEvent } from "@lib/bindings/GeneratorEvent";
 	import { listen } from "@tauri-apps/api/event";
+	import Progress from "@components/Progress.svelte";
 
 	const styleSheet = new CSSStyleSheet();
 	const store = new LazyStore("state.json");
@@ -210,21 +211,25 @@
 				editable
 			></CodeView>
 			<div class="h-full relative overflow-hidden">
-				<CodeView
-					class="h-full"
-					syntax={activeGeneratorInfo?.syntax || null}
-					code={outputCode}
-				></CodeView>
+				<CodeView class="h-full" syntax={activeGeneratorInfo?.syntax || null} code={outputCode}></CodeView>
 				{#if generatorEvents.length > 0 && generatingCode}
 					{@const event = generatorEvents[generatorEvents.length - 1]}
 					<div
 						transition:fade
-						class="absolute top-0 left-0 h-full w-full pointer-events-none flex items-center justify-center bg-base-200/50 backdrop-blur-sm"
+						class="absolute top-0 left-0 h-full w-full pointer-events-none flex flex-col gap-2 items-center justify-center bg-base-200/50 backdrop-blur-sm"
 					>
 						{#if event.kind === "progress"}
-							<Icon name="loading-line" class="animate-spin" size="2em"></Icon>
-							<div class="flex items-center space-x-2">
-								<span>{event.current}</span>/<span>{event.total}</span>
+							<Progress
+								class="h-2 animate-pulse"
+								max={activeGeneratorInfo?.steps}
+								value={event.step - 1 || 0}
+							/>
+							<div class="flex items-center space-x-2 animate-pulse">
+								{#if event.message}
+									<span>{event.message}...</span>
+								{:else}
+									<span>Generating...</span>
+								{/if}
 							</div>
 						{/if}
 					</div>

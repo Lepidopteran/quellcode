@@ -79,15 +79,13 @@ impl Generator for SvgGenerator {
             document = document.add(background_element);
         }
 
-        let total_lines = text.lines().count();
+        let _ = context.event_tx.send(GeneratorEvent::progress(1, Some("Generating SVG spans")));
 
         for (index, line) in text.lines().enumerate() {
             if context.cancel.load(Ordering::Relaxed) {
                 context.event_tx.send(GeneratorEvent::Cancelled)?;
                 return Ok(String::new());
             }
-
-            context.event_tx.send(GeneratorEvent::progress(total_lines, index))?;
 
             let ranges = highlight.highlight_line(line, syntax_set)?;
 
@@ -127,6 +125,8 @@ impl Generator for SvgGenerator {
         let width = text.lines().map(|line| line.len()).max().unwrap_or(0) * text_size;
 
         document = document.set("viewBox", format!("0 0 {} {}", width, height));
+
+        let _ = context.event_tx.send(GeneratorEvent::progress(2, Some("Processing generated SVG")));
 
         let document = document.to_string().replace("\n", "");
         let tree = roxmltree::Document::parse_with_options(
@@ -177,6 +177,7 @@ impl GeneratorExt for SvgGenerator {
             ]),
             syntax: Some("XML"),
             saveable: true,
+            steps: 2,
         }
     }
 }

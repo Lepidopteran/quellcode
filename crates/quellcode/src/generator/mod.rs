@@ -1,6 +1,10 @@
 use color_eyre::eyre::Result;
 use serde::{Deserialize, Serialize};
-use std::{collections::BTreeMap, fmt::Debug, sync::{atomic::AtomicBool, mpsc::Sender, Arc}};
+use std::{
+    collections::BTreeMap,
+    fmt::Debug,
+    sync::{atomic::AtomicBool, mpsc::Sender, Arc},
+};
 
 use syntect::{
     highlighting::Theme,
@@ -25,12 +29,15 @@ type Extensions = Vec<&'static str>;
 pub enum GeneratorEvent {
     Started,
     Cancelled,
-    Progress { total: usize, current: usize },
+    Progress { message: Option<String>, step: u8 },
 }
 
 impl GeneratorEvent {
-    pub fn progress(total: usize, current: usize) -> GeneratorEvent {
-        GeneratorEvent::Progress { total, current }
+    pub fn progress(step: u8, message: Option<&str>) -> GeneratorEvent {
+        GeneratorEvent::Progress {
+            step,
+            message: message.map(String::from),
+        }
     }
 }
 
@@ -49,7 +56,7 @@ impl GeneratorContext {
     }
 }
 
-#[derive(Debug, Default, Clone, Serialize, TS)]
+#[derive(Debug, Clone, Serialize, TS)]
 #[ts(export)]
 pub struct GeneratorInfo {
     /// The name of the generator
@@ -64,8 +71,23 @@ pub struct GeneratorInfo {
     properties: Option<Properties>,
     /// Whether the generator result should/can be saved
     saveable: bool,
+    /// Steps it takes to generate the output
+    steps: u8,
 }
 
+impl Default for GeneratorInfo {
+    fn default() -> Self {
+        Self {
+            name: "",
+            description: "",
+            syntax: None,
+            extensions: None,
+            properties: None,
+            saveable: false,
+            steps: 1,
+        }
+    }
+}
 
 impl GeneratorInfo {
     pub fn name(&self) -> &str {
@@ -99,7 +121,7 @@ pub trait Generator: Send + Sync + Debug {
         syntax: &SyntaxReference,
         syntax_set: &SyntaxSet,
         options: &GeneratorOptions,
-        context: &GeneratorContext
+        context: &GeneratorContext,
     ) -> Result<String>;
 }
 

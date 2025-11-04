@@ -25,4 +25,8 @@ properties: Array<PropertyInfo> | null,
 /**
  * Whether the generator result should/can be saved
  */
-saveable: boolean, };
+saveable: boolean, 
+/**
+ * Steps it takes to generate the output
+ */
+steps: number, };
