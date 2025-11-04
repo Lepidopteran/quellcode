@@ -1,6 +1,8 @@
+use std::sync::atomic::Ordering;
+
 use crate::generator::GeneratorOptions;
 
-use super::{Generator, GeneratorExt, GeneratorInfo, PropertyInfo};
+use super::{Generator, GeneratorExt, GeneratorEvent, GeneratorContext, GeneratorInfo, PropertyInfo};
 
 use color_eyre::eyre::Result;
 use svg::{
@@ -29,6 +31,7 @@ impl Generator for SvgGenerator {
         syntax: &syntect::parsing::SyntaxReference,
         syntax_set: &syntect::parsing::SyntaxSet,
         options: &GeneratorOptions,
+        context: &GeneratorContext,
     ) -> Result<String> {
         let text_size = options.font_size as usize;
         let font_family = options.font_family.as_str();
@@ -40,6 +43,8 @@ impl Generator for SvgGenerator {
                 .unwrap_or(true),
             ..Default::default()
         };
+
+        context.event_tx.send(GeneratorEvent::Started)?;
 
         log::debug!(
             "Generating svg with font family {} and font size {}",
@@ -74,7 +79,16 @@ impl Generator for SvgGenerator {
             document = document.add(background_element);
         }
 
+        let total_lines = text.lines().count();
+
         for (index, line) in text.lines().enumerate() {
+            if context.cancel.load(Ordering::Relaxed) {
+                context.event_tx.send(GeneratorEvent::Cancelled)?;
+                return Ok(String::new());
+            }
+
+            context.event_tx.send(GeneratorEvent::progress(total_lines, index))?;
+
             let ranges = highlight.highlight_line(line, syntax_set)?;
 
             let mut text_element = Text::new("")

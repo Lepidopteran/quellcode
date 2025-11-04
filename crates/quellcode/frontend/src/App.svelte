@@ -18,9 +18,21 @@
 	import Icon from "@components/Icon.svelte";
 	import Modal from "@components/Modal.svelte";
 	import Settings from "@components/settings/Settings.svelte";
+	import type { GeneratorEvent } from "@lib/bindings/GeneratorEvent";
+	import { listen } from "@tauri-apps/api/event";
 
 	const styleSheet = new CSSStyleSheet();
 	const store = new LazyStore("state.json");
+
+	let generatorEvents: GeneratorEvent[] = $state([]);
+
+	listen<GeneratorEvent>("generator-event", (event) => {
+		generatorEvents.push(event.payload);
+
+		if (generatorEvents.length > 100) {
+			generatorEvents = generatorEvents.slice(0, 100);
+		}
+	});
 
 	let syntectThemes: string[] = $state([]);
 	let syntectLanguages: string[] = $state([]);
@@ -32,6 +44,8 @@
 	let editorFontFamily: string = $state("Monospace");
 	let editorCode: string = $state("");
 	let outputCode: string = $state("");
+
+	let generatingCode = $state(false);
 
 	let debouncedEditorCode = new Debounced(() => editorCode, 1000);
 	let debouncededitorFontSize = new Debounced(() => editorFontSize, 1000);
@@ -127,13 +141,17 @@
 		};
 
 		(async () => {
+			generatingCode = true;
+
 			outputCode = await invoke<string>("generate_code", {
 				generatorName: activeGenerator,
-				syntax: editorSyntax,
-				theme: editorTheme,
+				syntaxName: editorSyntax,
+				themeName: editorTheme,
 				code: debouncedEditorCode.current,
 				options,
 			});
+
+			generatingCode = false;
 		})();
 	});
 
@@ -191,8 +209,27 @@
 				bind:code={editorCode}
 				editable
 			></CodeView>
-			<CodeView syntax={activeGeneratorInfo?.syntax || null} code={outputCode}
-			></CodeView>
+			<div class="h-full relative overflow-hidden">
+				<CodeView
+					class="h-full"
+					syntax={activeGeneratorInfo?.syntax || null}
+					code={outputCode}
+				></CodeView>
+				{#if generatorEvents.length > 0 && generatingCode}
+					{@const event = generatorEvents[generatorEvents.length - 1]}
+					<div
+						transition:fade
+						class="absolute top-0 left-0 h-full w-full pointer-events-none flex items-center justify-center bg-base-200/50 backdrop-blur-sm"
+					>
+						{#if event.kind === "progress"}
+							<Icon name="loading-line" class="animate-spin" size="2em"></Icon>
+							<div class="flex items-center space-x-2">
+								<span>{event.current}</span>/<span>{event.total}</span>
+							</div>
+						{/if}
+					</div>
+				{/if}
+			</div>
 		</div>
 	</main>
 	<aside class="grid grid-cols-1 grid-rows-[1fr_auto] p-2 h-full bg-base-100">

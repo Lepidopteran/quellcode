@@ -1,4 +1,4 @@
-use std::fmt::Display;
+use std::{fmt::Display, sync::atomic::Ordering};
 
 use syntect::easy::HighlightLines;
 
@@ -77,7 +77,9 @@ impl Generator for FusionGenerator {
         syntax: &SyntaxReference,
         syntax_set: &SyntaxSet,
         options: &GeneratorOptions,
+        context: &GeneratorContext,
     ) -> Result<String> {
+        let _ = context.event_tx.send(GeneratorEvent::Started);
         let mut result = String::new();
 
         let text = if options
@@ -119,14 +121,8 @@ impl Generator for FusionGenerator {
 
         let inputs = [
             Input::integer("GlobalOut", 119),
-            Input::integer(
-                "Width",
-                width,
-            ),
-            Input::integer(
-                "Height",
-                height
-            ),
+            Input::integer("Width", width),
+            Input::integer("Height", height),
             Input::string("Font", &options.font_family),
             Input::float("FontSize", options.font_size / width as f32),
             Input::integer("VerticalTopCenterBottom", -1),
@@ -162,7 +158,15 @@ impl Generator for FusionGenerator {
         let mut document_offset = 0;
         let mut highlight = HighlightLines::new(syntax, theme);
 
-        for line in text.lines() {
+        let total_lines = text.lines().count();
+        for (index, line) in text.lines().enumerate() {
+            if context.cancel.load(Ordering::Relaxed) {
+                let _ = context.event_tx.send(GeneratorEvent::Cancelled);
+                return Ok(String::new());
+            }
+
+            let _ = context.event_tx.send(GeneratorEvent::progress(total_lines, index));
+
             let ranges = highlight.highlight_line(line, syntax_set)?;
 
             let mut line_offset = 0;

@@ -1,6 +1,6 @@
 use color_eyre::eyre::Result;
 use serde::{Deserialize, Serialize};
-use std::{collections::BTreeMap, fmt::Debug};
+use std::{collections::BTreeMap, fmt::Debug, sync::{atomic::AtomicBool, mpsc::Sender, Arc}};
 
 use syntect::{
     highlighting::Theme,
@@ -19,6 +19,36 @@ pub use resolve::FusionGenerator;
 type Properties = Vec<PropertyInfo>;
 type Extensions = Vec<&'static str>;
 
+#[derive(Debug, Clone, Serialize, TS)]
+#[serde(rename_all = "camelCase", tag = "kind")]
+#[ts(export)]
+pub enum GeneratorEvent {
+    Started,
+    Cancelled,
+    Progress { total: usize, current: usize },
+}
+
+impl GeneratorEvent {
+    pub fn progress(total: usize, current: usize) -> GeneratorEvent {
+        GeneratorEvent::Progress { total, current }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct GeneratorContext {
+    pub event_tx: Sender<GeneratorEvent>,
+    pub cancel: Arc<AtomicBool>,
+}
+
+impl GeneratorContext {
+    pub fn new(event_tx: Sender<GeneratorEvent>) -> GeneratorContext {
+        GeneratorContext {
+            event_tx: event_tx.clone(),
+            cancel: Arc::new(AtomicBool::new(false)),
+        }
+    }
+}
+
 #[derive(Debug, Default, Clone, Serialize, TS)]
 #[ts(export)]
 pub struct GeneratorInfo {
@@ -35,6 +65,7 @@ pub struct GeneratorInfo {
     /// Whether the generator result should/can be saved
     saveable: bool,
 }
+
 
 impl GeneratorInfo {
     pub fn name(&self) -> &str {
@@ -63,11 +94,12 @@ pub struct GeneratorOptions {
 pub trait Generator: Send + Sync + Debug {
     fn generate_code(
         &self,
-        _text: &str,
-        _theme: &Theme,
-        _syntax: &SyntaxReference,
-        _syntax_set: &SyntaxSet,
-        _options: &GeneratorOptions,
+        text: &str,
+        theme: &Theme,
+        syntax: &SyntaxReference,
+        syntax_set: &SyntaxSet,
+        options: &GeneratorOptions,
+        context: &GeneratorContext
     ) -> Result<String>;
 }
 

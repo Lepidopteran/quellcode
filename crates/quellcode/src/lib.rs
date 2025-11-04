@@ -1,7 +1,11 @@
-use std::{collections::HashMap, path::PathBuf, sync::Mutex};
+use std::{
+    collections::HashMap,
+    path::PathBuf,
+    sync::{mpsc::channel, Arc, Mutex},
+};
 
 use color_eyre::{eyre::Result, owo_colors::OwoColorize};
-use log::{info, warn};
+use log::{debug, warn};
 use secrecy::SecretString;
 use serde::Serialize;
 use syntect::{
@@ -10,7 +14,7 @@ use syntect::{
     parsing::SyntaxSet,
     util::LinesWithEndings,
 };
-use tauri::{Manager, State};
+use tauri::{Emitter, Manager, State};
 use tauri_plugin_fs::FsExt;
 use tauri_plugin_log::fern::colors::{self, ColoredLevelConfig};
 use time::{format_description::well_known::Rfc3339, OffsetDateTime};
@@ -19,17 +23,20 @@ use ts_rs::TS;
 use crate::{
     dir::config_dir,
     generator::{
-        FusionGenerator, Generator, GeneratorExt, GeneratorInfo, GeneratorOptions, SvgGenerator,
+        FusionGenerator, Generator, GeneratorContext, GeneratorExt, GeneratorInfo, SvgGenerator,
     },
 };
 
+mod app;
 pub mod asset_store;
 pub mod dir;
 pub mod generator;
 pub mod property;
 pub mod scraping;
-pub mod util;
 mod settings;
+pub mod util;
+
+use app::generate_code;
 
 pub const SYNTECT_PREFIX: &str = "syntect-";
 
@@ -63,7 +70,8 @@ pub struct AppState {
     pub theme_files: HashMap<PathBuf, ThemeFormat>,
     pub syntect_themes: ThemeSet,
     pub syntect_syntaxes: SyntaxSet,
-    pub generators: Vec<(GeneratorInfo, Box<dyn Generator>)>,
+    pub generators: Vec<(GeneratorInfo, Arc<dyn Generator>)>,
+    generator_context: GeneratorContext,
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -118,20 +126,32 @@ pub fn run() {
                 }
             }
 
-            let generators: Vec<(GeneratorInfo, Box<dyn Generator>)> = vec![
+            let generators: Vec<(GeneratorInfo, Arc<dyn Generator>)> = vec![
                 (
                     FusionGenerator::information(),
-                    Box::new(FusionGenerator::new()),
+                    Arc::new(FusionGenerator::new()),
                 ),
-                (SvgGenerator::information(), Box::new(SvgGenerator::new())),
+                (SvgGenerator::information(), Arc::new(SvgGenerator::new())),
             ];
 
             let theme_files = code_theme_files(app.app_handle());
+
+            let (tx, rx) = channel();
+            let app_handle = app.app_handle().clone();
+
+            std::thread::spawn(move || {
+                while let Ok(event) = rx.recv() {
+                    debug!("Generator event: {event:?}");
+                    let _ = app_handle.emit("generator-event", event);
+                }
+            });
+
             app.manage(Mutex::new(AppState {
                 syntect_themes: load_themes(&theme_files),
                 syntect_syntaxes: syntax_set,
                 theme_files,
                 generators,
+                generator_context: GeneratorContext::new(tx.clone()),
             }));
 
             Ok(())
@@ -154,7 +174,8 @@ fn load_themes(theme_files: &HashMap<PathBuf, ThemeFormat>) -> ThemeSet {
                         .clone()
                         .unwrap_or(path.file_stem().unwrap().to_string_lossy().to_string());
 
-                    let theme = SnytectTheme::try_from(vscode_theme).expect("Failed to parse theme");
+                    let theme =
+                        SnytectTheme::try_from(vscode_theme).expect("Failed to parse theme");
 
                     theme_set.themes.insert(theme_name, theme);
                 }
@@ -168,7 +189,8 @@ fn load_themes(theme_files: &HashMap<PathBuf, ThemeFormat>) -> ThemeSet {
                         .clone()
                         .unwrap_or(path.file_stem().unwrap().to_string_lossy().to_string());
 
-                    let theme = SnytectTheme::try_from(color_scheme).expect("Failed to parse theme");
+                    let theme =
+                        SnytectTheme::try_from(color_scheme).expect("Failed to parse theme");
 
                     theme_set.themes.insert(theme_name, theme);
                 }
@@ -202,42 +224,6 @@ fn generators(state: State<Mutex<AppState>>) -> Vec<GeneratorInfo> {
 
     generators.sort_by(|a, b| a.name().cmp(b.name()));
     generators
-}
-
-#[tauri::command]
-fn generate_code(
-    state: State<Mutex<AppState>>,
-    code: String,
-    generator_name: String,
-    syntax: String,
-    theme: String,
-    options: GeneratorOptions,
-) -> Result<String, String> {
-    let state = &state.lock().expect("Failed to lock state");
-    let syntax_set = state.syntect_syntaxes.clone();
-    let syntax = syntax_set
-        .find_syntax_by_name(&syntax)
-        .ok_or(format!("Could not find syntax \"{}\"", syntax))?;
-
-    let theme_set = &state.syntect_themes;
-    let theme = theme_set.themes.get(&theme).ok_or("Failed to get theme")?;
-
-    let generators = &state.generators;
-    let generator = generators
-        .iter()
-        .find_map(|(info, gen)| {
-            if info.name() == generator_name {
-                Some(gen)
-            } else {
-                None
-            }
-        })
-        .ok_or("Failed to get generator".to_string())?;
-
-    info!("Generating code with generator {}", generator_name);
-    generator
-        .generate_code(&code, theme, syntax, &syntax_set, &options)
-        .map_err(|e| e.to_string())
 }
 
 #[tauri::command]
