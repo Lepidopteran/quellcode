@@ -21,7 +21,7 @@ use time::{format_description::well_known::Rfc3339, OffsetDateTime};
 use ts_rs::TS;
 
 use crate::{
-    dir::{cache_dir, config_dir},
+    dir::{cache_dir, config_dir, templates_dir},
     generator::{
         FusionGenerator, Generator, GeneratorContext, GeneratorExt, GeneratorInfo, SvgGenerator,
     },
@@ -127,6 +127,7 @@ pub fn run() {
             for path in [
                 dir::code_theme_dir(app.app_handle()),
                 dir::code_syntax_dir(app.app_handle()),
+                dir::templates_dir(app.app_handle()),
                 cache_dir,
                 config_dir,
             ] {
@@ -161,6 +162,7 @@ pub fn run() {
                 theme_files,
                 generators,
                 generator_context: GeneratorContext::new(tx.clone()),
+                templates: template_files(app.app_handle()),
             }));
 
             Ok(())
@@ -260,6 +262,38 @@ fn generate_html(
     }
 
     Ok(generator.finalize())
+}
+
+#[tauri::command]
+fn add_template(app: tauri::AppHandle, state: State<Mutex<AppState>>, template: Template) {
+    state
+        .lock()
+        .expect("Failed to lock state")
+        .templates
+        .insert(
+            templates_dir(&app).join(format!("{}.json", template.name)),
+            template,
+        );
+}
+
+#[tauri::command]
+fn remove_template(app: tauri::AppHandle, state: State<Mutex<AppState>>, name: String) {
+    state
+        .lock()
+        .expect("Failed to lock state")
+        .templates
+        .remove(&templates_dir(&app).join(format!("{}.json", name)));
+}
+
+#[tauri::command]
+fn templates(state: State<Mutex<AppState>>) -> Vec<Template> {
+    state
+        .lock()
+        .expect("Failed to lock state")
+        .templates
+        .values()
+        .cloned()
+        .collect()
 }
 
 #[tauri::command]
@@ -373,6 +407,29 @@ pub fn code_theme_files(app_handle: &tauri::AppHandle) -> HashMap<PathBuf, Theme
                 let path = entry.path();
                 if path.is_file() {
                     ThemeFormat::from_path(&path).map(|format| (path, format))
+                } else {
+                    None
+                }
+            })
+        })
+        .collect()
+}
+
+pub fn template_files(app_handle: &tauri::AppHandle) -> HashMap<PathBuf, Template> {
+    let templates_dir = templates_dir(app_handle);
+
+    templates_dir
+        .read_dir()
+        .expect("Failed to read templates dir")
+        .filter_map(|entry| {
+            entry.ok().and_then(|entry| {
+                let path = entry.path();
+                if path.is_file() {
+                    serde_json::from_str::<Template>(
+                        &std::fs::read_to_string(&path).expect("Failed to read template file"),
+                    )
+                    .ok()
+                    .map(|template| (path, template))
                 } else {
                     None
                 }
