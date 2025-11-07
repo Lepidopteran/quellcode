@@ -23,7 +23,6 @@ once_cell = "1.21.1"
 toml = "0.8.20"
 toml_edit = "0.22.24"
 evalexpr = "12.0.2"
-tinytemplate = "1.2.1"
 reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "json", "blocking"] }
 tokio = { version = "1", features = ["rt-multi-thread", "macros"] }
 time = { version = "0.3.41", features = ["macros", "serde", "parsing", "formatting"] }
@@ -41,6 +40,7 @@ ts-rs = "11.0.1"
 tauri-plugin-store = "2"
 tauri-plugin-dialog = "2"
 tauri-plugin-clipboard-manager = "2.3.0"
+handlebars = "6.3.2"
 
 [lib]
 name = "quellcode_lib"
