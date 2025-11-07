@@ -31,7 +31,7 @@ pub struct FontSettings {
 #[serde(rename_all = "camelCase")]
 pub struct FontFace {
     pub name: String,
-    pub path: PathBuf,
+    pub path: Option<PathBuf>,
     pub weight: Weight,
     pub style: Style,
     pub monospaced: bool,
