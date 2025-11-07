@@ -163,7 +163,7 @@ pub fn get_font_face_path_helper(
 
     out.write(
         &font
-            .map(|f| f.path.to_string_lossy().to_string())
+            .and_then(|f| f.path.map(|p| p.to_string_lossy().to_string()))
             .unwrap_or_default(),
     )?;
 
@@ -231,19 +231,23 @@ mod tests {
 
     use super::*;
 
-    #[test]
-    fn test_get_font_face_weight() {
-        let font = FontSettings {
+    fn font_settings() -> FontSettings {
+        FontSettings {
             size: 10.0,
             family_name: "test".to_string(),
             fonts: vec![FontFace {
                 name: "test".to_string(),
-                path: PathBuf::from("test.ttf"),
+                path: Some(PathBuf::from("test.ttf")),
                 weight: Weight::NORMAL,
                 style: Style::Normal,
                 monospaced: false,
             }],
-        };
+        }
+    }
+
+    #[test]
+    fn test_get_font_face_weight() {
+        let font = font_settings();
 
         let template = "{{fontFaceWeight fontSettings weight=\"normal\" style=\"normal\"}}";
         let empty_template = "{{fontFaceWeight fontSettings weight=\"BOLD\" style=\"normal\"}}";
@@ -268,17 +272,7 @@ mod tests {
 
     #[test]
     fn test_get_font_face_style() {
-        let font = FontSettings {
-            size: 10.0,
-            family_name: "test".to_string(),
-            fonts: vec![FontFace {
-                name: "test".to_string(),
-                path: PathBuf::from("test.ttf"),
-                weight: Weight::NORMAL,
-                style: Style::Normal,
-                monospaced: false,
-            }],
-        };
+        let font = font_settings();
 
         let template = "{{fontFaceStyle fontSettings weight=\"normal\" style=\"normal\"}}";
         let empty_template = "{{fontFaceStyle fontSettings weight=\"BOLD\" style=\"normal\"}}";
@@ -303,17 +297,7 @@ mod tests {
 
     #[test]
     fn test_get_font_face_name() {
-        let font = FontSettings {
-            size: 10.0,
-            family_name: "test".to_string(),
-            fonts: vec![FontFace {
-                name: "test".to_string(),
-                path: PathBuf::from("test.ttf"),
-                weight: Weight::NORMAL,
-                style: Style::Normal,
-                monospaced: false,
-            }],
-        };
+        let font = font_settings();
 
         let template = "{{fontFaceName fontSettings weight=\"normal\" style=\"normal\"}}";
         let empty_template = "{{fontFaceName fontSettings weight=\"BOLD\" style=\"normal\"}}";
@@ -338,17 +322,7 @@ mod tests {
 
     #[test]
     fn test_get_font_face_monospaced() {
-        let font = FontSettings {
-            size: 10.0,
-            family_name: "test".to_string(),
-            fonts: vec![FontFace {
-                name: "test".to_string(),
-                path: PathBuf::from("test.ttf"),
-                weight: Weight::NORMAL,
-                style: Style::Normal,
-                monospaced: true,
-            }],
-        };
+        let font = font_settings();
 
         let template = "{{fontFaceMonospaced fontSettings weight=\"normal\" style=\"normal\"}}";
         let empty_template = "{{fontFaceMonospaced fontSettings weight=\"BOLD\" style=\"normal\"}}";
@@ -376,17 +350,7 @@ mod tests {
 
     #[test]
     fn test_get_font_face_path() {
-        let font = FontSettings {
-            size: 10.0,
-            family_name: "test".to_string(),
-            fonts: vec![FontFace {
-                name: "test".to_string(),
-                path: PathBuf::from("test.ttf"),
-                weight: Weight::NORMAL,
-                style: Style::Normal,
-                monospaced: false,
-            }],
-        };
+        let font = font_settings();
 
         let template = "{{fontFacePath fontSettings weight=\"normal\"}}";
         let template2 = "{{fontFacePath fontSettings weight=\"Normal\"}}";
