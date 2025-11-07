@@ -10,7 +10,7 @@ use crate::property::PropertyInfo;
 #[ts(export)]
 pub struct Template {
     pub name: String,
-    pub template: String,
+    pub content: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
