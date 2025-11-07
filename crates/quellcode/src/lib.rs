@@ -21,20 +21,21 @@ use time::{format_description::well_known::Rfc3339, OffsetDateTime};
 use ts_rs::TS;
 
 use crate::{
-    dir::config_dir,
+    dir::{cache_dir, config_dir},
     generator::{
         FusionGenerator, Generator, GeneratorContext, GeneratorExt, GeneratorInfo, SvgGenerator,
     },
+    template::Template,
 };
 
 mod app;
 pub mod asset_store;
 pub mod dir;
 pub mod generator;
-mod template;
 pub mod property;
 pub mod scraping;
 mod settings;
+mod template;
 pub mod util;
 
 use app::generate_code;
@@ -73,6 +74,7 @@ pub struct AppState {
     syntect_syntaxes: SyntaxSet,
     generators: Vec<(GeneratorInfo, Arc<dyn Generator>)>,
     generator_context: GeneratorContext,
+    templates: HashMap<PathBuf, Template>,
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -115,12 +117,18 @@ pub fn run() {
         .setup(|app| {
             let syntax_set = SyntaxSet::load_defaults_nonewlines();
             let scope = app.fs_scope();
-            let _ = scope.allow_directory(config_dir(app.app_handle()), true);
+
+            let config_dir = config_dir(app.app_handle());
+            let cache_dir = cache_dir(app.app_handle());
+
+            let _ = scope.allow_directory(&config_dir, true);
+            let _ = scope.allow_directory(&cache_dir, true);
 
             for path in [
                 dir::code_theme_dir(app.app_handle()),
                 dir::code_syntax_dir(app.app_handle()),
-                dir::config_dir(app.app_handle()),
+                cache_dir,
+                config_dir,
             ] {
                 if !path.exists() {
                     std::fs::create_dir_all(&path).expect("Failed to ensure directory exists");
