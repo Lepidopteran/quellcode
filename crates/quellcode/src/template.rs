@@ -152,7 +152,7 @@ fn find_font_from_helper(
         .cloned())
 }
 
-fn get_font_face_path_helper(
+pub fn get_font_face_path_helper(
     h: &::handlebars::Helper<'_>,
     _: &::handlebars::Handlebars,
     _: &::handlebars::Context,
@@ -170,7 +170,7 @@ fn get_font_face_path_helper(
     Ok(())
 }
 
-fn get_font_face_name_helper(
+pub fn get_font_face_name_helper(
     h: &::handlebars::Helper<'_>,
     _: &::handlebars::Handlebars,
     _: &::handlebars::Context,
@@ -184,7 +184,7 @@ fn get_font_face_name_helper(
     Ok(())
 }
 
-fn get_font_face_weight_helper(
+pub fn get_font_face_weight_helper(
     h: &::handlebars::Helper<'_>,
     _: &::handlebars::Handlebars,
     _: &::handlebars::Context,
@@ -198,7 +198,7 @@ fn get_font_face_weight_helper(
     Ok(())
 }
 
-fn get_font_face_style_helper(
+pub fn get_font_face_style_helper(
     h: &::handlebars::Helper<'_>,
     _: &::handlebars::Handlebars,
     _: &::handlebars::Context,
@@ -211,7 +211,7 @@ fn get_font_face_style_helper(
     Ok(())
 }
 
-fn get_font_face_monospaced_helper(
+pub fn get_font_face_monospaced_helper(
     h: &::handlebars::Helper<'_>,
     _: &::handlebars::Handlebars,
     _: &::handlebars::Context,
