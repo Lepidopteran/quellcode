@@ -31,6 +31,7 @@ mod app;
 pub mod asset_store;
 pub mod dir;
 pub mod generator;
+mod template;
 pub mod property;
 pub mod scraping;
 mod settings;
