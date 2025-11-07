@@ -1,16 +1,26 @@
-use ::handlebars::{handlebars_helper, HelperDef};
-use handlebars::RenderErrorReason;
+use fontdb::Source;
+use handlebars::{Handlebars, RenderErrorReason};
 use serde::{Deserialize, Serialize};
-use std::{path::PathBuf, str::FromStr};
+use std::{collections::HashMap, path::PathBuf, str::FromStr};
 use ts_rs::TS;
 
-use crate::property::PropertyInfo;
+use crate::property::{PropertyInfo, PropertyValue};
 
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
 #[ts(export)]
-pub struct Template {
+pub struct TemplateInfo {
     pub name: String,
     pub content: String,
+    pub description: String,
+    pub extra_properties: Vec<PropertyInfo>,
+}
+
+#[derive(Debug, Clone, Deserialize, TS)]
+#[ts(export)]
+pub struct TemplateUserData {
+    pub font_size: f32,
+    pub font_family: String,
+    pub props: HashMap<String, PropertyValue>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -52,6 +62,12 @@ impl Weight {
     pub const BLACK: Weight = Weight(900);
 }
 
+impl From<fontdb::Weight> for Weight {
+    fn from(value: fontdb::Weight) -> Self {
+        Weight(value.0)
+    }
+}
+
 impl FromStr for Weight {
     type Err = String;
 
@@ -89,6 +105,16 @@ impl FromStr for Style {
             "italic" => Ok(Style::Italic),
             "oblique" => Ok(Style::Oblique),
             _ => Err("Could not convert to Style".to_string()),
+        }
+    }
+}
+
+impl From<fontdb::Style> for Style {
+    fn from(value: fontdb::Style) -> Self {
+        match value {
+            fontdb::Style::Normal => Style::Normal,
+            fontdb::Style::Italic => Style::Italic,
+            fontdb::Style::Oblique => Style::Oblique,
         }
     }
 }
@@ -224,12 +250,82 @@ pub fn get_font_face_monospaced_helper(
     Ok(())
 }
 
+pub fn render_template(
+    font_db: &fontdb::Database,
+    handlebars: &Handlebars,
+    template_name: String,
+    data: TemplateUserData,
+) -> Result<String, RenderErrorReason> {
+    let font_settings = FontSettings {
+        family_name: data.font_family.clone(),
+        size: data.font_size,
+        fonts: font_db
+            .faces()
+            .filter(|f| f.families.iter().any(|(fam, _)| *fam == data.font_family))
+            .map(|f| FontFace {
+                name: f.post_script_name.clone(),
+                path: if let Source::File(path) = &f.source {
+                    Some(path.to_path_buf())
+                } else {
+                    None
+                },
+                weight: f.weight.into(),
+                style: f.style.into(),
+                monospaced: f.monospaced,
+            })
+            .collect(),
+    };
+
+    let result = handlebars.render(&template_name, &TemplateData { font_settings })?;
+
+    Ok(result)
+}
+
 #[cfg(test)]
 mod tests {
+    use log::info;
     use serde_json::json;
     use test_log::test;
 
     use super::*;
+
+    #[test]
+    fn test_render_template() {
+        let mut handlebars = ::handlebars::Handlebars::new();
+        handlebars.set_strict_mode(true);
+
+        handlebars.register_helper("fontFaceWeight", Box::new(get_font_face_weight_helper));
+        handlebars.register_helper("fontFaceStyle", Box::new(get_font_face_style_helper));
+        handlebars.register_helper("fontFaceName", Box::new(get_font_face_name_helper));
+        handlebars.register_helper("fontFacePath", Box::new(get_font_face_path_helper));
+        handlebars.register_helper(
+            "fontFaceMonospaced",
+            Box::new(get_font_face_monospaced_helper),
+        );
+
+        let mut font_db = fontdb::Database::new();
+        font_db.load_system_fonts();
+
+        let template = "{{fontFaceName fontSettings weight=\"normal\" style=\"normal\"}}";
+
+        handlebars.register_template_string("t1", template).unwrap();
+
+        let result = render_template(
+            &font_db,
+            &handlebars,
+            "t1".to_string(),
+            TemplateUserData {
+                font_family: font_db.family_name(&fontdb::Family::Monospace).to_string(),
+                font_size: 10.0,
+                props: HashMap::new(),
+            },
+        )
+        .unwrap();
+
+        info!("{result}");
+
+        assert!(!result.is_empty());
+    }
 
     fn font_settings() -> FontSettings {
         FontSettings {

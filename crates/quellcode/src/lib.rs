@@ -26,7 +26,7 @@ use crate::{
     generator::{
         FusionGenerator, Generator, GeneratorContext, GeneratorExt, GeneratorInfo, SvgGenerator,
     },
-    template::Template,
+    template::{TemplateInfo, TemplateUserData},
 };
 
 mod app;
@@ -75,9 +75,9 @@ pub struct AppState {
     syntect_syntaxes: SyntaxSet,
     generators: Vec<(GeneratorInfo, Arc<dyn Generator>)>,
     generator_context: GeneratorContext,
-    template_files: HashMap<PathBuf, Template>,
+    template_files: HashMap<PathBuf, TemplateInfo>,
     handlebars: Handlebars<'static>,
-    fontdb: fontdb::Database,
+    font_db: fontdb::Database,
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -119,6 +119,7 @@ pub fn run() {
             templates,
             add_template,
             remove_template,
+            render_template,
         ])
         .setup(|app| {
             let syntax_set = SyntaxSet::load_defaults_nonewlines();
@@ -176,7 +177,7 @@ pub fn run() {
                 generator_context: GeneratorContext::new(tx.clone()),
                 template_files,
                 handlebars,
-                fontdb
+                font_db: fontdb,
             }));
 
             Ok(())
@@ -185,7 +186,7 @@ pub fn run() {
         .expect("error while running tauri application");
 }
 
-fn setup_handlebars(files: &HashMap<PathBuf, Template>) -> Handlebars<'static> {
+fn setup_handlebars(files: &HashMap<PathBuf, TemplateInfo>) -> Handlebars<'static> {
     let mut handlebars = Handlebars::new();
     handlebars.set_strict_mode(true);
 
@@ -272,6 +273,20 @@ fn load_themes(theme_files: &HashMap<PathBuf, ThemeFormat>) -> ThemeSet {
 }
 
 #[tauri::command]
+fn render_template(
+    state: State<Mutex<AppState>>,
+    template_name: String,
+    data: TemplateUserData,
+) -> Result<String, String> {
+    let state = state.lock().expect("Failed to lock state");
+    let handlebars = &state.handlebars;
+    let font_db = &state.font_db;
+
+    template::render_template(font_db, handlebars, template_name, data)
+        .map_err(|e| format!("Failed to render template: {e}"))
+}
+
+#[tauri::command]
 fn generators(state: State<Mutex<AppState>>) -> Vec<GeneratorInfo> {
     let mut generators = state
         .lock()
@@ -313,7 +328,7 @@ fn generate_html(
 }
 
 #[tauri::command]
-fn add_template(app: tauri::AppHandle, state: State<Mutex<AppState>>, template: Template) {
+fn add_template(app: tauri::AppHandle, state: State<Mutex<AppState>>, template: TemplateInfo) {
     state
         .lock()
         .expect("Failed to lock state")
@@ -347,7 +362,7 @@ fn remove_template(app: tauri::AppHandle, state: State<Mutex<AppState>>, name: S
 }
 
 #[tauri::command]
-fn templates(state: State<Mutex<AppState>>) -> Vec<Template> {
+fn templates(state: State<Mutex<AppState>>) -> Vec<TemplateInfo> {
     state
         .lock()
         .expect("Failed to lock state")
@@ -412,9 +427,8 @@ pub struct FontFamily {
 }
 
 #[tauri::command]
-fn font_families() -> Vec<FontFamily> {
-    let mut db = usvg::fontdb::Database::new();
-    db.load_system_fonts();
+fn font_families(state: State<Mutex<AppState>>) -> Vec<FontFamily> {
+    let db = &state.lock().expect("Failed to lock state").font_db;
 
     let mut families: Vec<FontFamily> = Vec::new();
 
@@ -476,7 +490,7 @@ pub fn code_theme_files(app_handle: &tauri::AppHandle) -> HashMap<PathBuf, Theme
         .collect()
 }
 
-pub fn template_files(app_handle: &tauri::AppHandle) -> HashMap<PathBuf, Template> {
+pub fn template_files(app_handle: &tauri::AppHandle) -> HashMap<PathBuf, TemplateInfo> {
     let templates_dir = templates_dir(app_handle);
 
     templates_dir
@@ -486,7 +500,7 @@ pub fn template_files(app_handle: &tauri::AppHandle) -> HashMap<PathBuf, Templat
             entry.ok().and_then(|entry| {
                 let path = entry.path();
                 if path.is_file() {
-                    serde_json::from_str::<Template>(
+                    serde_json::from_str::<TemplateInfo>(
                         &std::fs::read_to_string(&path).expect("Failed to read template file"),
                     )
                     .ok()
