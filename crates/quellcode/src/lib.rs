@@ -5,6 +5,7 @@ use std::{
 };
 
 use color_eyre::{eyre::Result, owo_colors::OwoColorize};
+use handlebars::Handlebars;
 use log::{debug, warn};
 use secrecy::SecretString;
 use serde::Serialize;
@@ -74,7 +75,9 @@ pub struct AppState {
     syntect_syntaxes: SyntaxSet,
     generators: Vec<(GeneratorInfo, Arc<dyn Generator>)>,
     generator_context: GeneratorContext,
-    templates: HashMap<PathBuf, Template>,
+    template_files: HashMap<PathBuf, Template>,
+    handlebars: Handlebars<'static>,
+    fontdb: fontdb::Database,
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -159,19 +162,61 @@ pub fn run() {
                 }
             });
 
+            let template_files = template_files(app.app_handle());
+            let handlebars = setup_handlebars(&template_files);
+
+            let mut fontdb = fontdb::Database::new();
+            fontdb.load_system_fonts();
+
             app.manage(Mutex::new(AppState {
                 syntect_themes: load_themes(&theme_files),
                 syntect_syntaxes: syntax_set,
                 theme_files,
                 generators,
                 generator_context: GeneratorContext::new(tx.clone()),
-                templates: template_files(app.app_handle()),
+                template_files,
+                handlebars,
+                fontdb
             }));
 
             Ok(())
         })
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
+}
+
+fn setup_handlebars(files: &HashMap<PathBuf, Template>) -> Handlebars<'static> {
+    let mut handlebars = Handlebars::new();
+    handlebars.set_strict_mode(true);
+
+    handlebars.register_helper(
+        "fontFacePath",
+        Box::new(template::get_font_face_path_helper),
+    );
+    handlebars.register_helper(
+        "fontFaceName",
+        Box::new(template::get_font_face_name_helper),
+    );
+    handlebars.register_helper(
+        "fontFaceWeight",
+        Box::new(template::get_font_face_weight_helper),
+    );
+    handlebars.register_helper(
+        "fontFaceStyle",
+        Box::new(template::get_font_face_style_helper),
+    );
+    handlebars.register_helper(
+        "fontFaceMonospaced",
+        Box::new(template::get_font_face_monospaced_helper),
+    );
+
+    for (_, template) in files.iter() {
+        handlebars
+            .register_template_string(&template.name, &template.content)
+            .unwrap();
+    }
+
+    handlebars
 }
 
 fn load_themes(theme_files: &HashMap<PathBuf, ThemeFormat>) -> ThemeSet {
@@ -272,7 +317,14 @@ fn add_template(app: tauri::AppHandle, state: State<Mutex<AppState>>, template: 
     state
         .lock()
         .expect("Failed to lock state")
-        .templates
+        .handlebars
+        .register_template_string(&template.name, &template.content)
+        .unwrap();
+
+    state
+        .lock()
+        .expect("Failed to lock state")
+        .template_files
         .insert(
             templates_dir(&app).join(format!("{}.json", template.name)),
             template,
@@ -284,8 +336,14 @@ fn remove_template(app: tauri::AppHandle, state: State<Mutex<AppState>>, name: S
     state
         .lock()
         .expect("Failed to lock state")
-        .templates
+        .template_files
         .remove(&templates_dir(&app).join(format!("{}.json", name)));
+
+    state
+        .lock()
+        .expect("Failed to lock state")
+        .handlebars
+        .unregister_template(&name);
 }
 
 #[tauri::command]
@@ -293,7 +351,7 @@ fn templates(state: State<Mutex<AppState>>) -> Vec<Template> {
     state
         .lock()
         .expect("Failed to lock state")
-        .templates
+        .template_files
         .values()
         .cloned()
         .collect()
