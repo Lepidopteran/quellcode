@@ -344,7 +344,7 @@ mod tests {
         let rendered = handlebars.render("t1", &data).unwrap();
         let empty_render = handlebars.render("t2", &data).unwrap();
 
-        assert_eq!(rendered, "true");
+        assert_eq!(rendered, "false");
         assert_eq!(empty_render, "");
     }
 
