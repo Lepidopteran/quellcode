@@ -112,7 +112,10 @@ pub fn run() {
             theme_files,
             generators,
             syntaxes,
-            themes
+            themes,
+            templates,
+            add_template,
+            remove_template,
         ])
         .setup(|app| {
             let syntax_set = SyntaxSet::load_defaults_nonewlines();
