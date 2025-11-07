@@ -68,10 +68,10 @@ impl ThemeFormat {
 }
 
 pub struct AppState {
-    pub theme_files: HashMap<PathBuf, ThemeFormat>,
-    pub syntect_themes: ThemeSet,
-    pub syntect_syntaxes: SyntaxSet,
-    pub generators: Vec<(GeneratorInfo, Arc<dyn Generator>)>,
+    theme_files: HashMap<PathBuf, ThemeFormat>,
+    syntect_themes: ThemeSet,
+    syntect_syntaxes: SyntaxSet,
+    generators: Vec<(GeneratorInfo, Arc<dyn Generator>)>,
     generator_context: GeneratorContext,
 }
 
