@@ -191,26 +191,6 @@ fn setup_handlebars(files: &HashMap<PathBuf, TemplateInfo>) -> Handlebars<'stati
     handlebars.set_strict_mode(true);
 
     handlebars.register_helper(
-        "fontFacePath",
-        Box::new(template::get_font_face_path_helper),
-    );
-    handlebars.register_helper(
-        "fontFaceName",
-        Box::new(template::get_font_face_name_helper),
-    );
-    handlebars.register_helper(
-        "fontFaceWeight",
-        Box::new(template::get_font_face_weight_helper),
-    );
-    handlebars.register_helper(
-        "fontFaceStyle",
-        Box::new(template::get_font_face_style_helper),
-    );
-    handlebars.register_helper(
-        "fontFaceMonospaced",
-        Box::new(template::get_font_face_monospaced_helper),
-    );
-    handlebars.register_helper(
         "fontFace",
         Box::new(template::get_font_face_helper),
     );

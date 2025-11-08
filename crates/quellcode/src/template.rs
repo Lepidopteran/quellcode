@@ -1,3 +1,4 @@
+use color_eyre::eyre::OptionExt;
 use fontdb::Source;
 use handlebars::{
     Context, Handlebars, Helper, Output, RenderContext, RenderErrorReason, Renderable,
@@ -121,16 +122,6 @@ impl From<fontdb::Style> for Style {
     }
 }
 
-impl std::fmt::Display for Style {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Style::Normal => write!(f, "normal"),
-            Style::Italic => write!(f, "italic"),
-            Style::Oblique => write!(f, "oblique"),
-        }
-    }
-}
-
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct FontSettingsQuery {
@@ -202,78 +193,6 @@ pub fn get_font_face_helper<'reg, 'rc>(
     }
 }
 
-pub fn get_font_face_path_helper(
-    h: &::handlebars::Helper<'_>,
-    _: &::handlebars::Handlebars,
-    _: &::handlebars::Context,
-    _: &mut ::handlebars::RenderContext,
-    out: &mut dyn ::handlebars::Output,
-) -> ::handlebars::HelperResult {
-    let font = find_font_from_helper(h)?;
-
-    out.write(
-        &font
-            .and_then(|f| f.path.map(|p| p.to_string_lossy().to_string()))
-            .unwrap_or_default(),
-    )?;
-
-    Ok(())
-}
-
-pub fn get_font_face_name_helper(
-    h: &::handlebars::Helper<'_>,
-    _: &::handlebars::Handlebars,
-    _: &::handlebars::Context,
-    _: &mut ::handlebars::RenderContext,
-    out: &mut dyn ::handlebars::Output,
-) -> ::handlebars::HelperResult {
-    let font = find_font_from_helper(h)?;
-
-    out.write(&font.map(|f| f.name.to_string()).unwrap_or_default())?;
-
-    Ok(())
-}
-
-pub fn get_font_face_weight_helper(
-    h: &::handlebars::Helper<'_>,
-    _: &::handlebars::Handlebars,
-    _: &::handlebars::Context,
-    _: &mut ::handlebars::RenderContext,
-    out: &mut dyn ::handlebars::Output,
-) -> ::handlebars::HelperResult {
-    let font = find_font_from_helper(h)?;
-
-    out.write(&font.map(|f| f.weight.0.to_string()).unwrap_or_default())?;
-
-    Ok(())
-}
-
-pub fn get_font_face_style_helper(
-    h: &::handlebars::Helper<'_>,
-    _: &::handlebars::Handlebars,
-    _: &::handlebars::Context,
-    _: &mut ::handlebars::RenderContext,
-    out: &mut dyn ::handlebars::Output,
-) -> ::handlebars::HelperResult {
-    let font = find_font_from_helper(h)?;
-    out.write(&font.map(|f| f.style.to_string()).unwrap_or_default())?;
-
-    Ok(())
-}
-
-pub fn get_font_face_monospaced_helper(
-    h: &::handlebars::Helper<'_>,
-    _: &::handlebars::Handlebars,
-    _: &::handlebars::Context,
-    _: &mut ::handlebars::RenderContext,
-    out: &mut dyn ::handlebars::Output,
-) -> ::handlebars::HelperResult {
-    let font = find_font_from_helper(h)?;
-    out.write(&font.map(|f| f.monospaced.to_string()).unwrap_or_default())?;
-
-    Ok(())
-}
-
 pub fn render_template(
     font_db: &fontdb::Database,
     handlebars: &Handlebars,
@@ -307,49 +226,11 @@ pub fn render_template(
 
 #[cfg(test)]
 mod tests {
-    use log::info;
+    use log::{debug, info};
     use serde_json::json;
     use test_log::test;
 
     use super::*;
-
-    #[test]
-    fn test_render_template() {
-        let mut handlebars = ::handlebars::Handlebars::new();
-        handlebars.set_strict_mode(true);
-
-        handlebars.register_helper("fontFaceWeight", Box::new(get_font_face_weight_helper));
-        handlebars.register_helper("fontFaceStyle", Box::new(get_font_face_style_helper));
-        handlebars.register_helper("fontFaceName", Box::new(get_font_face_name_helper));
-        handlebars.register_helper("fontFacePath", Box::new(get_font_face_path_helper));
-        handlebars.register_helper(
-            "fontFaceMonospaced",
-            Box::new(get_font_face_monospaced_helper),
-        );
-
-        let mut font_db = fontdb::Database::new();
-        font_db.load_system_fonts();
-
-        let template = "{{fontFaceName fontSettings weight=\"normal\" style=\"normal\"}}";
-
-        handlebars.register_template_string("t1", template).unwrap();
-
-        let result = render_template(
-            &font_db,
-            &handlebars,
-            "t1".to_string(),
-            TemplateUserData {
-                font_family: font_db.family_name(&fontdb::Family::Monospace).to_string(),
-                font_size: 10.0,
-                props: HashMap::new(),
-            },
-        )
-        .unwrap();
-
-        info!("{result}");
-
-        assert!(!result.is_empty());
-    }
 
     fn font_settings() -> FontSettings {
         FontSettings {
@@ -363,143 +244,6 @@ mod tests {
                 monospaced: false,
             }],
         }
-    }
-
-    #[test]
-    fn test_get_font_face_weight() {
-        let font = font_settings();
-
-        let template = "{{fontFaceWeight fontSettings weight=\"normal\" style=\"normal\"}}";
-        let empty_template = "{{fontFaceWeight fontSettings weight=\"BOLD\" style=\"normal\"}}";
-
-        let mut handlebars = ::handlebars::Handlebars::new();
-        handlebars.set_strict_mode(true);
-
-        handlebars.register_helper("fontFaceWeight", Box::new(get_font_face_weight_helper));
-        handlebars.register_template_string("t1", template).unwrap();
-        handlebars
-            .register_template_string("t2", empty_template)
-            .unwrap();
-
-        let data = json!({"fontSettings": font});
-
-        let t1 = handlebars.render("t1", &data).unwrap();
-        let t2 = handlebars.render("t2", &data).unwrap();
-
-        assert_eq!(t1, "400");
-        assert_eq!(t2, "");
-    }
-
-    #[test]
-    fn test_get_font_face_style() {
-        let font = font_settings();
-
-        let template = "{{fontFaceStyle fontSettings weight=\"normal\" style=\"normal\"}}";
-        let empty_template = "{{fontFaceStyle fontSettings weight=\"BOLD\" style=\"normal\"}}";
-
-        let mut handlebars = ::handlebars::Handlebars::new();
-        handlebars.set_strict_mode(true);
-
-        handlebars.register_helper("fontFaceStyle", Box::new(get_font_face_style_helper));
-        handlebars.register_template_string("t1", template).unwrap();
-        handlebars
-            .register_template_string("t2", empty_template)
-            .unwrap();
-
-        let data = json!({"fontSettings": font});
-
-        let t1 = handlebars.render("t1", &data).unwrap();
-        let t2 = handlebars.render("t2", &data).unwrap();
-
-        assert_eq!(t1, "normal");
-        assert_eq!(t2, "");
-    }
-
-    #[test]
-    fn test_get_font_face_name() {
-        let font = font_settings();
-
-        let template = "{{fontFaceName fontSettings weight=\"normal\" style=\"normal\"}}";
-        let empty_template = "{{fontFaceName fontSettings weight=\"BOLD\" style=\"normal\"}}";
-
-        let mut handlebars = ::handlebars::Handlebars::new();
-        handlebars.set_strict_mode(true);
-
-        handlebars.register_helper("fontFaceName", Box::new(get_font_face_name_helper));
-        handlebars.register_template_string("t1", template).unwrap();
-        handlebars
-            .register_template_string("t2", empty_template)
-            .unwrap();
-
-        let data = json!({"fontSettings": font});
-
-        let rendered = handlebars.render("t1", &data).unwrap();
-        let empty_render = handlebars.render("t2", &data).unwrap();
-
-        assert_eq!(rendered, "test");
-        assert_eq!(empty_render, "");
-    }
-
-    #[test]
-    fn test_get_font_face_monospaced() {
-        let font = font_settings();
-
-        let template = "{{fontFaceMonospaced fontSettings weight=\"normal\" style=\"normal\"}}";
-        let empty_template = "{{fontFaceMonospaced fontSettings weight=\"BOLD\" style=\"normal\"}}";
-
-        let mut handlebars = ::handlebars::Handlebars::new();
-        handlebars.set_strict_mode(true);
-
-        handlebars.register_helper(
-            "fontFaceMonospaced",
-            Box::new(get_font_face_monospaced_helper),
-        );
-        handlebars.register_template_string("t1", template).unwrap();
-        handlebars
-            .register_template_string("t2", empty_template)
-            .unwrap();
-
-        let data = json!({"fontSettings": font});
-
-        let rendered = handlebars.render("t1", &data).unwrap();
-        let empty_render = handlebars.render("t2", &data).unwrap();
-
-        assert_eq!(rendered, "false");
-        assert_eq!(empty_render, "");
-    }
-
-    #[test]
-    fn test_get_font_face_path() {
-        let font = font_settings();
-
-        let template = "{{fontFacePath fontSettings weight=\"normal\"}}";
-        let template2 = "{{fontFacePath fontSettings weight=\"Normal\"}}";
-        let template3 = "{{fontFacePath fontSettings weight=\"Bold\"}}";
-
-        let mut handlebars = ::handlebars::Handlebars::new();
-        handlebars.set_strict_mode(true);
-
-        handlebars.register_helper("fontFacePath", Box::new(get_font_face_path_helper));
-        handlebars.register_template_string("t1", template).unwrap();
-        handlebars
-            .register_template_string("t2", template2)
-            .unwrap();
-
-        handlebars
-            .register_template_string("t3", template3)
-            .unwrap();
-
-        let data = json!({
-            "fontSettings": font,
-        });
-
-        let rendered = handlebars.render("t1", &data).expect("Failed to render");
-        let rendered2 = handlebars.render("t2", &data).expect("Failed to render");
-        let empty_render = handlebars.render("t3", &data).expect("Failed to render");
-
-        assert_eq!(rendered, "test.ttf".to_string());
-        assert_eq!(rendered2, "test.ttf".to_string());
-        assert!(empty_render.is_empty());
     }
 
     #[test]
