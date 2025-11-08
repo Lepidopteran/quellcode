@@ -265,8 +265,9 @@ fn render_template(
     let state = state.lock().expect("Failed to lock state");
     let handlebars = &state.handlebars;
     let font_db = &state.font_db;
+    let theme_set = &state.syntect_themes;
 
-    template::render_template(font_db, handlebars, template_name, data)
+    template::render_template(font_db, handlebars, theme_set, template_name, data)
         .map_err(|e| format!("Failed to render template: {e}"))
 }
 

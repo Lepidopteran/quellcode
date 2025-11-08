@@ -5,6 +5,9 @@ use handlebars::{
 };
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, path::PathBuf, str::FromStr};
+use syntect::{
+    highlighting::{Theme, ThemeSet},
+};
 use ts_rs::TS;
 
 use crate::property::{PropertyInfo, PropertyValue};
@@ -23,6 +26,9 @@ pub struct TemplateInfo {
 pub struct TemplateUserData {
     pub font_size: f32,
     pub font_family: String,
+    pub theme_name: String,
+
+    #[allow(dead_code)]
     pub props: HashMap<String, PropertyValue>,
 }
 
@@ -30,6 +36,7 @@ pub struct TemplateUserData {
 #[serde(rename_all = "camelCase")]
 pub struct TemplateData {
     pub font_settings: FontSettings,
+    pub theme: Theme,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -196,6 +203,7 @@ pub fn get_font_face_helper<'reg, 'rc>(
 pub fn render_template(
     font_db: &fontdb::Database,
     handlebars: &Handlebars,
+    themes: &ThemeSet,
     template_name: String,
     data: TemplateUserData,
 ) -> Result<String, RenderErrorReason> {
@@ -219,14 +227,32 @@ pub fn render_template(
             .collect(),
     };
 
-    let result = handlebars.render(&template_name, &TemplateData { font_settings })?;
+    let theme = themes
+        .themes
+        .iter()
+        .find_map(|t| {
+            if *t.0 == data.theme_name {
+                Some(t.1.clone())
+            } else {
+                None
+            }
+        })
+        .ok_or_eyre("Theme not found")
+        .map_err(|err| RenderErrorReason::NestedError(err.into()))?;
+
+    let result = handlebars.render(
+        &template_name,
+        &TemplateData {
+            font_settings,
+            theme,
+        },
+    )?;
 
     Ok(result)
 }
 
 #[cfg(test)]
 mod tests {
-    use log::{debug, info};
     use serde_json::json;
     use test_log::test;
 
