@@ -1,7 +1,7 @@
 use color_eyre::eyre::OptionExt;
 use fontdb::Source;
 use handlebars::{
-    Context, Handlebars, Helper, Output, RenderContext, RenderErrorReason, Renderable,
+    BlockContext, Context, Handlebars, Helper, Output, RenderContext, RenderErrorReason, Renderable,
 };
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, path::PathBuf, str::FromStr};
@@ -188,11 +188,17 @@ pub fn get_font_face_helper<'reg, 'rc>(
     let font = find_font_from_helper(h)?;
 
     if let Some(font) = font {
-        rc.set_context(Context::wraps(font)?);
+        let mut block = BlockContext::new();
+        block.set_base_value(serde_json::to_value(font).expect("Could not serialize font"));
+        rc.push_block(block);
 
         h.template()
             .map(|template| template.render(r, ctx, rc, out))
-            .unwrap_or(Ok(()))
+            .unwrap_or(Ok(()))?;
+
+        rc.pop_block();
+
+        Ok(())
     } else {
         h.inverse()
             .map(|inverse| inverse.render(r, ctx, rc, out))
