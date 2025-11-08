@@ -6,11 +6,20 @@ use handlebars::{
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, path::PathBuf, str::FromStr};
 use syntect::{
-    highlighting::{Theme, ThemeSet},
+    easy::HighlightLines,
+    highlighting::{Style as SyntectStyle, Theme, ThemeSet},
+    parsing::SyntaxSet,
+    util::LinesWithEndings,
 };
 use ts_rs::TS;
 
 use crate::property::{PropertyInfo, PropertyValue};
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Token {
+    pub style: SyntectStyle,
+    pub text: String,
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
 #[ts(export)]
@@ -27,16 +36,19 @@ pub struct TemplateUserData {
     pub font_size: f32,
     pub font_family: String,
     pub theme_name: String,
+    pub syntax_name: String,
+    pub code: String,
 
     #[allow(dead_code)]
     pub props: HashMap<String, PropertyValue>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TemplateData {
     pub font_settings: FontSettings,
     pub theme: Theme,
+    pub lines: Vec<Vec<Token>>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -210,6 +222,7 @@ pub fn render_template(
     font_db: &fontdb::Database,
     handlebars: &Handlebars,
     themes: &ThemeSet,
+    syntaxes: &SyntaxSet,
     template_name: String,
     data: TemplateUserData,
 ) -> Result<String, RenderErrorReason> {
@@ -246,11 +259,34 @@ pub fn render_template(
         .ok_or_eyre("Theme not found")
         .map_err(|err| RenderErrorReason::NestedError(err.into()))?;
 
+    let syntax = syntaxes
+        .find_syntax_by_name(&data.syntax_name)
+        .ok_or_eyre("Syntax not found")
+        .map_err(|err| RenderErrorReason::NestedError(err.into()))?;
+
+    let mut highlighter = HighlightLines::new(syntax, &theme);
+    let mut lines = vec![];
+
+    for line in LinesWithEndings::from(data.code.as_str()) {
+        let line_ranges: Vec<_> = highlighter
+            .highlight_line(line, syntaxes)
+            .map_err(|err| RenderErrorReason::NestedError(err.into()))?
+            .iter()
+            .map(|r| Token {
+                style: r.0,
+                text: r.1.to_string(),
+            })
+            .collect();
+
+        lines.push(line_ranges);
+    }
+
     let result = handlebars.render(
         &template_name,
         &TemplateData {
             font_settings,
             theme,
+            lines,
         },
     )?;
 
@@ -259,6 +295,7 @@ pub fn render_template(
 
 #[cfg(test)]
 mod tests {
+    use log::info;
     use serde_json::json;
     use test_log::test;
 
@@ -276,6 +313,63 @@ mod tests {
                 monospaced: false,
             }],
         }
+    }
+
+    #[test]
+    fn test_render_template() {
+        let mut handlebars = ::handlebars::Handlebars::new();
+        handlebars.set_strict_mode(true);
+
+        let mut font_db = fontdb::Database::new();
+        font_db.load_system_fonts();
+
+        let syntax_set = SyntaxSet::load_defaults_nonewlines();
+        let theme_set = ThemeSet::load_defaults();
+
+        let template = r#"
+        let font_family = `{{fontSettings.familyName}}`
+        let font_size = `{{fontSettings.size}}`
+
+        let font_paths = [{{~#each fontSettings.fonts as |font|}}
+            `{{font.path}}`,
+        {{~/each}} ];
+
+        let normal_font_face_path = {{#fontFace fontSettings weight="normal"}}
+            "{{~path~}}"
+        {{/fontFace}}
+
+        let code = `
+        {{#each lines as |line|~}}
+        {{#each line as |token|}}
+        {{{~text~}}}
+        {{/each}}
+        {{/each}}
+
+        `
+        "#;
+
+        handlebars.register_helper("fontFace", Box::new(get_font_face_helper));
+
+        handlebars.register_template_string("t1", template).unwrap();
+
+        let result = render_template(
+            &font_db,
+            &handlebars,
+            &theme_set,
+            &syntax_set,
+            "t1".to_string(),
+            TemplateUserData {
+                font_family: font_db.family_name(&fontdb::Family::Monospace).to_string(),
+                font_size: 10.0,
+                theme_name: "base16-mocha.dark".to_string(),
+                syntax_name: "Rust".to_string(),
+                code: "fn main() {\n    println!(\"Hello, world!\");\n}".to_string(),
+                props: HashMap::new(),
+            },
+        )
+        .expect("Could not render template");
+
+        info!("{result}");
     }
 
     #[test]
