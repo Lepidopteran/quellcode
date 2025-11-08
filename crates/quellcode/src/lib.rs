@@ -210,6 +210,10 @@ fn setup_handlebars(files: &HashMap<PathBuf, TemplateInfo>) -> Handlebars<'stati
         "fontFaceMonospaced",
         Box::new(template::get_font_face_monospaced_helper),
     );
+    handlebars.register_helper(
+        "fontFace",
+        Box::new(template::get_font_face_helper),
+    );
 
     for (_, template) in files.iter() {
         handlebars

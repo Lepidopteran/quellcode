@@ -1,5 +1,7 @@
 use fontdb::Source;
-use handlebars::{Handlebars, RenderErrorReason};
+use handlebars::{
+    Context, Handlebars, Helper, Output, RenderContext, RenderErrorReason, Renderable,
+};
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, path::PathBuf, str::FromStr};
 use ts_rs::TS;
@@ -176,6 +178,28 @@ fn find_font_from_helper(
                 && (query.style.is_some() || query.weight.is_some() || query.monospaced.is_some())
         })
         .cloned())
+}
+
+pub fn get_font_face_helper<'reg, 'rc>(
+    h: &Helper<'rc>,
+    r: &'reg Handlebars<'reg>,
+    ctx: &'rc Context,
+    rc: &mut RenderContext<'reg, 'rc>,
+    out: &mut dyn Output,
+) -> ::handlebars::HelperResult {
+    let font = find_font_from_helper(h)?;
+
+    if let Some(font) = font {
+        rc.set_context(Context::wraps(font)?);
+
+        h.template()
+            .map(|template| template.render(r, ctx, rc, out))
+            .unwrap_or(Ok(()))
+    } else {
+        h.inverse()
+            .map(|inverse| inverse.render(r, ctx, rc, out))
+            .unwrap_or(Ok(()))
+    }
 }
 
 pub fn get_font_face_path_helper(
@@ -476,5 +500,24 @@ mod tests {
         assert_eq!(rendered, "test.ttf".to_string());
         assert_eq!(rendered2, "test.ttf".to_string());
         assert!(empty_render.is_empty());
+    }
+
+    #[test]
+    fn test_get_font_face() {
+        let font = font_settings();
+
+        let template = r#"{{#fontFace fontSettings weight="normal" style="normal"}}{{name}} {{weight}}{{/fontFace}}"#;
+
+        let mut handlebars = ::handlebars::Handlebars::new();
+        handlebars.set_strict_mode(true);
+
+        handlebars.register_helper("fontFace", Box::new(get_font_face_helper));
+        handlebars.register_template_string("t1", template).unwrap();
+
+        let data = json!({"fontSettings": font});
+
+        let rendered = handlebars.render("t1", &data);
+
+        assert!(rendered.is_ok());
     }
 }
