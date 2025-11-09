@@ -1,19 +1,22 @@
 use color_eyre::eyre::OptionExt;
 use fontdb::Source;
 use handlebars::{
-    BlockContext, Context, Handlebars, Helper, Output, RenderContext, RenderErrorReason, Renderable,
+    BlockContext, Context, Handlebars, Helper, HelperResult, Output, PathAndJson, RenderContext,
+    RenderErrorReason, Renderable,
 };
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, path::PathBuf, str::FromStr};
 use syntect::{
     easy::HighlightLines,
-    highlighting::{Style as SyntectStyle, Theme, ThemeSet},
+    highlighting::{Color, Style as SyntectStyle, Theme, ThemeSet},
     parsing::SyntaxSet,
     util::LinesWithEndings,
 };
 use ts_rs::TS;
 
 use crate::property::{PropertyInfo, PropertyValue};
+
+type Scripts = HashMap<String, String>;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Token {
@@ -218,6 +221,78 @@ pub fn get_font_face_helper<'reg, 'rc>(
     }
 }
 
+pub fn hex_color_helper(
+    h: &Helper<'_>,
+    _: &Handlebars,
+    _: &Context,
+    _: &mut RenderContext<'_, '_>,
+    out: &mut dyn Output,
+) -> HelperResult {
+    let color: Color = serde_json::from_value(
+        h.param(0)
+            .ok_or_else(|| RenderErrorReason::ParamNotFoundForIndex("color", 0))?
+            .value()
+            .clone(),
+    )
+    .expect("Could not deserialize color");
+
+    if color.a < 255 {
+        write!(
+            out,
+            "#{:02x}{:02x}{:02x}{:02x}",
+            color.r, color.g, color.b, color.a
+        )?;
+    } else {
+        write!(out, "#{:02x}{:02x}{:02x}", color.r, color.g, color.b)?;
+    }
+
+    Ok(())
+}
+
+pub fn color_channel_to_float_helper(
+    h: &Helper<'_>,
+    _: &Handlebars,
+    _: &Context,
+    _: &mut RenderContext<'_, '_>,
+    out: &mut dyn Output,
+) -> HelperResult {
+    let channel = h
+        .param(0)
+        .ok_or_else(|| RenderErrorReason::MissingVariable(Some(String::from("channel"))))?
+        .value()
+        .clone()
+        .as_u64()
+        .ok_or_else(|| {
+            RenderErrorReason::InvalidParamType("channel must be an unsigned integer")
+        })?;
+
+    let max_value = h
+        .hash_get("max")
+        .unwrap_or(&PathAndJson::new(
+            None,
+            handlebars::ScopedJson::Derived(serde_json::Value::Number(255.into())),
+        ))
+        .value()
+        .as_u64()
+        .ok_or_else(|| RenderErrorReason::InvalidParamType("max must be an positive integer"))?;
+
+    let decimals = h
+        .hash_get("decimals")
+        .unwrap_or(&PathAndJson::new(
+            None,
+            handlebars::ScopedJson::Derived(serde_json::Value::Number(2.into())),
+        ))
+        .value()
+        .as_u64()
+        .ok_or_else(|| {
+            RenderErrorReason::InvalidParamType("decimals must be an positive integer")
+        })? as usize;
+
+    write!(out, "{:.decimals$}", channel as f64 / max_value as f64)?;
+
+    Ok(())
+}
+
 pub fn render_template(
     font_db: &fontdb::Database,
     handlebars: &Handlebars,
@@ -313,6 +388,49 @@ mod tests {
                 monospaced: false,
             }],
         }
+    }
+
+    #[test]
+    fn test_hex_color() {
+        let mut handlebars = ::handlebars::Handlebars::new();
+        handlebars.set_strict_mode(true);
+        handlebars.register_helper("colorToHex", Box::new(hex_color_helper));
+
+        let color = Color {
+            r: 230,
+            g: 0,
+            b: 200,
+            a: 255,
+        };
+
+        let result = handlebars
+            .render_template("{{colorToHex color}}", &json!({"color": color}))
+            .unwrap();
+
+        assert_eq!(result, "#e600c8");
+    }
+
+    #[test]
+    fn test_color_channel() {
+        let mut handlebars = ::handlebars::Handlebars::new();
+        handlebars.set_strict_mode(true);
+        handlebars.register_helper(
+            "colorChannelToFloat",
+            Box::new(color_channel_to_float_helper),
+        );
+
+        let color = Color {
+            r: 230,
+            g: 0,
+            b: 200,
+            a: 255,
+        };
+
+        let result = handlebars
+            .render_template("{{colorChannelToFloat color.a }}", &json!({"color": color}))
+            .unwrap();
+
+        assert_eq!(result, "1.00");
     }
 
     #[test]

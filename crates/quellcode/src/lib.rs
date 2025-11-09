@@ -190,9 +190,11 @@ fn setup_handlebars(files: &HashMap<PathBuf, TemplateInfo>) -> Handlebars<'stati
     let mut handlebars = Handlebars::new();
     handlebars.set_strict_mode(true);
 
+    handlebars.register_helper("fontFace", Box::new(template::get_font_face_helper));
+    handlebars.register_helper("colorToHex", Box::new(template::hex_color_helper));
     handlebars.register_helper(
-        "fontFace",
-        Box::new(template::get_font_face_helper),
+        "colorChannelToFloat",
+        Box::new(template::color_channel_to_float_helper),
     );
 
     for (_, template) in files.iter() {
@@ -268,8 +270,15 @@ fn render_template(
     let theme_set = &state.syntect_themes;
     let syntax_set = &state.syntect_syntaxes;
 
-    template::render_template(font_db, handlebars, theme_set, syntax_set, template_name, data)
-        .map_err(|e| format!("Failed to render template: {e}"))
+    template::render_template(
+        font_db,
+        handlebars,
+        theme_set,
+        syntax_set,
+        template_name,
+        data,
+    )
+    .map_err(|e| format!("Failed to render template: {e}"))
 }
 
 #[tauri::command]
