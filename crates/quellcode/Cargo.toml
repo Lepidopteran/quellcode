@@ -40,7 +40,8 @@ ts-rs = "11.0.1"
 tauri-plugin-store = "2"
 tauri-plugin-dialog = "2"
 tauri-plugin-clipboard-manager = "2.3.0"
-handlebars = "6.3.2"
+handlebars = { git = "https://github.com/sunng87/handlebars-rust.git", rev = "36ebe048567a895feabd3f75829bd6832efc6a4e", features = ["script_helper"] }
+
 fontdb = "0.23.0"
 
 [lib]
