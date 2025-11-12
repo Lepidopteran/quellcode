@@ -1,0 +1,2 @@
+[files]
+extend-exclude = ["crates/sublime-color-scheme/assets/", "crates/vscode-theme-syntect/assets/", "crates/quellcode/data/themes/"]
