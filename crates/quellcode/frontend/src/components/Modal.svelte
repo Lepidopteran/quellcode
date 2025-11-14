@@ -64,7 +64,9 @@
 
 <dialog
 	{...rest}
-	class={["m-auto bg-base-200 w-full max-w-2/3 h-full max-h-2/3 rounded-theme shadow-lg inset-shadow-xs overflow-hidden inset-shadow-highlight/25 backdrop:backdrop-brightness-50"]}
+	class={[
+		"flex flex-col m-auto bg-base-200 w-full max-w-2/3 h-full max-h-2/3 rounded-theme shadow-lg inset-shadow-xs overflow-hidden inset-shadow-highlight/25 backdrop:backdrop-brightness-50",
+	]}
 	bind:this={dialog}
 	use:closeAction
 >
@@ -103,9 +105,9 @@
 <style>
 	@layer components {
 		.dialog-content {
-			padding: calc(var(--spacing) * 4);
-			height: 100%;
+			box-sizing: border-box;
 			overflow-y: auto;
+			height: 100%;
 		}
 	}
 </style>
