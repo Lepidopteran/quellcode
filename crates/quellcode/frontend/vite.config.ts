@@ -7,15 +7,14 @@ import tailwindcss from "@tailwindcss/vite";
 const host = process.env.TAURI_DEV_HOST;
 
 export default defineConfig({
-	// prevent vite from obscuring rust errors
+	clearScreen: false,
 	optimizeDeps: {
 		exclude: [
-			"svelte-codemirror-editor",
 			"codemirror",
-			"@xiechao/codemirror-lang-handlebars"
+			"@xiechao/codemirror-lang-handlebars",
+			"@codemirror/lang-javascript",
 		],
 	},
-	clearScreen: false,
 	resolve: {
 		alias: {
 			"@components": resolve(__dirname, "src/components"),
