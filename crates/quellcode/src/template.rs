@@ -5,7 +5,10 @@ use syntect::highlighting::{Style as SyntectStyle, Theme};
 use ts_rs::TS;
 
 mod helpers;
+mod registry;
+
 pub use helpers::*;
+pub use registry::*;
 
 type Scripts = HashMap<String, String>;
 

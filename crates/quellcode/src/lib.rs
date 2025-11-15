@@ -5,7 +5,6 @@ use std::{
 };
 
 use color_eyre::{eyre::Result, owo_colors::OwoColorize};
-use handlebars::Handlebars;
 use log::{debug, warn};
 use secrecy::SecretString;
 use serde::Serialize;
@@ -26,7 +25,7 @@ use crate::{
     generator::{
         FusionGenerator, Generator, GeneratorContext, GeneratorExt, GeneratorInfo, SvgGenerator,
     },
-    template::{TemplateInfo, TemplateUserData},
+    template::{Template, TemplateInfo, TemplateRegistry, TemplateUserData},
 };
 
 mod app;
@@ -69,14 +68,13 @@ impl ThemeFormat {
     }
 }
 
-pub struct AppState {
+pub struct AppState<'r> {
     theme_files: HashMap<PathBuf, ThemeFormat>,
     syntect_themes: ThemeSet,
     syntect_syntaxes: SyntaxSet,
     generators: Vec<(GeneratorInfo, Arc<dyn Generator>)>,
     generator_context: GeneratorContext,
-    template_files: HashMap<PathBuf, TemplateInfo>,
-    handlebars: Handlebars<'static>,
+    template_registry: TemplateRegistry<'r>,
     font_db: fontdb::Database,
 }
 
@@ -117,8 +115,8 @@ pub fn run() {
             syntaxes,
             themes,
             templates,
-            add_template,
-            remove_template,
+            register_template,
+            unregister_template,
             render_template,
         ])
         .setup(|app| {
@@ -163,20 +161,16 @@ pub fn run() {
                 }
             });
 
-            let template_files = template_files(app.app_handle());
-            let handlebars = setup_handlebars(&template_files);
-
             let mut fontdb = fontdb::Database::new();
             fontdb.load_system_fonts();
 
             app.manage(Mutex::new(AppState {
+                template_registry: setup_templates(app.app_handle()),
                 syntect_themes: load_themes(&theme_files),
                 syntect_syntaxes: syntax_set,
                 theme_files,
                 generators,
                 generator_context: GeneratorContext::new(tx.clone()),
-                template_files,
-                handlebars,
                 font_db: fontdb,
             }));
 
@@ -186,24 +180,24 @@ pub fn run() {
         .expect("error while running tauri application");
 }
 
-fn setup_handlebars(files: &HashMap<PathBuf, TemplateInfo>) -> Handlebars<'static> {
-    let mut handlebars = Handlebars::new();
-    handlebars.set_strict_mode(true);
+fn setup_templates<'r>(app: &tauri::AppHandle) -> TemplateRegistry<'r> {
+    let templates_dir = templates_dir(app);
+    let mut registry = TemplateRegistry::default();
 
-    handlebars.register_helper("fontFace", Box::new(template::get_font_face_helper));
-    handlebars.register_helper("colorToHex", Box::new(template::hex_color_helper));
-    handlebars.register_helper(
-        "colorChannelToFloat",
-        Box::new(template::color_channel_to_float_helper),
-    );
+    for entry in std::fs::read_dir(&templates_dir).expect("Failed to read templates dir") {
+        let entry = entry.expect("Failed to read template entry");
+        let path = entry.path();
+        if path.is_file() {
+            let template = serde_json::from_str::<TemplateInfo>(
+                &std::fs::read_to_string(&path).expect("Failed to read template file"),
+            )
+            .expect("Failed to deserialize template info");
 
-    for (_, template) in files.iter() {
-        handlebars
-            .register_template_string(&template.name, &template.content)
-            .unwrap();
+            let _ = registry.register_template(template::Source::Path { path }, template);
+        }
     }
 
-    handlebars
+    registry
 }
 
 fn load_themes(theme_files: &HashMap<PathBuf, ThemeFormat>) -> ThemeSet {
@@ -265,20 +259,14 @@ fn render_template(
     data: TemplateUserData,
 ) -> Result<String, String> {
     let state = state.lock().expect("Failed to lock state");
-    let handlebars = &state.handlebars;
     let font_db = &state.font_db;
     let theme_set = &state.syntect_themes;
     let syntax_set = &state.syntect_syntaxes;
 
-    template::render_template(
-        font_db,
-        handlebars,
-        theme_set,
-        syntax_set,
-        template_name,
-        data,
-    )
-    .map_err(|e| format!("Failed to render template: {e}"))
+    state
+        .template_registry
+        .render_template(font_db, theme_set, syntax_set, template_name, data)
+        .map_err(|e| format!("Failed to render template: {e}"))
 }
 
 #[tauri::command]
@@ -323,45 +311,42 @@ fn generate_html(
 }
 
 #[tauri::command]
-fn add_template(app: tauri::AppHandle, state: State<Mutex<AppState>>, template: TemplateInfo) {
+fn register_template(
+    app: tauri::AppHandle,
+    state: State<Mutex<AppState>>,
+    template: TemplateInfo,
+) -> Result<(), String> {
     state
         .lock()
         .expect("Failed to lock state")
-        .handlebars
-        .register_template_string(&template.name, &template.content)
-        .unwrap();
-
-    state
-        .lock()
-        .expect("Failed to lock state")
-        .template_files
-        .insert(
-            templates_dir(&app).join(format!("{}.json", template.name)),
+        .template_registry
+        .register_template(
+            template::Source::Path {
+                path: templates_dir(&app).join(format!("{}.json", template.name)),
+            },
             template,
-        );
+        )
+        .map_err(|e| format!("Failed to register template: {e}"))?;
+
+    Ok(())
 }
 
 #[tauri::command]
-fn remove_template(app: tauri::AppHandle, state: State<Mutex<AppState>>, name: String) {
+fn unregister_template(state: State<Mutex<AppState>>, name: String) {
     state
         .lock()
         .expect("Failed to lock state")
-        .template_files
-        .remove(&templates_dir(&app).join(format!("{}.json", name)));
-
-    state
-        .lock()
-        .expect("Failed to lock state")
-        .handlebars
+        .template_registry
         .unregister_template(&name);
 }
 
 #[tauri::command]
-fn templates(state: State<Mutex<AppState>>) -> Vec<TemplateInfo> {
+fn templates(state: State<Mutex<AppState>>) -> Vec<Template> {
     state
         .lock()
         .expect("Failed to lock state")
-        .template_files
+        .template_registry
+        .templates()
         .values()
         .cloned()
         .collect()
