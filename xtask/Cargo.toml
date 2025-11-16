@@ -1,0 +1,12 @@
+[package]
+name = "xtask"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+cargo_metadata = "0.23.1"
+clap = { version = "4.5.51", features = ["derive"] }
+console = "0.16.1"
+duct = "1.1.1"
+indicatif = "0.18.3"
+owo-colors = "4.2.3"
