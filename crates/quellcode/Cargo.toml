@@ -36,11 +36,16 @@ secrecy = "0.10.3"
 tauri = { version = "2", features = ["config-toml"] }
 tauri-plugin-opener = "2"
 tauri-plugin-log = {version = "2", features = ["colored"] }
-tauri-plugin-fs = "2"
 ts-rs = "11.0.1"
 tauri-plugin-store = "2"
-tauri-plugin-dialog = "2"
 tauri-plugin-clipboard-manager = "2.3.0"
+tauri-plugin-fs = { git = "https://github.com/tauri-apps/plugins-workspace.git", rev = "c23fa03f07d5c1c220bcf0bca482364513e3f754"}
+
+[dependencies.tauri-plugin-dialog]
+git = "https://github.com/tauri-apps/plugins-workspace.git"
+rev = "c23fa03f07d5c1c220bcf0bca482364513e3f754"
+default-features = false
+features = ["xdg-portal"]
 
 [lib]
 name = "quellcode_lib"
