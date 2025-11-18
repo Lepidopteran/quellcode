@@ -23,7 +23,6 @@ once_cell = "1.21.1"
 toml = "0.8.20"
 toml_edit = "0.22.24"
 evalexpr = "12.0.2"
-tinytemplate = "1.2.1"
 reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "json", "blocking"] }
 tokio = { version = "1", features = ["rt-multi-thread", "macros"] }
 time = { version = "0.3.41", features = ["macros", "serde", "parsing", "formatting"] }
@@ -39,6 +38,9 @@ tauri-plugin-log = {version = "2", features = ["colored"] }
 ts-rs = "11.0.1"
 tauri-plugin-store = "2"
 tauri-plugin-clipboard-manager = "2.3.0"
+handlebars = { git = "https://github.com/sunng87/handlebars-rust.git", rev = "36ebe048567a895feabd3f75829bd6832efc6a4e", features = ["script_helper"] }
+
+fontdb = "0.23.0"
 tauri-plugin-fs = { git = "https://github.com/tauri-apps/plugins-workspace.git", rev = "c23fa03f07d5c1c220bcf0bca482364513e3f754"}
 
 [dependencies.tauri-plugin-dialog]

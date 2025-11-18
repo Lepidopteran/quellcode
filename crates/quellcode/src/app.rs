@@ -8,7 +8,7 @@ use crate::{generator::GeneratorOptions, AppState};
 
 #[tauri::command]
 pub async fn generate_code(
-    state: State<'_, Mutex<AppState>>,
+    state: State<'_, Mutex<AppState<'_>>>,
     code: String,
     generator_name: String,
     syntax_name: String,

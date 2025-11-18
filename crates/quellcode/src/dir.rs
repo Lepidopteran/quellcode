@@ -36,6 +36,10 @@ pub fn code_syntax_dir(app_handle: &tauri::AppHandle) -> PathBuf {
     data_dir(app_handle).join("syntaxes")
 }
 
+pub fn templates_dir(app_handle: &tauri::AppHandle) -> PathBuf {
+    data_dir(app_handle).join("templates")
+}
+
 pub fn store_cache_dir(app_handle: &tauri::AppHandle) -> PathBuf {
     cache_dir(app_handle).join("asset_store")
 }

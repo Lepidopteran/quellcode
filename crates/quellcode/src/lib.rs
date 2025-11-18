@@ -21,10 +21,11 @@ use time::{format_description::well_known::Rfc3339, OffsetDateTime};
 use ts_rs::TS;
 
 use crate::{
-    dir::config_dir,
+    dir::{cache_dir, config_dir, templates_dir},
     generator::{
         FusionGenerator, Generator, GeneratorContext, GeneratorExt, GeneratorInfo, SvgGenerator,
     },
+    template::{Template, TemplateInfo, TemplateRegistry, TemplateUserData},
 };
 
 mod app;
@@ -34,6 +35,7 @@ pub mod generator;
 pub mod property;
 pub mod scraping;
 mod settings;
+mod template;
 pub mod util;
 
 use app::generate_code;
@@ -66,12 +68,14 @@ impl ThemeFormat {
     }
 }
 
-pub struct AppState {
-    pub theme_files: HashMap<PathBuf, ThemeFormat>,
-    pub syntect_themes: ThemeSet,
-    pub syntect_syntaxes: SyntaxSet,
-    pub generators: Vec<(GeneratorInfo, Arc<dyn Generator>)>,
+pub struct AppState<'r> {
+    theme_files: HashMap<PathBuf, ThemeFormat>,
+    syntect_themes: ThemeSet,
+    syntect_syntaxes: SyntaxSet,
+    generators: Vec<(GeneratorInfo, Arc<dyn Generator>)>,
     generator_context: GeneratorContext,
+    template_registry: TemplateRegistry<'r>,
+    font_db: fontdb::Database,
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -109,17 +113,28 @@ pub fn run() {
             theme_files,
             generators,
             syntaxes,
-            themes
+            themes,
+            templates,
+            register_template,
+            unregister_template,
+            render_template,
         ])
         .setup(|app| {
             let syntax_set = SyntaxSet::load_defaults_nonewlines();
             let scope = app.fs_scope();
-            let _ = scope.allow_directory(config_dir(app.app_handle()), true);
+
+            let config_dir = config_dir(app.app_handle());
+            let cache_dir = cache_dir(app.app_handle());
+
+            let _ = scope.allow_directory(&config_dir, true);
+            let _ = scope.allow_directory(&cache_dir, true);
 
             for path in [
                 dir::code_theme_dir(app.app_handle()),
                 dir::code_syntax_dir(app.app_handle()),
-                dir::config_dir(app.app_handle()),
+                dir::templates_dir(app.app_handle()),
+                cache_dir,
+                config_dir,
             ] {
                 if !path.exists() {
                     std::fs::create_dir_all(&path).expect("Failed to ensure directory exists");
@@ -146,18 +161,43 @@ pub fn run() {
                 }
             });
 
+            let mut fontdb = fontdb::Database::new();
+            fontdb.load_system_fonts();
+
             app.manage(Mutex::new(AppState {
+                template_registry: setup_templates(app.app_handle()),
                 syntect_themes: load_themes(&theme_files),
                 syntect_syntaxes: syntax_set,
                 theme_files,
                 generators,
                 generator_context: GeneratorContext::new(tx.clone()),
+                font_db: fontdb,
             }));
 
             Ok(())
         })
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
+}
+
+fn setup_templates<'r>(app: &tauri::AppHandle) -> TemplateRegistry<'r> {
+    let templates_dir = templates_dir(app);
+    let mut registry = TemplateRegistry::default();
+
+    for entry in std::fs::read_dir(&templates_dir).expect("Failed to read templates dir") {
+        let entry = entry.expect("Failed to read template entry");
+        let path = entry.path();
+        if path.is_file() {
+            let template = serde_json::from_str::<TemplateInfo>(
+                &std::fs::read_to_string(&path).expect("Failed to read template file"),
+            )
+            .expect("Failed to deserialize template info");
+
+            let _ = registry.register_template(template::Source::Path { path }, template);
+        }
+    }
+
+    registry
 }
 
 fn load_themes(theme_files: &HashMap<PathBuf, ThemeFormat>) -> ThemeSet {
@@ -213,6 +253,23 @@ fn load_themes(theme_files: &HashMap<PathBuf, ThemeFormat>) -> ThemeSet {
 }
 
 #[tauri::command]
+fn render_template(
+    state: State<Mutex<AppState>>,
+    template_name: String,
+    data: TemplateUserData,
+) -> Result<String, String> {
+    let state = state.lock().expect("Failed to lock state");
+    let font_db = &state.font_db;
+    let theme_set = &state.syntect_themes;
+    let syntax_set = &state.syntect_syntaxes;
+
+    state
+        .template_registry
+        .render_template(font_db, theme_set, syntax_set, template_name, data)
+        .map_err(|e| format!("Failed to render template: {e}"))
+}
+
+#[tauri::command]
 fn generators(state: State<Mutex<AppState>>) -> Vec<GeneratorInfo> {
     let mut generators = state
         .lock()
@@ -251,6 +308,48 @@ fn generate_html(
     }
 
     Ok(generator.finalize())
+}
+
+#[tauri::command]
+fn register_template(
+    app: tauri::AppHandle,
+    state: State<Mutex<AppState>>,
+    template: TemplateInfo,
+) -> Result<(), String> {
+    state
+        .lock()
+        .expect("Failed to lock state")
+        .template_registry
+        .register_template(
+            template::Source::Path {
+                path: templates_dir(&app).join(format!("{}.json", template.name)),
+            },
+            template,
+        )
+        .map_err(|e| format!("Failed to register template: {e}"))?;
+
+    Ok(())
+}
+
+#[tauri::command]
+fn unregister_template(state: State<Mutex<AppState>>, name: String) {
+    state
+        .lock()
+        .expect("Failed to lock state")
+        .template_registry
+        .unregister_template(&name);
+}
+
+#[tauri::command]
+fn templates(state: State<Mutex<AppState>>) -> Vec<Template> {
+    state
+        .lock()
+        .expect("Failed to lock state")
+        .template_registry
+        .templates()
+        .values()
+        .cloned()
+        .collect()
 }
 
 #[tauri::command]
@@ -308,9 +407,8 @@ pub struct FontFamily {
 }
 
 #[tauri::command]
-fn font_families() -> Vec<FontFamily> {
-    let mut db = usvg::fontdb::Database::new();
-    db.load_system_fonts();
+fn font_families(state: State<Mutex<AppState>>) -> Vec<FontFamily> {
+    let db = &state.lock().expect("Failed to lock state").font_db;
 
     let mut families: Vec<FontFamily> = Vec::new();
 
@@ -364,6 +462,29 @@ pub fn code_theme_files(app_handle: &tauri::AppHandle) -> HashMap<PathBuf, Theme
                 let path = entry.path();
                 if path.is_file() {
                     ThemeFormat::from_path(&path).map(|format| (path, format))
+                } else {
+                    None
+                }
+            })
+        })
+        .collect()
+}
+
+pub fn template_files(app_handle: &tauri::AppHandle) -> HashMap<PathBuf, TemplateInfo> {
+    let templates_dir = templates_dir(app_handle);
+
+    templates_dir
+        .read_dir()
+        .expect("Failed to read templates dir")
+        .filter_map(|entry| {
+            entry.ok().and_then(|entry| {
+                let path = entry.path();
+                if path.is_file() {
+                    serde_json::from_str::<TemplateInfo>(
+                        &std::fs::read_to_string(&path).expect("Failed to read template file"),
+                    )
+                    .ok()
+                    .map(|template| (path, template))
                 } else {
                     None
                 }

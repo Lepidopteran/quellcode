@@ -20,7 +20,7 @@ pub enum PropertyValue {
     Bool(bool),
 }
 
-#[derive(Debug, Clone, Serialize, TS)]
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
 #[ts(export)]
 pub enum StringPropertySubtype {
@@ -28,7 +28,7 @@ pub enum StringPropertySubtype {
     Template,
 }
 
-#[derive(Debug, Clone, Serialize, TS)]
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase", rename_all_fields = "camelCase", tag = "kind")]
 #[ts(export)]
 pub enum PropertyInfo {
