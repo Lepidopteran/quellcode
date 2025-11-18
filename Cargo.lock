@@ -4074,6 +4074,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "pollster"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2f3a9f18d041e6d0e102a0a46750538147e5e8992d3b4873aaafee2520b00ce3"
+
+[[package]]
 name = "portable-atomic"
 version = "1.11.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4729,16 +4735,15 @@ dependencies = [
  "ashpd",
  "block2 0.6.1",
  "dispatch2",
- "glib-sys",
- "gobject-sys",
- "gtk-sys",
  "js-sys",
  "log",
  "objc2 0.6.2",
  "objc2-app-kit",
  "objc2-core-foundation",
  "objc2-foundation 0.3.1",
+ "pollster",
  "raw-window-handle",
+ "urlencoding",
  "wasm-bindgen",
  "wasm-bindgen-futures",
  "web-sys",
@@ -5897,8 +5902,7 @@ dependencies = [
 [[package]]
 name = "tauri-plugin-dialog"
 version = "2.4.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "313f8138692ddc4a2127c4c9607d616a46f5c042e77b3722450866da0aad2f19"
+source = "git+https://github.com/tauri-apps/plugins-workspace.git?rev=c23fa03f07d5c1c220bcf0bca482364513e3f754#c23fa03f07d5c1c220bcf0bca482364513e3f754"
 dependencies = [
  "log",
  "raw-window-handle",
@@ -5915,8 +5919,7 @@ dependencies = [
 [[package]]
 name = "tauri-plugin-fs"
 version = "2.4.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "47df422695255ecbe7bac7012440eddaeefd026656171eac9559f5243d3230d9"
+source = "git+https://github.com/tauri-apps/plugins-workspace.git?rev=c23fa03f07d5c1c220bcf0bca482364513e3f754#c23fa03f07d5c1c220bcf0bca482364513e3f754"
 dependencies = [
  "anyhow",
  "dunce",
@@ -6783,6 +6786,12 @@ dependencies = [
  "percent-encoding",
  "serde",
 ]
+
+[[package]]
+name = "urlencoding"
+version = "2.1.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "daf8dba3b7eb870caf1ddeed7bc9d2a049f3cfdfae7cb521b087cc33ae4c49da"
 
 [[package]]
 name = "urlpattern"

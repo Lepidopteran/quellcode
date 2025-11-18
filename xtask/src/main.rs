@@ -18,6 +18,8 @@ const TICKS: &[&str] = &[
     "⣿", "⡿", "⠿", "⢟", "⠟", "⡛", "⠛", "⠫", "⢋", "⠋", "⠍", "⡉", "⠉", "⠑", "⠡", "⢁",
 ];
 
+// TODO: choose to use owo_colors or console
+
 #[derive(Parser)]
 #[command(version, about, long_about = None)]
 struct Args {

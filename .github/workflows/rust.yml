@@ -17,23 +17,14 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     - uses: dtolnay/rust-toolchain@stable
-    - uses: actions/cache@v4
-      with:
-        path: |
-          ~/.cargo/bin/
-          ~/.cargo/registry/index/
-          ~/.cargo/registry/cache/
-          ~/.cargo/git/db/
-          target/
-        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-
+    - uses: Swatinem/rust-cache@v2
     - name: Git LFS Pull
       run: |
         git lfs install
         git lfs pull
-    - name: Update Dependencies
-      run: sudo apt update
     - name: Install Dependencies
-      run:  sudo apt install -y libwebkit2gtk-4.1-dev build-essential curl wget file libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev    
+      run: |
+        sudo apt update
+        sudo apt install -y libwebkit2gtk-4.1-dev
     - name: Run tests
       run: cargo test --verbose
